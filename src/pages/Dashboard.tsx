@@ -7,17 +7,44 @@ import { FeatureCards } from "@/components/dashboard/FeatureCards";
 import { AddAppDialog } from "@/components/apps/AddAppDialog";
 import { useApps } from "@/hooks/useApps";
 import { useUserSettings } from "@/hooks/useUserSettings";
-import { AppWindow, Plus } from "lucide-react";
+ import { useContentAnalytics } from "@/hooks/useAnalytics";
+ import { usePlatformConnections, Platform } from "@/hooks/usePlatformConnections";
+ import { useContent } from "@/hooks/useContent";
+ import { AppWindow, Plus, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+ import { Link } from "react-router-dom";
+ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Dashboard() {
   const { data: apps, isLoading } = useApps();
   const { data: settings } = useUserSettings();
+   const { data: analytics } = useContentAnalytics();
+   const { data: connections } = usePlatformConnections();
+   const { data: content } = useContent();
+ 
+   // Check for scheduled content on disconnected platforms
+   const disconnectedPlatforms = new Set(
+     connections?.filter((c) => !c.connected).map((c) => c.platform) || []
+   );
+   const scheduledOnDisconnected = content?.filter(
+     (c) => (c.status === "pending" || c.status === "approved") && 
+            disconnectedPlatforms.has(c.platform as Platform)
+   ) || [];
 
   return (
     <DashboardLayout title="Dashboard">
       <div className="space-y-6">
+         {/* Warning for disconnected platforms */}
+         {scheduledOnDisconnected.length > 0 && (
+           <Alert variant="destructive">
+             <AlertTriangle className="h-4 w-4" />
+             <AlertDescription>
+               <strong>{scheduledOnDisconnected.length} scheduled post{scheduledOnDisconnected.length > 1 ? "s" : ""}</strong> won't publish — platforms not connected.{" "}
+               <Link to="/settings" className="underline font-medium">Connect platforms</Link>
+             </AlertDescription>
+           </Alert>
+         )}
+ 
         {/* Mode indicator */}
         {settings?.autopilot_mode && (
           <div className="rounded-lg bg-success/10 border border-success/20 p-4 flex items-center gap-3">

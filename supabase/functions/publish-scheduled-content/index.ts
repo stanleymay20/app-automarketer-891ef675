@@ -5,6 +5,15 @@
    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
  };
  
+ // Generate mock analytics values
+ function generateMockAnalytics() {
+   return {
+     impressions: Math.floor(Math.random() * 5000) + 500,
+     engagements: Math.floor(Math.random() * 300) + 20,
+     clicks: Math.floor(Math.random() * 100) + 5,
+   };
+ }
+ 
  Deno.serve(async (req) => {
    if (req.method === 'OPTIONS') {
      return new Response('ok', { headers: corsHeaders });
@@ -55,12 +64,18 @@
          // await publishToLinkedIn(item.content_text);
          // etc.
  
+         // Generate mock analytics for the published post
+         const mockAnalytics = generateMockAnalytics();
+ 
          // Mark as published
          const { error: updateError } = await supabase
            .from('content')
            .update({ 
              status: 'published', 
-             published_at: new Date().toISOString() 
+             published_at: new Date().toISOString(),
+             impressions: mockAnalytics.impressions,
+             engagements: mockAnalytics.engagements,
+             clicks: mockAnalytics.clicks,
            })
            .eq('id', item.id)
            .eq('status', 'approved') // Idempotency: only update if still approved

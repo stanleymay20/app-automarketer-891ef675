@@ -1,13 +1,20 @@
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { DashboardLayout } from "@/components/layout/DashboardLayout";
+ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { Switch } from "@/components/ui/switch";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { PlatformConnections } from "@/components/settings/PlatformConnections";
+ import { useUserSettings, useUpdateUserSettings } from "@/hooks/useUserSettings";
+ import { useAuth } from "@/contexts/AuthContext";
 
 export default function Settings() {
+   const { user } = useAuth();
+   const { data: settings } = useUserSettings();
+   const updateSettings = useUpdateUserSettings();
+ 
   return (
     <DashboardLayout title="Settings">
       <Tabs defaultValue="general" className="w-full">
@@ -56,7 +63,10 @@ export default function Settings() {
                     Automatically post content without approval
                   </p>
                 </div>
-                <Switch />
+                 <Switch 
+                   checked={settings?.autopilot_mode ?? false}
+                   onCheckedChange={(checked) => updateSettings.mutate({ autopilot_mode: checked, approval_mode: !checked })}
+                 />
               </div>
               <div className="flex items-center justify-between">
                 <div>
@@ -65,11 +75,17 @@ export default function Settings() {
                     AI chooses optimal posting times
                   </p>
                 </div>
-                <Switch defaultChecked />
+                 <Switch 
+                   checked={settings?.smart_scheduling ?? true}
+                   onCheckedChange={(checked) => updateSettings.mutate({ smart_scheduling: checked })}
+                 />
               </div>
               <div className="space-y-2">
                 <Label>Default Brand Tone</Label>
-                <Select defaultValue="professional">
+                 <Select 
+                   value={settings?.default_brand_tone ?? "professional"}
+                   onValueChange={(value) => updateSettings.mutate({ default_brand_tone: value })}
+                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -86,38 +102,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="platforms" className="space-y-6">
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="font-display">Connected Platforms</CardTitle>
-              <CardDescription>Manage your social media connections.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                { name: "X (Twitter)", connected: true },
-                { name: "LinkedIn", connected: true },
-                { name: "Instagram", connected: false },
-                { name: "Facebook", connected: false },
-              ].map((platform) => (
-                <div
-                  key={platform.name}
-                  className="flex items-center justify-between rounded-lg border border-border p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-accent" />
-                    <div>
-                      <p className="font-medium">{platform.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {platform.connected ? "Connected" : "Not connected"}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant={platform.connected ? "outline" : "default"}>
-                    {platform.connected ? "Disconnect" : "Connect"}
-                  </Button>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+           <PlatformConnections />
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
@@ -132,15 +117,26 @@ export default function Settings() {
                 { title: "Post Published", desc: "Confirmation when content goes live" },
                 { title: "Weekly Performance Report", desc: "Summary of your marketing performance" },
                 { title: "Engagement Alerts", desc: "Notify when posts get high engagement" },
-              ].map((notification) => (
-                <div key={notification.title} className="flex items-center justify-between">
+               ].map((notification, index) => {
+                 const settingKeys = [
+                   "notification_content_ready",
+                   "notification_post_published", 
+                   "notification_weekly_report",
+                   "notification_engagement_alerts"
+                 ] as const;
+                 const key = settingKeys[index];
+                 return (
+                 <div key={notification.title} className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{notification.title}</p>
                     <p className="text-sm text-muted-foreground">{notification.desc}</p>
                   </div>
-                  <Switch defaultChecked />
+                   <Switch 
+                     checked={(settings as any)?.[key] ?? true}
+                     onCheckedChange={(checked) => updateSettings.mutate({ [key]: checked })}
+                   />
                 </div>
-              ))}
+               )})}
             </CardContent>
           </Card>
         </TabsContent>
