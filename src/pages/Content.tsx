@@ -3,10 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+ import { Alert, AlertDescription } from "@/components/ui/alert";
+ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useContent, useApproveContent, useDeleteContent } from "@/hooks/useContent";
 import { useApps } from "@/hooks/useApps";
 import { useGenerateContent } from "@/hooks/useGenerateContent";
-import { Plus, Check, Clock, Edit2, Trash2, FileText, Loader2, Sparkles } from "lucide-react";
+ import { usePlatformConnections, Platform } from "@/hooks/usePlatformConnections";
+ import { Plus, Check, Clock, Edit2, Trash2, FileText, Loader2, Sparkles, AlertTriangle, Unlink } from "lucide-react";
 import { format } from "date-fns";
 
 const statusColors = {
@@ -27,9 +30,15 @@ const platformLabels: Record<string, string> = {
 export default function Content() {
   const { data: content, isLoading } = useContent();
   const { data: apps } = useApps();
+   const { data: connections } = usePlatformConnections();
   const approveContent = useApproveContent();
   const deleteContent = useDeleteContent();
   const { generateContent, isGenerating } = useGenerateContent();
+ 
+   // Get disconnected platforms
+   const connectedPlatforms = new Set(
+     connections?.filter((c) => c.connected).map((c) => c.platform) || []
+   );
 
   const filterContent = (status?: string) => {
     if (!content) return [];
@@ -37,7 +46,13 @@ export default function Content() {
     return content.filter((c) => c.status === status);
   };
 
-  const renderContentList = (items: typeof content) => {
+   const renderContentList = (items: typeof content) => {
+     // Count items with disconnected platforms
+     const disconnectedItems = items?.filter(
+       (item) => !connectedPlatforms.has(item.platform as Platform) && 
+                 (item.status === "pending" || item.status === "approved")
+     ) || [];
+ 
     if (!items || items.length === 0) {
       return (
         <div className="rounded-xl border-2 border-dashed border-border bg-muted/30 p-12 text-center">
@@ -65,14 +80,42 @@ export default function Content() {
     }
 
     return (
+       <TooltipProvider>
       <div className="space-y-4">
+         {disconnectedItems.length > 0 && (
+           <Alert variant="destructive" className="mb-4">
+             <AlertTriangle className="h-4 w-4" />
+             <AlertDescription>
+               {disconnectedItems.length} post{disconnectedItems.length > 1 ? "s" : ""} scheduled for disconnected platforms. 
+               Connect platforms in Settings to enable publishing.
+             </AlertDescription>
+           </Alert>
+         )}
         {items.map((item) => (
-          <Card key={item.id} className="shadow-card">
+           <Card key={item.id} className={`shadow-card ${
+             !connectedPlatforms.has(item.platform as Platform) && 
+             (item.status === "pending" || item.status === "approved")
+               ? "border-destructive/50"
+               : ""
+           }`}>
             <CardContent className="flex items-start gap-4 p-4">
               <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-3 flex-wrap">
                   <Badge variant="outline">{(item as any).apps?.name || "Unknown App"}</Badge>
-                  <Badge variant="secondary">{platformLabels[item.platform] || item.platform}</Badge>
+                   <Badge variant="secondary" className="gap-1">
+                     {!connectedPlatforms.has(item.platform as Platform) && 
+                      (item.status === "pending" || item.status === "approved") && (
+                       <Tooltip>
+                         <TooltipTrigger>
+                           <Unlink className="h-3 w-3 text-destructive" />
+                         </TooltipTrigger>
+                         <TooltipContent>
+                           Platform not connected
+                         </TooltipContent>
+                       </Tooltip>
+                     )}
+                     {platformLabels[item.platform] || item.platform}
+                   </Badge>
                   <Badge className={statusColors[item.status as keyof typeof statusColors]}>
                     {item.status}
                   </Badge>
@@ -116,6 +159,7 @@ export default function Content() {
           </Card>
         ))}
       </div>
+       </TooltipProvider>
     );
   };
 

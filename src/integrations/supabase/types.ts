@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_snapshots: {
+        Row: {
+          app_id: string | null
+          created_at: string
+          id: string
+          period_end: string
+          period_start: string
+          period_type: string
+          platform: string | null
+          posts_count: number | null
+          total_clicks: number | null
+          total_engagements: number | null
+          total_impressions: number | null
+          user_id: string
+        }
+        Insert: {
+          app_id?: string | null
+          created_at?: string
+          id?: string
+          period_end: string
+          period_start: string
+          period_type?: string
+          platform?: string | null
+          posts_count?: number | null
+          total_clicks?: number | null
+          total_engagements?: number | null
+          total_impressions?: number | null
+          user_id: string
+        }
+        Update: {
+          app_id?: string | null
+          created_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          platform?: string | null
+          posts_count?: number | null
+          total_clicks?: number | null
+          total_engagements?: number | null
+          total_impressions?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_snapshots_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       apps: {
         Row: {
           brand_tone: string | null
@@ -120,6 +173,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_connections: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          connected: boolean
+          connected_at: string | null
+          created_at: string
+          id: string
+          platform: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          account_name?: string | null
+          connected?: boolean
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          platform: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          account_name?: string | null
+          connected?: boolean
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          platform?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_settings: {
         Row: {
