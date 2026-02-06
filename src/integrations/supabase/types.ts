@@ -214,6 +214,7 @@ export type Database = {
         Row: {
           approval_mode: boolean | null
           autopilot_mode: boolean | null
+          billing_period_start: string | null
           created_at: string
           default_brand_tone: string | null
           id: string
@@ -221,6 +222,8 @@ export type Database = {
           notification_engagement_alerts: boolean | null
           notification_post_published: boolean | null
           notification_weekly_report: boolean | null
+          plan: string
+          posts_this_month: number
           smart_scheduling: boolean | null
           updated_at: string
           user_id: string
@@ -228,6 +231,7 @@ export type Database = {
         Insert: {
           approval_mode?: boolean | null
           autopilot_mode?: boolean | null
+          billing_period_start?: string | null
           created_at?: string
           default_brand_tone?: string | null
           id?: string
@@ -235,6 +239,8 @@ export type Database = {
           notification_engagement_alerts?: boolean | null
           notification_post_published?: boolean | null
           notification_weekly_report?: boolean | null
+          plan?: string
+          posts_this_month?: number
           smart_scheduling?: boolean | null
           updated_at?: string
           user_id: string
@@ -242,6 +248,7 @@ export type Database = {
         Update: {
           approval_mode?: boolean | null
           autopilot_mode?: boolean | null
+          billing_period_start?: string | null
           created_at?: string
           default_brand_tone?: string | null
           id?: string
@@ -249,6 +256,8 @@ export type Database = {
           notification_engagement_alerts?: boolean | null
           notification_post_published?: boolean | null
           notification_weekly_report?: boolean | null
+          plan?: string
+          posts_this_month?: number
           smart_scheduling?: boolean | null
           updated_at?: string
           user_id?: string

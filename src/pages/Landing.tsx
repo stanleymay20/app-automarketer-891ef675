@@ -1,32 +1,54 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Zap, BarChart3, ArrowRight } from "lucide-react";
+import { Rocket, Sparkles, BarChart3, ArrowRight, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
 
 const features = [
   {
     icon: Sparkles,
-    title: "Smart Content Creation",
-    description: "AI creates authentic social content tailored to each of your apps.",
+    title: "AI-Powered Content",
+    description: "Authentic marketing posts tailored to your app's voice and audience.",
   },
   {
-    icon: Zap,
-    title: "Autopilot or Approval Mode",
-    description: "Choose full automation or review every post before publishing.",
+    icon: Rocket,
+    title: "Full Autopilot",
+    description: "Set it and forget it. We create, schedule, and publish automatically.",
   },
   {
     icon: BarChart3,
-    title: "Results-Driven Analytics",
-    description: "Track engagement, traffic, and performance with AI insights.",
+    title: "Track What Works",
+    description: "Simple metrics show if your marketing is driving results.",
   },
 ];
 
-const navLinks = [
-  { label: "Home", href: "#" },
-  { label: "Features", href: "#features" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "Contact", href: "#contact" },
+const plans = [
+  {
+    name: "Free",
+    price: "€0",
+    description: "Try it out",
+    features: ["1 app", "10 posts/month", "Manual approval"],
+    cta: "Start Free",
+    highlighted: false,
+  },
+  {
+    name: "Starter",
+    price: "€29",
+    period: "/mo",
+    description: "For indie builders",
+    features: ["3 apps", "100 posts/month", "Autopilot ON", "Priority scheduling"],
+    cta: "Start Autopilot",
+    highlighted: true,
+  },
+  {
+    name: "Pro",
+    price: "€79",
+    period: "/mo",
+    description: "Scale without limits",
+    features: ["Unlimited apps", "Unlimited posts", "Autopilot ON", "Priority support"],
+    cta: "Go Pro",
+    highlighted: false,
+  },
 ];
 
 export default function Landing() {
@@ -46,74 +68,51 @@ export default function Landing() {
           </div>
 
           <div className="hidden items-center gap-8 md:flex">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {link.label}
-              </a>
-            ))}
+            <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+              Features
+            </a>
+            <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+              Pricing
+            </a>
           </div>
 
           <Link to={user ? "/dashboard" : "/auth"}>
-            <Button>{user ? "Dashboard" : "Sign Up"}</Button>
+            <Button>{user ? "Dashboard" : "Start Free"}</Button>
           </Link>
         </div>
       </nav>
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 lg:py-28">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div className="space-y-6 animate-fade-in">
-            <h1 className="font-display text-4xl font-bold leading-tight text-foreground lg:text-5xl xl:text-6xl">
-              Automate Marketing
-              <br />
-              <span className="text-primary">for All Your Apps</span>
-            </h1>
-            <p className="max-w-lg text-lg text-muted-foreground">
-              Let <span className="font-semibold text-foreground">ScrollMarketer</span> handle
-              your app marketing with intelligent AI that creates, posts, and optimizes for you.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Link to={user ? "/dashboard" : "/auth"}>
-                <Button size="lg" className="gap-2 bg-info hover:bg-info/90">
-                  {user ? "Go to Dashboard" : "Start Free Trial"}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Button size="lg" variant="outline">
-                See in Action
+        <div className="max-w-3xl mx-auto text-center animate-fade-in">
+          <h1 className="font-display text-4xl font-bold leading-tight text-foreground lg:text-5xl xl:text-6xl">
+            Your apps. Their marketing.
+            <br />
+            <span className="text-primary">Fully automated.</span>
+          </h1>
+          <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto">
+            ScrollMarketer uses AI to create, schedule, and publish marketing content while you build.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <Link to={user ? "/dashboard" : "/auth"}>
+              <Button size="lg" className="gap-2 bg-success hover:bg-success/90">
+                Start Autopilot Free
+                <Rocket className="h-4 w-4" />
               </Button>
-            </div>
+            </Link>
           </div>
-
-          <div className="relative animate-scale-in">
-            <div className="relative mx-auto max-w-md">
-              <img
-                src={logo}
-                alt="ScrollMarketer Hero"
-                className="h-auto w-full drop-shadow-2xl"
-              />
-              {/* Floating UI Preview */}
-              <div className="absolute -right-4 top-4 w-48 animate-slide-in-left rounded-xl bg-card p-4 shadow-xl" style={{ animationDelay: "0.3s" }}>
-                <p className="text-xs font-semibold text-foreground">App Marketing Overview</p>
-                <p className="text-[10px] text-success">Autopilot Enabled</p>
-                <div className="mt-2 space-y-1">
-                  <div className="h-1.5 w-full rounded-full bg-info/30">
-                    <div className="h-1.5 w-3/4 rounded-full bg-info" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <p className="mt-4 text-sm text-muted-foreground">
+            No credit card required · Set up in 2 minutes
+          </p>
         </div>
       </section>
 
       {/* Features Section */}
       <section id="features" className="border-t border-border/50 bg-card/50 py-20">
         <div className="container mx-auto px-4">
+          <h2 className="text-center font-display text-2xl font-bold mb-12 lg:text-3xl">
+            Marketing that runs itself
+          </h2>
           <div className="grid gap-8 md:grid-cols-3">
             {features.map((feature, idx) => (
               <div
@@ -122,12 +121,62 @@ export default function Landing() {
                 style={{ animationDelay: `${idx * 0.1}s` }}
               >
                 <div className="mb-4 inline-flex rounded-xl bg-accent p-3">
-                  <feature.icon className="h-6 w-6 text-info" />
+                  <feature.icon className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="mb-2 font-display text-xl font-semibold text-foreground">
                   {feature.title}
                 </h3>
                 <p className="text-muted-foreground">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20">
+        <div className="container mx-auto px-4">
+          <h2 className="text-center font-display text-2xl font-bold mb-4 lg:text-3xl">
+            Simple, transparent pricing
+          </h2>
+          <p className="text-center text-muted-foreground mb-12">
+            Start free. Upgrade when you need more.
+          </p>
+          <div className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto">
+            {plans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`rounded-2xl p-6 ${
+                  plan.highlighted
+                    ? "bg-gradient-to-br from-primary/10 to-secondary/10 border-2 border-primary shadow-lg"
+                    : "bg-card border border-border shadow-card"
+                }`}
+              >
+                {plan.highlighted && (
+                  <p className="text-xs font-semibold text-primary mb-2">MOST POPULAR</p>
+                )}
+                <h3 className="font-display text-xl font-bold">{plan.name}</h3>
+                <p className="text-sm text-muted-foreground">{plan.description}</p>
+                <div className="mt-4 mb-6">
+                  <span className="text-3xl font-bold">{plan.price}</span>
+                  {plan.period && <span className="text-muted-foreground">{plan.period}</span>}
+                </div>
+                <ul className="space-y-2 mb-6">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-success" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Link to="/auth">
+                  <Button
+                    className={`w-full ${plan.highlighted ? "bg-primary" : ""}`}
+                    variant={plan.highlighted ? "default" : "outline"}
+                  >
+                    {plan.cta}
+                  </Button>
+                </Link>
               </div>
             ))}
           </div>
@@ -140,11 +189,11 @@ export default function Landing() {
           Ready to automate your marketing?
         </h2>
         <p className="mx-auto mb-8 max-w-xl text-muted-foreground">
-          Join thousands of app creators who trust ScrollMarketer to grow their audience.
+          Go from sign-up to marketing running in under 5 minutes.
         </p>
         <Link to={user ? "/dashboard" : "/auth"}>
-          <Button size="lg" className="gap-2">
-            {user ? "Go to Dashboard" : "Get Started Free"}
+          <Button size="lg" className="gap-2 bg-success hover:bg-success/90">
+            Start Autopilot Free
             <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>
@@ -160,9 +209,7 @@ export default function Landing() {
               <span className="text-secondary">Marketer</span>
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            © 2025 ScrollMarketer. All rights reserved.
-          </p>
+          <p className="text-sm text-muted-foreground">© 2025 ScrollMarketer. All rights reserved.</p>
         </div>
       </footer>
     </div>
