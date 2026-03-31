@@ -36,6 +36,7 @@ export default function Content() {
   const approveContent = useApproveContent();
   const deleteContent = useDeleteContent();
   const { generateContent, isGenerating } = useGenerateContent();
+  const publishNow = usePublishNow();
 
   const connectedPlatforms = new Set(
     connections?.filter((c) => c.connected).map((c) => c.platform) || []
