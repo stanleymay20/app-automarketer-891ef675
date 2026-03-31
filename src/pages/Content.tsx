@@ -9,7 +9,8 @@ import { useContent, useApproveContent, useDeleteContent } from "@/hooks/useCont
 import { useApps } from "@/hooks/useApps";
 import { useGenerateContent } from "@/hooks/useGenerateContent";
 import { usePlatformConnections, Platform } from "@/hooks/usePlatformConnections";
-import { Plus, Check, Clock, Edit2, Trash2, FileText, Loader2, Sparkles, AlertTriangle, Unlink, ExternalLink, XCircle } from "lucide-react";
+import { usePublishNow } from "@/hooks/usePublishNow";
+import { Plus, Check, Clock, Edit2, Trash2, FileText, Loader2, Sparkles, AlertTriangle, Unlink, ExternalLink, XCircle, Send } from "lucide-react";
 import { format } from "date-fns";
 
 const statusColors: Record<string, string> = {
@@ -35,6 +36,7 @@ export default function Content() {
   const approveContent = useApproveContent();
   const deleteContent = useDeleteContent();
   const { generateContent, isGenerating } = useGenerateContent();
+  const publishNow = usePublishNow();
 
   const connectedPlatforms = new Set(
     connections?.filter((c) => c.connected).map((c) => c.platform) || []
@@ -159,6 +161,22 @@ export default function Content() {
                     )}
                   </div>
                   <div className="flex gap-2">
+                    {item.status === "approved" && item.platform === "x" && (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="gap-1"
+                        onClick={() => publishNow.mutate(item.id)}
+                        disabled={publishNow.isPending}
+                      >
+                        {publishNow.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Send className="h-3 w-3" />
+                        )}
+                        Publish Now
+                      </Button>
+                    )}
                     {item.status === "pending" && (
                       <Button 
                         size="sm" 
