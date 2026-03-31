@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.x-refresh-token]
 verify_jwt = false
+
+[functions.publish-now]
+verify_jwt = false
