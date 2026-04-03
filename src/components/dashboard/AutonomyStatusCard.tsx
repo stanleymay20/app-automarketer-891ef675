@@ -1,15 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useAutomationPolicy } from "@/hooks/useAutomationPolicies";
 import { useContent } from "@/hooks/useContent";
-import { Bot, Shield, Zap } from "lucide-react";
+import { Bot, Shield, Zap, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function AutonomyStatusCard() {
   const { data: policy } = useAutomationPolicy();
   const { data: content } = useContent();
-
-  const recentPublished = (content || []).filter(
-    (c) => c.status === "published" && c.published_at
-  ).slice(0, 1);
 
   const pendingReview = (content || []).filter((c) => c.status === "pending").length;
   const failedCount = (content || []).filter((c) => c.status === "failed").length;
@@ -25,6 +23,9 @@ export function AutonomyStatusCard() {
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Bot className="h-4 w-4 text-primary" />
           Autonomy Status
+          <Link to="/settings?tab=autonomy" className="ml-auto">
+            <Settings className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+          </Link>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0 space-y-3">
@@ -49,6 +50,15 @@ export function AutonomyStatusCard() {
         )}
         {failedCount > 0 && (
           <p className="text-xs text-destructive">{failedCount} failed post{failedCount > 1 ? "s" : ""}</p>
+        )}
+
+        {!policy?.auto_approve_enabled && (
+          <Link to="/settings?tab=autonomy">
+            <Button variant="outline" size="sm" className="w-full gap-1 text-xs">
+              <Bot className="h-3 w-3" />
+              Configure Autonomy
+            </Button>
+          </Link>
         )}
       </CardContent>
     </Card>

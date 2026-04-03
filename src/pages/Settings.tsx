@@ -7,6 +7,8 @@
  import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { PlatformConnections } from "@/components/settings/PlatformConnections";
+ import { AutomationPolicySettings } from "@/components/settings/AutomationPolicySettings";
+ import { GrowthGoalsSection } from "@/components/settings/GrowthGoalsSection";
  import { useUserSettings, useUpdateUserSettings } from "@/hooks/useUserSettings";
  import { useAuth } from "@/contexts/AuthContext";
 
@@ -18,8 +20,9 @@ export default function Settings() {
   return (
     <DashboardLayout title="Settings">
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="mb-6">
+        <TabsList className="mb-6 flex-wrap">
           <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="autonomy">Autonomy</TabsTrigger>
           <TabsTrigger value="platforms">Platforms</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
@@ -99,6 +102,11 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="autonomy" className="space-y-6">
+          <AutomationPolicySettings />
+          <GrowthGoalsSection />
         </TabsContent>
 
         <TabsContent value="platforms" className="space-y-6">
