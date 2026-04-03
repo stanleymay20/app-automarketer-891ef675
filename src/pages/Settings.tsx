@@ -14,8 +14,15 @@
  import { useAuth } from "@/contexts/AuthContext";
 
 export default function Settings() {
+   const [searchParams] = useSearchParams();
+   const defaultTab = searchParams.get("tab") || "general";
    const { user } = useAuth();
    const { data: settings } = useUserSettings();
+   const updateSettings = useUpdateUserSettings();
+ 
+  return (
+    <DashboardLayout title="Settings">
+      <Tabs defaultValue={defaultTab} className="w-full">
    const updateSettings = useUpdateUserSettings();
  
   return (
