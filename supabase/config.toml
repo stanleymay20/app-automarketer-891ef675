@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.publish-now]
 verify_jwt = false
+
+[functions.quality-gate]
+verify_jwt = false
