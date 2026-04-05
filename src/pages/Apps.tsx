@@ -5,6 +5,7 @@ import { AddAppDialog } from "@/components/apps/AddAppDialog";
 import { useApps, useDeleteApp } from "@/hooks/useApps";
 import { useGenerateContent } from "@/hooks/useGenerateContent";
 import { AppWindow, MoreVertical, ExternalLink, Sparkles, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,

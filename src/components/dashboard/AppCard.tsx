@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDeleteApp } from "@/hooks/useApps";
 import { useGenerateContent } from "@/hooks/useGenerateContent";
+import { Link } from "react-router-dom";
 import { App } from "@/hooks/useApps";
 
 interface AppCardProps {
