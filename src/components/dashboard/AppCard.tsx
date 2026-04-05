@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDeleteApp } from "@/hooks/useApps";
 import { useGenerateContent } from "@/hooks/useGenerateContent";
+import { Link } from "react-router-dom";
 import { App } from "@/hooks/useApps";
 
 interface AppCardProps {
@@ -71,8 +72,10 @@ export function AppCard({ id, name, description, posts, engagements, traffic, pl
               <Sparkles className="h-4 w-4 mr-2" />
               Generate Content
             </DropdownMenuItem>
-            <DropdownMenuItem>Edit</DropdownMenuItem>
-            <DropdownMenuItem>View Analytics</DropdownMenuItem>
+            <DropdownMenuItem disabled>Edit (Coming Soon)</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/analytics">View Analytics</Link>
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive"
               onClick={() => deleteApp.mutate(id)}

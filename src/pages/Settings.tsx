@@ -52,7 +52,7 @@ export default function Settings() {
                 <Label htmlFor="company">Company Name</Label>
                 <Input id="company" placeholder="Acme Inc." />
               </div>
-              <Button>Save Changes</Button>
+              <Button disabled>Save Changes (Coming Soon)</Button>
             </CardContent>
           </Card>
 
@@ -156,16 +156,18 @@ export default function Settings() {
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="font-display">Current Plan</CardTitle>
-              <CardDescription>You're currently on the Pro plan.</CardDescription>
+              <CardDescription>Manage your subscription plan.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg bg-accent/50 p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-lg font-semibold">Pro Plan</p>
-                    <p className="text-sm text-muted-foreground">$29/month • Billed monthly</p>
+                    <p className="text-lg font-semibold capitalize">{settings?.plan || "Free"} Plan</p>
+                    <p className="text-sm text-muted-foreground">
+                      {settings?.plan === "free" ? "€0/month" : settings?.plan === "starter" ? "€29/month" : "€79/month"}
+                    </p>
                   </div>
-                  <Button variant="outline">Upgrade</Button>
+                  <Button variant="outline" disabled>Upgrade (Coming Soon)</Button>
                 </div>
               </div>
               <div className="space-y-2">

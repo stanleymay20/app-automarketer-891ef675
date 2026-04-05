@@ -5,6 +5,7 @@ import { AddAppDialog } from "@/components/apps/AddAppDialog";
 import { useApps, useDeleteApp } from "@/hooks/useApps";
 import { useGenerateContent } from "@/hooks/useGenerateContent";
 import { AppWindow, MoreVertical, ExternalLink, Sparkles, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,8 +65,10 @@ export default function Apps() {
                         <Sparkles className="h-4 w-4 mr-2" />
                         Generate Content
                       </DropdownMenuItem>
-                      <DropdownMenuItem>Edit App</DropdownMenuItem>
-                      <DropdownMenuItem>View Analytics</DropdownMenuItem>
+                      <DropdownMenuItem disabled>Edit App (Coming Soon)</DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/analytics">View Analytics</Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem 
                         className="text-destructive"
                         onClick={() => deleteApp.mutate(app.id)}
