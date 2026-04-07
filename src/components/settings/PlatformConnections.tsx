@@ -1,9 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePlatformConnections, useConnectPlatform, useDisconnectPlatform, Platform, getTokenStatus } from "@/hooks/usePlatformConnections";
 import { Loader2, Link2, Unlink, Twitter, Linkedin, Instagram, Facebook, AlertCircle, RefreshCw } from "lucide-react";
 import { useContent } from "@/hooks/useContent";
+import { useApps } from "@/hooks/useApps";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -27,13 +29,22 @@ const tokenStatusConfig = {
 };
 
 export function PlatformConnections() {
-  const { data: connections, isLoading } = usePlatformConnections();
+  const { data: apps } = useApps();
+  const [selectedAppId, setSelectedAppId] = useState<string | undefined>(undefined);
+  const { data: connections, isLoading } = usePlatformConnections(selectedAppId);
   const { data: content } = useContent();
   const connectPlatform = useConnectPlatform();
   const disconnectPlatform = useDisconnectPlatform();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [actionPlatform, setActionPlatform] = useState<Platform | null>(null);
+
+  // Set first app as default when apps load
+  useEffect(() => {
+    if (apps && apps.length > 0 && !selectedAppId) {
+      setSelectedAppId(apps[0].id);
+    }
+  }, [apps, selectedAppId]);
 
   // Handle OAuth callback params
   useEffect(() => {
@@ -83,20 +94,55 @@ export function PlatformConnections() {
 
   const handleConnect = (platform: Platform) => {
     setActionPlatform(platform);
-    connectPlatform.mutate(platform, {
+    connectPlatform.mutate({ platform, appId: selectedAppId }, {
       onSettled: () => setActionPlatform(null),
     });
   };
 
   const handleDisconnect = (platform: Platform) => {
     setActionPlatform(platform);
-    disconnectPlatform.mutate(platform, {
+    disconnectPlatform.mutate({ platform, appId: selectedAppId }, {
       onSettled: () => setActionPlatform(null),
     });
   };
 
+  // Deduplicate: show app-specific connection if exists, otherwise user-level
+  const deduplicatedConnections = (() => {
+    if (!connections) return [];
+    const byPlatform = new Map<string, typeof connections[number]>();
+    for (const conn of connections) {
+      const existing = byPlatform.get(conn.platform);
+      if (!existing) {
+        byPlatform.set(conn.platform, conn);
+      } else if (conn.app_id === selectedAppId && existing.app_id !== selectedAppId) {
+        // Prefer app-specific over user-level
+        byPlatform.set(conn.platform, conn);
+      }
+    }
+    return Array.from(byPlatform.values());
+  })();
+
   return (
     <div className="space-y-4">
+      {/* App selector */}
+      {apps && apps.length > 0 && (
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-muted-foreground">Connect for app:</span>
+          <Select value={selectedAppId} onValueChange={setSelectedAppId}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select an app" />
+            </SelectTrigger>
+            <SelectContent>
+              {apps.map((app) => (
+                <SelectItem key={app.id} value={app.id}>
+                  {app.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {warningContent.length > 0 && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -111,11 +157,11 @@ export function PlatformConnections() {
         <CardHeader>
           <CardTitle>Connected Platforms</CardTitle>
           <CardDescription>
-            Connect your social media accounts to enable automated publishing.
+            Connect your social media accounts to enable automated publishing. Each app can use a different account.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {connections?.map((connection) => {
+          {deduplicatedConnections.map((connection) => {
             const config = platformConfig[connection.platform];
             if (!config) return null;
             const Icon = config.icon;
@@ -195,7 +241,7 @@ export function PlatformConnections() {
                         <Button
                           size="sm"
                           onClick={() => handleConnect(connection.platform)}
-                          disabled={isThisConnecting}
+                          disabled={isThisConnecting || !selectedAppId}
                           className="gap-2"
                         >
                           {isThisConnecting ? (
