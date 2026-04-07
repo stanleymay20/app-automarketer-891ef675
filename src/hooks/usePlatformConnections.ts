@@ -17,24 +17,30 @@ export interface PlatformConnection {
   updated_at: string;
   expires_at: string | null;
   scope: string | null;
+  app_id: string | null;
 }
 
 const PLATFORMS: Platform[] = ["x", "linkedin", "instagram", "facebook"];
 
-export function usePlatformConnections() {
+export function usePlatformConnections(appId?: string) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["platform-connections", user?.id],
+    queryKey: ["platform-connections", user?.id, appId],
     queryFn: async () => {
       if (!user) return [];
 
-      // Frontend query - tokens are in DB but we only select safe columns
-      const { data, error } = await supabase
+      let query = supabase
         .from("platform_connections")
-        .select("id, user_id, platform, connected, connected_at, account_name, account_id, created_at, updated_at, expires_at, scope")
+        .select("id, user_id, platform, connected, connected_at, account_name, account_id, created_at, updated_at, expires_at, scope, app_id")
         .eq("user_id", user.id);
 
+      if (appId) {
+        // Get connections for this specific app OR user-level (null app_id)
+        query = query.or(`app_id.eq.${appId},app_id.is.null`);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       const existingPlatforms = new Set(data?.map((c) => c.platform) || []);
@@ -54,6 +60,7 @@ export function usePlatformConnections() {
             updated_at: new Date().toISOString(),
             expires_at: null,
             scope: null,
+            app_id: appId || null,
           });
         }
       }
@@ -69,11 +76,10 @@ export function useConnectPlatform() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (platform: Platform) => {
+    mutationFn: async ({ platform, appId }: { platform: Platform; appId?: string }) => {
       if (!user) throw new Error("Not authenticated");
 
       if (platform === "x") {
-        // Real OAuth flow for X
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
         if (!token) throw new Error("No session token");
@@ -87,30 +93,27 @@ export function useConnectPlatform() {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
+            body: JSON.stringify({ app_id: appId || null }),
           }
         );
 
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Failed to start OAuth");
 
-        // Open X OAuth in a new window/tab to avoid blanking the app
         const authWindow = window.open(result.url, "_blank");
         if (!authWindow) {
-          // Popup blocked — fall back to same-window redirect
           window.location.href = result.url;
         }
         return null;
       }
 
-      // Other platforms not yet supported for real OAuth
       throw new Error(`${platform.toUpperCase()} integration is coming soon. Only X (Twitter) is currently supported.`);
     },
-    onSuccess: (data, platform) => {
+    onSuccess: (data, { platform }) => {
       if (platform !== "x") {
         toast.success(`Connected to ${platform.toUpperCase()} successfully`);
         queryClient.invalidateQueries({ queryKey: ["platform-connections"] });
       }
-      // X redirect handles its own flow
     },
     onError: (error) => {
       toast.error(`Failed to connect: ${error.message}`);
@@ -123,16 +126,22 @@ export function useDisconnectPlatform() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (platform: Platform) => {
+    mutationFn: async ({ platform, appId }: { platform: Platform; appId?: string }) => {
       if (!user) throw new Error("Not authenticated");
 
-      // Check if a real DB record exists (temp connections start with "temp-")
-      const { data: existing } = await supabase
+      let query = supabase
         .from("platform_connections")
         .select("id")
         .eq("user_id", user.id)
-        .eq("platform", platform)
-        .maybeSingle();
+        .eq("platform", platform);
+
+      if (appId) {
+        query = query.eq("app_id", appId);
+      } else {
+        query = query.is("app_id", null);
+      }
+
+      const { data: existing } = await query.maybeSingle();
 
       if (!existing) {
         throw new Error("No connection to disconnect");
@@ -151,12 +160,11 @@ export function useDisconnectPlatform() {
           token_type: null,
           scope: null,
         })
-        .eq("user_id", user.id)
-        .eq("platform", platform);
+        .eq("id", existing.id);
 
       if (error) throw error;
     },
-    onSuccess: (_, platform) => {
+    onSuccess: (_, { platform }) => {
       queryClient.invalidateQueries({ queryKey: ["platform-connections"] });
       toast.success(`Disconnected from ${platform.toUpperCase()}`);
     },
@@ -166,9 +174,9 @@ export function useDisconnectPlatform() {
   });
 }
 
-export function useIsplatformConnected(platform: Platform) {
-  const { data: connections } = usePlatformConnections();
-  return connections?.find((c) => c.platform === platform)?.connected ?? false;
+export function useIsplatformConnected(platform: Platform, appId?: string) {
+  const { data: connections } = usePlatformConnections(appId);
+  return connections?.find((c) => c.platform === platform && c.connected) ? true : false;
 }
 
 export function getTokenStatus(connection: PlatformConnection): "active" | "expiring" | "expired" | "disconnected" {
