@@ -6,8 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const PUBLISHED_APP_URL = "https://app-automarketer.lovable.app";
-
 function generateCodeVerifier(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
@@ -37,39 +35,14 @@ function getRedirectUri(supabaseUrl: string): string {
   const configuredRedirectUri = Deno.env.get("X_REDIRECT_URI")?.trim();
   const fallbackRedirectUri = `${supabaseUrl}/functions/v1/x-auth-callback`;
 
-  if (!configuredRedirectUri) {
-    return fallbackRedirectUri;
-  }
+  if (!configuredRedirectUri) return fallbackRedirectUri;
 
   try {
     const parsed = new URL(configuredRedirectUri);
-    const isLegacyLovableCallback =
-      parsed.hostname === "lovable.dev" && parsed.pathname === "/api/x/callback";
-
-    return isLegacyLovableCallback ? fallbackRedirectUri : configuredRedirectUri;
+    const isLegacy = parsed.hostname === "lovable.dev" && parsed.pathname === "/api/x/callback";
+    return isLegacy ? fallbackRedirectUri : configuredRedirectUri;
   } catch {
     return fallbackRedirectUri;
-  }
-}
-
-function getAppUrl(): string {
-  const configuredAppUrl = Deno.env.get("APP_URL")?.trim();
-
-  if (!configuredAppUrl) {
-    console.warn(`[XAuthStart] APP_URL missing; using ${PUBLISHED_APP_URL}`);
-    return PUBLISHED_APP_URL;
-  }
-
-  try {
-    const origin = new URL(configuredAppUrl).origin;
-    if (origin !== PUBLISHED_APP_URL) {
-      console.warn(`[XAuthStart] APP_URL mismatch (${origin}); using ${PUBLISHED_APP_URL}`);
-      return PUBLISHED_APP_URL;
-    }
-    return origin;
-  } catch {
-    console.warn(`[XAuthStart] APP_URL invalid; using ${PUBLISHED_APP_URL}`);
-    return PUBLISHED_APP_URL;
   }
 }
 
@@ -112,9 +85,11 @@ Deno.serve(async (req) => {
     const userId = user.id;
 
     let appId: string | null = null;
+    let returnTo: string | null = null;
     try {
       const body = await req.json();
       appId = typeof body.app_id === "string" && body.app_id.length > 0 ? body.app_id : null;
+      returnTo = typeof body.return_to === "string" && body.return_to.length > 0 ? body.return_to : null;
     } catch {
       appId = null;
     }
@@ -143,8 +118,8 @@ Deno.serve(async (req) => {
     );
 
     const redirectUri = getRedirectUri(supabaseUrl);
-    const appUrl = getAppUrl();
-    const statePayload = `${state}:${userId}:${appId ?? ""}`;
+    const encodedReturnTo = returnTo ? encodeURIComponent(returnTo) : "";
+    const statePayload = `${state}:${userId}:${appId ?? ""}:${encodedReturnTo}`;
     const scopes = "tweet.write tweet.read users.read offline.access";
     const authUrl = new URL("https://x.com/i/oauth2/authorize");
     authUrl.searchParams.set("response_type", "code");
@@ -157,13 +132,8 @@ Deno.serve(async (req) => {
     authUrl.searchParams.set("force_login", "true");
 
     console.log("[XAuthStart] OAuth request", JSON.stringify({
-      userId,
-      appId,
-      redirectUri,
-      appUrl,
-      scopes,
+      userId, appId, redirectUri, returnTo, scopes,
     }));
-    console.log(`[XAuthStart] Final auth URL: ${authUrl.toString()}`);
 
     return new Response(JSON.stringify({ url: authUrl.toString() }), {
       status: 200,

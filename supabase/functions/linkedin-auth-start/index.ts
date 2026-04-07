@@ -6,33 +6,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const PUBLISHED_APP_URL = "https://app-automarketer.lovable.app";
-
 function generateState(): string {
   const array = new Uint8Array(16);
   crypto.getRandomValues(array);
   return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function getAppUrl(): string {
-  const configuredAppUrl = Deno.env.get("APP_URL")?.trim();
-
-  if (!configuredAppUrl) {
-    console.warn(`[LinkedInAuthStart] APP_URL missing; using ${PUBLISHED_APP_URL}`);
-    return PUBLISHED_APP_URL;
-  }
-
-  try {
-    const origin = new URL(configuredAppUrl).origin;
-    if (origin !== PUBLISHED_APP_URL) {
-      console.warn(`[LinkedInAuthStart] APP_URL mismatch (${origin}); using ${PUBLISHED_APP_URL}`);
-      return PUBLISHED_APP_URL;
-    }
-    return origin;
-  } catch {
-    console.warn(`[LinkedInAuthStart] APP_URL invalid; using ${PUBLISHED_APP_URL}`);
-    return PUBLISHED_APP_URL;
-  }
 }
 
 Deno.serve(async (req) => {
@@ -77,9 +54,11 @@ Deno.serve(async (req) => {
     const userId = user.id;
 
     let appId: string | null = null;
+    let returnTo: string | null = null;
     try {
       const body = await req.json();
       appId = typeof body.app_id === "string" && body.app_id.length > 0 ? body.app_id : null;
+      returnTo = typeof body.return_to === "string" && body.return_to.length > 0 ? body.return_to : null;
     } catch {
       appId = null;
     }
@@ -104,9 +83,9 @@ Deno.serve(async (req) => {
       { onConflict: "user_id,platform,app_id" },
     );
 
-    const appUrl = getAppUrl();
+    const encodedReturnTo = returnTo ? encodeURIComponent(returnTo) : "";
     const scopes = "w_member_social";
-    const statePayload = `${state}:${userId}:${appId ?? ""}`;
+    const statePayload = `${state}:${userId}:${appId ?? ""}:${encodedReturnTo}`;
     const authUrl = new URL("https://www.linkedin.com/oauth/v2/authorization");
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("client_id", clientId);
@@ -118,10 +97,9 @@ Deno.serve(async (req) => {
       userId,
       appId,
       redirectUri,
-      appUrl,
+      returnTo,
       scopes,
     }));
-    console.log(`[LinkedInAuthStart] Final auth URL: ${authUrl.toString()}`);
 
     return new Response(JSON.stringify({ url: authUrl.toString() }), {
       status: 200,
