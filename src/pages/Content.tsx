@@ -186,6 +186,18 @@ export default function Content() {
                     </div>
                     <p className="text-sm text-foreground whitespace-pre-wrap">{item.content_text}</p>
                     
+                    {/* Post Image */}
+                    {(item as any).image_url && (
+                      <div className="mt-2 rounded-lg overflow-hidden border max-w-xs">
+                        <img 
+                          src={(item as any).image_url} 
+                          alt="Post image" 
+                          className="w-full h-auto object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+                    
                     {/* Quality Scores */}
                     {score && (
                       <div className="flex items-center gap-4 rounded-md bg-muted/50 px-3 py-2">
