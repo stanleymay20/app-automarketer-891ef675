@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAutomationPolicy, useUpdateAutomationPolicy } from "@/hooks/useAutomationPolicies";
-import { Bot, Shield, Clock, AlertTriangle } from "lucide-react";
+import { Bot, Shield, Clock, AlertTriangle, Send } from "lucide-react";
 
 function useDebouncedMutate(mutateFn: (val: any) => void, delay = 500) {
   const timer = useRef<ReturnType<typeof setTimeout>>();
