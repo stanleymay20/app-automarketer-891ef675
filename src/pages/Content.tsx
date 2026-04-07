@@ -178,6 +178,11 @@ export default function Content() {
                           View on X
                         </a>
                       )}
+                      {!externalUrl && item.status === "published" && (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          Simulated (no live link)
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-foreground whitespace-pre-wrap">{item.content_text}</p>
                     
@@ -220,7 +225,7 @@ export default function Content() {
                     )}
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    {item.status === "approved" && item.platform === "x" && (
+                    {item.status === "approved" && item.platform === "x" && connectedPlatforms.has("x") && (
                       <Button
                         size="sm"
                         variant="default"
@@ -235,6 +240,11 @@ export default function Content() {
                         )}
                         Publish Now
                       </Button>
+                    )}
+                    {item.status === "approved" && item.platform !== "x" && (
+                      <Badge variant="outline" className="text-muted-foreground text-xs">
+                        Auto-publish coming soon
+                      </Badge>
                     )}
                     {item.status === "pending" && (
                       <Button 

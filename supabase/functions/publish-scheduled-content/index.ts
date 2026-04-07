@@ -6,14 +6,6 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Non-X platforms are simulated — no real API calls, so no real metrics
-function getSimulatedMetrics() {
-  return {
-    impressions: 0,
-    engagements: 0,
-    clicks: 0,
-  };
-}
 
 interface PublishResult {
   success: boolean;
@@ -237,8 +229,10 @@ Deno.serve(async (req) => {
             skippedIds.push(item.id);
             continue;
           } else if (result.error === "live_posting_disabled") {
-            // Simulate publishing when live posting is off
-            console.log(`[Publisher] Simulating publish for content ${item.id} (live posting disabled)`);
+            // Don't fake publish — leave as approved so user knows it wasn't really posted
+            console.log(`[Publisher] Skipping content ${item.id} — live X posting is disabled`);
+            skippedIds.push(item.id);
+            continue;
           } else {
             // Real failure
             failureReason = result.error || "Unknown X posting error";
@@ -258,23 +252,21 @@ Deno.serve(async (req) => {
             continue;
           }
         } else {
-          // Simulated publish for other platforms (no real API yet)
-          console.log(`[Publisher] Simulated publish to ${item.platform}: "${item.content_text.substring(0, 50)}..."`);
+          // No real API for non-X platforms yet — skip, don't fake publish
+          console.log(`[Publisher] Skipping content ${item.id} — no real API for ${item.platform} yet`);
+          skippedIds.push(item.id);
+          continue;
         }
 
-        // Real X posts get metrics from collect-signals; simulated posts start at 0
-        const isRealXPost = item.platform === "x" && externalPostId;
-        const metrics = isRealXPost ? null : getSimulatedMetrics();
-
-        // Mark as published
+        // Only real X posts reach here — mark as published with real data
         const { error: updateError } = await supabase
           .from('content')
           .update({ 
             status: 'published', 
             published_at: new Date().toISOString(),
-            impressions: metrics?.impressions ?? 0,
-            engagements: metrics?.engagements ?? 0,
-            clicks: metrics?.clicks ?? 0,
+            impressions: 0,
+            engagements: 0,
+            clicks: 0,
             external_post_id: externalPostId,
             external_url: externalUrl,
           })
