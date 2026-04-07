@@ -6,56 +6,27 @@ function getRedirectUri(supabaseUrl: string): string {
   const configuredRedirectUri = Deno.env.get("X_REDIRECT_URI")?.trim();
   const fallbackRedirectUri = `${supabaseUrl}/functions/v1/x-auth-callback`;
 
-  if (!configuredRedirectUri) {
-    return fallbackRedirectUri;
-  }
+  if (!configuredRedirectUri) return fallbackRedirectUri;
 
   try {
     const parsed = new URL(configuredRedirectUri);
-    const isLegacyLovableCallback =
-      parsed.hostname === "lovable.dev" && parsed.pathname === "/api/x/callback";
-
-    return isLegacyLovableCallback ? fallbackRedirectUri : configuredRedirectUri;
+    const isLegacy = parsed.hostname === "lovable.dev" && parsed.pathname === "/api/x/callback";
+    return isLegacy ? fallbackRedirectUri : configuredRedirectUri;
   } catch {
     return fallbackRedirectUri;
-  }
-}
-
-function getAppUrl(): string {
-  const configuredAppUrl = Deno.env.get("APP_URL")?.trim();
-
-  if (!configuredAppUrl) {
-    console.warn(`[XAuthCallback] APP_URL missing; using ${PUBLISHED_APP_URL}`);
-    return PUBLISHED_APP_URL;
-  }
-
-  try {
-    const origin = new URL(configuredAppUrl).origin;
-    if (origin !== PUBLISHED_APP_URL) {
-      console.warn(`[XAuthCallback] APP_URL mismatch (${origin}); using ${PUBLISHED_APP_URL}`);
-      return PUBLISHED_APP_URL;
-    }
-    return origin;
-  } catch {
-    console.warn(`[XAuthCallback] APP_URL invalid; using ${PUBLISHED_APP_URL}`);
-    return PUBLISHED_APP_URL;
   }
 }
 
 function buildRedirectUrl(appUrl: string, params: Record<string, string | null | undefined>) {
   const redirectUrl = new URL("/oauth/callback", appUrl);
-
   Object.entries(params).forEach(([key, value]) => {
-    if (value) {
-      redirectUrl.searchParams.set(key, value);
-    }
+    if (value) redirectUrl.searchParams.set(key, value);
   });
-
   return redirectUrl.toString();
 }
 
 Deno.serve(async (req) => {
-  const appUrl = getAppUrl();
+  let appUrl = PUBLISHED_APP_URL;
 
   try {
     const url = new URL(req.url);
@@ -71,49 +42,38 @@ Deno.serve(async (req) => {
     if (!clientId) throw new Error("X_CLIENT_ID is not configured");
     if (!clientSecret) throw new Error("X_CLIENT_SECRET is not configured");
 
+    // Parse state: state:userId:appId:encodedReturnTo
+    const stateParts = (state || "").split(":");
+    const storedState = stateParts[0] || "";
+    const userId = stateParts[1] || "";
+    const appId = stateParts[2] || null;
+    const returnTo = stateParts[3] ? decodeURIComponent(stateParts[3]) : null;
+
+    // Use return_to origin if provided
+    if (returnTo) {
+      try {
+        appUrl = new URL(returnTo).origin;
+        console.log(`[XAuthCallback] Using return_to origin: ${appUrl}`);
+      } catch {
+        console.warn(`[XAuthCallback] Invalid return_to, using default: ${appUrl}`);
+      }
+    }
+
     if (error) {
       console.error("[XAuthCallback] Provider error", JSON.stringify({ error, errorDescription }));
-      const finalRedirectUrl = buildRedirectUrl(appUrl, {
-        platform: "x",
-        status: "error",
-        error,
-        error_description: errorDescription,
-      });
-      console.log(`[XAuthCallback] Final redirect URL: ${finalRedirectUrl}`);
-      return Response.redirect(finalRedirectUrl, 302);
+      return Response.redirect(buildRedirectUrl(appUrl, {
+        platform: "x", status: "error", error, error_description: errorDescription,
+      }), 302);
     }
 
-    if (!code || !state) {
-      const finalRedirectUrl = buildRedirectUrl(appUrl, {
-        platform: "x",
-        status: "error",
-        error: "missing_params",
-      });
-      console.error("[XAuthCallback] Missing code or state params");
-      console.log(`[XAuthCallback] Final redirect URL: ${finalRedirectUrl}`);
-      return Response.redirect(finalRedirectUrl, 302);
+    if (!code || !userId) {
+      console.error("[XAuthCallback] Missing code or userId");
+      return Response.redirect(buildRedirectUrl(appUrl, {
+        platform: "x", status: "error", error: "missing_params",
+      }), 302);
     }
 
-    const stateParts = state.split(":");
-    const storedState = stateParts[0];
-    const userId = stateParts[1];
-    const appId = stateParts[2] || null;
-
-    if (!userId) {
-      const finalRedirectUrl = buildRedirectUrl(appUrl, {
-        platform: "x",
-        status: "error",
-        error: "invalid_state",
-      });
-      console.error("[XAuthCallback] Invalid state payload", state);
-      console.log(`[XAuthCallback] Final redirect URL: ${finalRedirectUrl}`);
-      return Response.redirect(finalRedirectUrl, 302);
-    }
-
-    const serviceClient = createClient(
-      supabaseUrl,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     let connectionQuery = serviceClient
       .from("platform_connections")
@@ -130,25 +90,18 @@ Deno.serve(async (req) => {
     const { data: connection } = await connectionQuery.single();
 
     if (!connection || connection.scope !== storedState) {
-      const finalRedirectUrl = buildRedirectUrl(appUrl, {
-        platform: "x",
-        status: "error",
-        error: "state_mismatch",
-        app_id: appId,
-      });
-      console.error("[XAuthCallback] State mismatch", JSON.stringify({ stored: connection?.scope, received: storedState }));
-      console.log(`[XAuthCallback] Final redirect URL: ${finalRedirectUrl}`);
-      return Response.redirect(finalRedirectUrl, 302);
+      console.error("[XAuthCallback] State mismatch", JSON.stringify({
+        stored: connection?.scope, received: storedState,
+      }));
+      return Response.redirect(buildRedirectUrl(appUrl, {
+        platform: "x", status: "error", error: "state_mismatch", app_id: appId,
+      }), 302);
     }
 
     const codeVerifier = connection.token_type;
     const redirectUri = getRedirectUri(supabaseUrl);
 
-    console.log("[XAuthCallback] Token exchange request", JSON.stringify({
-      redirectUri,
-      appUrl,
-      appId,
-    }));
+    console.log("[XAuthCallback] Token exchange request", JSON.stringify({ redirectUri, appUrl, appId }));
 
     const tokenResponse = await fetch("https://api.x.com/2/oauth2/token", {
       method: "POST",
@@ -173,14 +126,9 @@ Deno.serve(async (req) => {
 
     if (!tokenResponse.ok) {
       console.error("[XAuthCallback] Token exchange failed", JSON.stringify(tokenData));
-      const finalRedirectUrl = buildRedirectUrl(appUrl, {
-        platform: "x",
-        status: "error",
-        error: "token_exchange_failed",
-        app_id: appId,
-      });
-      console.log(`[XAuthCallback] Final redirect URL: ${finalRedirectUrl}`);
-      return Response.redirect(finalRedirectUrl, 302);
+      return Response.redirect(buildRedirectUrl(appUrl, {
+        platform: "x", status: "error", error: "token_exchange_failed", app_id: appId,
+      }), 302);
     }
 
     const profileResponse = await fetch("https://api.x.com/2/users/me", {
@@ -189,22 +137,16 @@ Deno.serve(async (req) => {
     const profileData = await profileResponse.json();
     const profile = profileData.data;
 
-    console.log("[XAuthCallback] Profile fetch result", JSON.stringify({
+    console.log("[XAuthCallback] Profile", JSON.stringify({
       status: profileResponse.status,
       username: profile?.username ?? null,
-      id: profile?.id ?? null,
     }));
 
     if (!profile) {
-      console.error("[XAuthCallback] Failed to fetch X profile", JSON.stringify(profileData));
-      const finalRedirectUrl = buildRedirectUrl(appUrl, {
-        platform: "x",
-        status: "error",
-        error: "profile_fetch_failed",
-        app_id: appId,
-      });
-      console.log(`[XAuthCallback] Final redirect URL: ${finalRedirectUrl}`);
-      return Response.redirect(finalRedirectUrl, 302);
+      console.error("[XAuthCallback] Profile fetch failed", JSON.stringify(profileData));
+      return Response.redirect(buildRedirectUrl(appUrl, {
+        platform: "x", status: "error", error: "profile_fetch_failed", app_id: appId,
+      }), 302);
     }
 
     const expiresAt = new Date(Date.now() + (tokenData.expires_in || 7200) * 1000).toISOString();
@@ -227,23 +169,14 @@ Deno.serve(async (req) => {
       { onConflict: "user_id,platform,app_id" },
     );
 
-    const finalRedirectUrl = buildRedirectUrl(appUrl, {
-      platform: "x",
-      status: "success",
-      connected: "x",
-      app_id: appId,
-    });
-
-    console.log(`[XAuthCallback] Final redirect URL: ${finalRedirectUrl}`);
-    return Response.redirect(finalRedirectUrl, 302);
+    console.log(`[XAuthCallback] Success, redirecting to ${appUrl}`);
+    return Response.redirect(buildRedirectUrl(appUrl, {
+      platform: "x", status: "success", connected: "x", app_id: appId,
+    }), 302);
   } catch (err) {
     console.error("Error in x-auth-callback:", err);
-    const finalRedirectUrl = buildRedirectUrl(appUrl, {
-      platform: "x",
-      status: "error",
-      error: "server_error",
-    });
-    console.log(`[XAuthCallback] Final redirect URL: ${finalRedirectUrl}`);
-    return Response.redirect(finalRedirectUrl, 302);
+    return Response.redirect(buildRedirectUrl(appUrl, {
+      platform: "x", status: "error", error: "server_error",
+    }), 302);
   }
 });
