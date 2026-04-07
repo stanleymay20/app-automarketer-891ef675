@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
 const SUPPORTED_PLATFORMS: Platform[] = ["x"];
+const ALL_PLATFORMS: Platform[] = ["x", "linkedin", "instagram", "facebook"];
 
 const platformConfig: Record<Platform, { name: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
   x: { name: "X (Twitter)", icon: Twitter, color: "bg-black text-white" },
@@ -31,7 +32,7 @@ const tokenStatusConfig = {
 export function PlatformConnections() {
   const { data: apps } = useApps();
   const [selectedAppId, setSelectedAppId] = useState<string | undefined>(undefined);
-  const { data: connections, isLoading } = usePlatformConnections(selectedAppId);
+  const { data: connections, isLoading, isError } = usePlatformConnections(selectedAppId);
   const { data: content } = useContent();
   const connectPlatform = useConnectPlatform();
   const disconnectPlatform = useDisconnectPlatform();
@@ -82,11 +83,21 @@ export function PlatformConnections() {
     disconnectedPlatforms.has(c.platform as Platform)
   );
 
-  if (isLoading) {
+  if (isLoading || !apps) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <p className="text-sm text-muted-foreground">Failed to load platform connections. Please refresh.</p>
         </CardContent>
       </Card>
     );
@@ -106,16 +117,35 @@ export function PlatformConnections() {
     });
   };
 
-  // Deduplicate: show app-specific connection if exists, otherwise user-level
   const deduplicatedConnections = (() => {
-    if (!connections) return [];
-    const byPlatform = new Map<string, typeof connections[number]>();
-    for (const conn of connections) {
+    const allConnections = connections || [];
+    const byPlatform = new Map<string, typeof allConnections[number]>();
+    
+    // First add temp entries for all platforms as defaults
+    for (const platform of ALL_PLATFORMS) {
+      byPlatform.set(platform, {
+        id: `temp-${platform}`,
+        user_id: "",
+        platform: platform as Platform,
+        connected: false,
+        connected_at: null,
+        account_name: null,
+        account_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        expires_at: null,
+        scope: null,
+        app_id: selectedAppId || null,
+      });
+    }
+    
+    // Then override with real connections
+    for (const conn of allConnections) {
       const existing = byPlatform.get(conn.platform);
-      if (!existing) {
+      if (!existing || existing.id.startsWith("temp-")) {
         byPlatform.set(conn.platform, conn);
-      } else if (conn.app_id === selectedAppId && existing.app_id !== selectedAppId) {
-        // Prefer app-specific over user-level
+      }
+      if (conn.app_id === selectedAppId && existing && !existing.id.startsWith("temp-") && existing.app_id !== selectedAppId) {
         byPlatform.set(conn.platform, conn);
       }
     }
