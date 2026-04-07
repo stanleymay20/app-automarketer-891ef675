@@ -116,23 +116,30 @@ Deno.serve(async (req) => {
     let accountId = "";
 
     const meResponse = await fetch(
-      "https://api.linkedin.com/v2/me?projection=(id,localizedFirstName,localizedLastName)",
+      "https://api.linkedin.com/v2/userinfo",
       { headers: { Authorization: `Bearer ${tokenData.access_token}` } },
     );
 
     if (meResponse.ok) {
       const meData = await meResponse.json();
-      accountId = meData.id || "";
-      accountName = `${meData.localizedFirstName || ""} ${meData.localizedLastName || ""}`.trim();
+      accountId = meData.sub || "";
+      accountName = meData.name || `${meData.given_name || ""} ${meData.family_name || ""}`.trim();
+      console.log("[LinkedInCallback] userinfo profile", JSON.stringify({ accountId, accountName }));
     } else {
-      const userinfoResponse = await fetch("https://api.linkedin.com/v2/userinfo", {
+      console.warn("[LinkedInCallback] /v2/userinfo failed, trying /v2/me");
+      const legacyResponse = await fetch("https://api.linkedin.com/v2/me?projection=(id,localizedFirstName,localizedLastName)", {
         headers: { Authorization: `Bearer ${tokenData.access_token}` },
       });
-      if (userinfoResponse.ok) {
-        const userinfoData = await userinfoResponse.json();
-        accountId = userinfoData.sub || "";
-        accountName = userinfoData.name || `${userinfoData.given_name || ""} ${userinfoData.family_name || ""}`.trim();
+      if (legacyResponse.ok) {
+        const legacyData = await legacyResponse.json();
+        accountId = legacyData.id || "";
+        accountName = `${legacyData.localizedFirstName || ""} ${legacyData.localizedLastName || ""}`.trim();
+        console.log("[LinkedInCallback] /v2/me profile", JSON.stringify({ accountId, accountName }));
       }
+    }
+
+    if (!accountId) {
+      console.error("[LinkedInCallback] Could not resolve account_id from any endpoint");
     }
 
     const expiresIn = tokenData.expires_in || 5184000;
