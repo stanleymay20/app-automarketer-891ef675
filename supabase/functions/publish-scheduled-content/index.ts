@@ -194,6 +194,13 @@ Deno.serve(async (req) => {
       throw fetchError;
     }
 
+    // Normalize platform names for comparison (handle legacy "X", "LinkedIn" etc.)
+    const normalizeContentPlatforms = (items: typeof contentToPublish) =>
+      items?.map(item => ({
+        ...item,
+        platform: item.platform.toLowerCase().replace("x (twitter)", "x").replace("twitter", "x"),
+      })) || [];
+
     if (!contentToPublish || contentToPublish.length === 0) {
       console.log('[Publisher] No content ready to publish');
       return new Response(
