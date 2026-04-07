@@ -209,7 +209,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[Publisher] Found ${contentToPublish.length} items to publish`);
+    const normalizedContent = normalizeContentPlatforms(contentToPublish);
+    console.log(`[Publisher] Found ${normalizedContent.length} items to publish`);
 
     const publishedIds: string[] = [];
     const skippedIds: string[] = [];
