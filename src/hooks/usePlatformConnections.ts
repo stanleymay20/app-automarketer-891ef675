@@ -100,9 +100,16 @@ export function useConnectPlatform() {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Failed to start OAuth");
 
-        const authWindow = window.open(result.url, "_blank");
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        if (isMobile) {
+          window.location.assign(result.url);
+          return null;
+        }
+
+        const authWindow = window.open(result.url, "_blank", "noopener,noreferrer");
         if (!authWindow) {
-          window.location.href = result.url;
+          window.location.assign(result.url);
         }
         return null;
       }
