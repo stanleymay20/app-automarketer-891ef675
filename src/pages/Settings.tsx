@@ -1,23 +1,36 @@
- import { useSearchParams } from "react-router-dom";
- import { DashboardLayout } from "@/components/layout/DashboardLayout";
- import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
- import { Button } from "@/components/ui/button";
- import { Input } from "@/components/ui/input";
- import { Label } from "@/components/ui/label";
- import { Switch } from "@/components/ui/switch";
- import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
- import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
- import { PlatformConnections } from "@/components/settings/PlatformConnections";
- import { AutomationPolicySettings } from "@/components/settings/AutomationPolicySettings";
- import { GrowthGoalsSection } from "@/components/settings/GrowthGoalsSection";
- import { useUserSettings, useUpdateUserSettings } from "@/hooks/useUserSettings";
- import { useAuth } from "@/contexts/AuthContext";
+import { useSearchParams } from "react-router-dom";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlatformConnections } from "@/components/settings/PlatformConnections";
+import { AutomationPolicySettings } from "@/components/settings/AutomationPolicySettings";
+import { GrowthGoalsSection } from "@/components/settings/GrowthGoalsSection";
+import { useUserSettings, useUpdateUserSettings } from "@/hooks/useUserSettings";
+import { useAuth } from "@/contexts/AuthContext";
 
 const PLAN_LIMITS: Record<string, { apps: string; posts: string; platforms: string }> = {
   free: { apps: "1", posts: "10", platforms: "X (Twitter)" },
   starter: { apps: "3", posts: "100", platforms: "All" },
   pro: { apps: "Unlimited", posts: "Unlimited", platforms: "All" },
 };
+
+type NotificationKey =
+  | "notification_content_ready"
+  | "notification_post_published"
+  | "notification_weekly_report"
+  | "notification_engagement_alerts";
+
+const NOTIFICATION_SETTINGS: { key: NotificationKey; title: string; desc: string }[] = [
+  { key: "notification_content_ready", title: "Content Ready for Approval", desc: "Get notified when new content is generated" },
+  { key: "notification_post_published", title: "Post Published", desc: "Confirmation when content goes live" },
+  { key: "notification_weekly_report", title: "Weekly Performance Report", desc: "Summary of your marketing performance" },
+  { key: "notification_engagement_alerts", title: "Engagement Alerts", desc: "Notify when posts get high engagement" },
+];
 
 function PlanDetailsFromSettings({ plan }: { plan: string }) {
   const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
@@ -40,15 +53,19 @@ function PlanDetailsFromSettings({ plan }: { plan: string }) {
 }
 
 export default function Settings() {
-   const [searchParams] = useSearchParams();
-   const defaultTab = searchParams.get("tab") || "general";
-   const { user } = useAuth();
-   const { data: settings } = useUserSettings();
-   const updateSettings = useUpdateUserSettings();
- 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "general";
+  const { user } = useAuth();
+  const { data: settings } = useUserSettings();
+  const updateSettings = useUpdateUserSettings();
+
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value }, { replace: true });
+  };
+
   return (
     <DashboardLayout title="Settings">
-       <Tabs defaultValue={defaultTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-6 flex-wrap">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="autonomy">Autonomy</TabsTrigger>
@@ -58,7 +75,7 @@ export default function Settings() {
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
-           <Card className="shadow-card">
+          <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="font-display">Profile Settings</CardTitle>
               <CardDescription>Your account information.</CardDescription>
@@ -84,13 +101,13 @@ export default function Settings() {
                 <div>
                   <p className="font-medium">Autopilot Mode</p>
                   <p className="text-sm text-muted-foreground">
-                    Automatically post content without approval
+                    Automatically approve content without manual review
                   </p>
                 </div>
-                 <Switch 
-                   checked={settings?.autopilot_mode ?? false}
-                   onCheckedChange={(checked) => updateSettings.mutate({ autopilot_mode: checked, approval_mode: !checked })}
-                 />
+                <Switch
+                  checked={settings?.autopilot_mode ?? false}
+                  onCheckedChange={(checked) => updateSettings.mutate({ autopilot_mode: checked, approval_mode: !checked })}
+                />
               </div>
               <div className="flex items-center justify-between">
                 <div>
@@ -99,17 +116,17 @@ export default function Settings() {
                     AI chooses optimal posting times
                   </p>
                 </div>
-                 <Switch 
-                   checked={settings?.smart_scheduling ?? true}
-                   onCheckedChange={(checked) => updateSettings.mutate({ smart_scheduling: checked })}
-                 />
+                <Switch
+                  checked={settings?.smart_scheduling ?? true}
+                  onCheckedChange={(checked) => updateSettings.mutate({ smart_scheduling: checked })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Default Brand Tone</Label>
-                 <Select 
-                   value={settings?.default_brand_tone ?? "professional"}
-                   onValueChange={(value) => updateSettings.mutate({ default_brand_tone: value })}
-                 >
+                <Select
+                  value={settings?.default_brand_tone ?? "professional"}
+                  onValueChange={(value) => updateSettings.mutate({ default_brand_tone: value })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -131,7 +148,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="platforms" className="space-y-6">
-           <PlatformConnections />
+          <PlatformConnections />
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
@@ -141,31 +158,18 @@ export default function Settings() {
               <CardDescription>Choose what notifications you receive.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {[
-                { title: "Content Ready for Approval", desc: "Get notified when new content is generated" },
-                { title: "Post Published", desc: "Confirmation when content goes live" },
-                { title: "Weekly Performance Report", desc: "Summary of your marketing performance" },
-                { title: "Engagement Alerts", desc: "Notify when posts get high engagement" },
-               ].map((notification, index) => {
-                 const settingKeys = [
-                   "notification_content_ready",
-                   "notification_post_published", 
-                   "notification_weekly_report",
-                   "notification_engagement_alerts"
-                 ] as const;
-                 const key = settingKeys[index];
-                 return (
-                 <div key={notification.title} className="flex items-center justify-between">
+              {NOTIFICATION_SETTINGS.map((notification) => (
+                <div key={notification.key} className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{notification.title}</p>
                     <p className="text-sm text-muted-foreground">{notification.desc}</p>
                   </div>
-                   <Switch 
-                     checked={(settings as any)?.[key] ?? true}
-                     onCheckedChange={(checked) => updateSettings.mutate({ [key]: checked })}
-                   />
+                  <Switch
+                    checked={settings?.[notification.key] ?? true}
+                    onCheckedChange={(checked) => updateSettings.mutate({ [notification.key]: checked })}
+                  />
                 </div>
-               )})}
+              ))}
             </CardContent>
           </Card>
         </TabsContent>

@@ -58,6 +58,7 @@ export function useUpdateUserSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user_settings"] });
+      toast({ title: "Settings saved" });
     },
     onError: (error) => {
       toast({
