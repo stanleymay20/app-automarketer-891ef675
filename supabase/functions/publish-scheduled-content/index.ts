@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
     const skippedIds: string[] = [];
     const errors: { id: string; error: string }[] = [];
 
-    for (const item of contentToPublish) {
+    for (const item of normalizedContent) {
       try {
         console.log(`[Publisher] Processing ${item.platform} content ${item.id} for user ${item.user_id}`);
 
