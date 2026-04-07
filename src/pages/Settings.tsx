@@ -170,20 +170,7 @@ export default function Settings() {
                   <Button variant="outline" disabled>Upgrade (Coming Soon)</Button>
                 </div>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Apps included</span>
-                  <span className="font-medium">Unlimited</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Posts per month</span>
-                  <span className="font-medium">500</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Platforms</span>
-                  <span className="font-medium">All</span>
-                </div>
-              </div>
+              <PlanDetailsFromSettings plan={settings?.plan || "free"} />
             </CardContent>
           </Card>
         </TabsContent>
