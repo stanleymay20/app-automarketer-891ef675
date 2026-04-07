@@ -5,10 +5,12 @@ import { usePlatformConnections, useConnectPlatform, useDisconnectPlatform, Plat
 import { Loader2, Link2, Unlink, Twitter, Linkedin, Instagram, Facebook, AlertCircle, RefreshCw } from "lucide-react";
 import { useContent } from "@/hooks/useContent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+
+const SUPPORTED_PLATFORMS: Platform[] = ["x"];
 
 const platformConfig: Record<Platform, { name: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
   x: { name: "X (Twitter)", icon: Twitter, color: "bg-black text-white" },
@@ -31,6 +33,7 @@ export function PlatformConnections() {
   const disconnectPlatform = useDisconnectPlatform();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const [actionPlatform, setActionPlatform] = useState<Platform | null>(null);
 
   // Handle OAuth callback params
   useEffect(() => {
@@ -40,7 +43,6 @@ export function PlatformConnections() {
     if (connected === "x") {
       toast.success("Successfully connected to X (Twitter)!");
       queryClient.invalidateQueries({ queryKey: ["platform-connections"] });
-      // Preserve tab param when clearing OAuth params
       setSearchParams({ tab: "platforms" }, { replace: true });
     } else if (error) {
       const messages: Record<string, string> = {
@@ -49,6 +51,8 @@ export function PlatformConnections() {
         state_mismatch: "Security check failed. Please try connecting again.",
         profile_fetch_failed: "Connected but couldn't fetch your profile. Try again.",
         server_error: "Something went wrong. Please try again.",
+        missing_params: "OAuth response was incomplete. Please try again.",
+        invalid_state: "Invalid OAuth state. Please try connecting again.",
       };
       toast.error(messages[error] || `Connection error: ${error}`);
       setSearchParams({ tab: "platforms" }, { replace: true });
@@ -77,6 +81,20 @@ export function PlatformConnections() {
     );
   }
 
+  const handleConnect = (platform: Platform) => {
+    setActionPlatform(platform);
+    connectPlatform.mutate(platform, {
+      onSettled: () => setActionPlatform(null),
+    });
+  };
+
+  const handleDisconnect = (platform: Platform) => {
+    setActionPlatform(platform);
+    disconnectPlatform.mutate(platform, {
+      onSettled: () => setActionPlatform(null),
+    });
+  };
+
   return (
     <div className="space-y-4">
       {warningContent.length > 0 && (
@@ -98,10 +116,12 @@ export function PlatformConnections() {
         </CardHeader>
         <CardContent className="space-y-4">
           {connections?.map((connection) => {
-            const config = platformConfig[connection.platform as Platform];
+            const config = platformConfig[connection.platform];
+            if (!config) return null;
             const Icon = config.icon;
-            const isConnecting = connectPlatform.isPending;
-            const isDisconnecting = disconnectPlatform.isPending;
+            const isSupported = SUPPORTED_PLATFORMS.includes(connection.platform);
+            const isThisConnecting = actionPlatform === connection.platform && connectPlatform.isPending;
+            const isThisDisconnecting = actionPlatform === connection.platform && disconnectPlatform.isPending;
             const status = getTokenStatus(connection);
             const statusConfig = tokenStatusConfig[status];
 
@@ -115,11 +135,17 @@ export function PlatformConnections() {
                     <Icon className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium">{config.name}</span>
-                      <Badge variant="outline" className={statusConfig.className}>
-                        {statusConfig.label}
-                      </Badge>
+                      {isSupported ? (
+                        <Badge variant="outline" className={statusConfig.className}>
+                          {statusConfig.label}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-muted text-muted-foreground">
+                          Coming Soon
+                        </Badge>
+                      )}
                     </div>
                     {connection.connected && connection.account_name && (
                       <p className="text-sm text-muted-foreground">{connection.account_name}</p>
@@ -127,51 +153,60 @@ export function PlatformConnections() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  {status === "expired" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => connectPlatform.mutate(connection.platform as Platform)}
-                      disabled={isConnecting}
-                      className="gap-2"
-                    >
-                      {isConnecting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-4 w-4" />
-                      )}
-                      Reconnect
-                    </Button>
-                  )}
-                  {connection.connected ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => disconnectPlatform.mutate(connection.platform as Platform)}
-                      disabled={isDisconnecting}
-                      className="gap-2"
-                    >
-                      {isDisconnecting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Unlink className="h-4 w-4" />
-                      )}
-                      Disconnect
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => connectPlatform.mutate(connection.platform as Platform)}
-                      disabled={isConnecting}
-                      className="gap-2"
-                    >
-                      {isConnecting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Link2 className="h-4 w-4" />
-                      )}
+                  {!isSupported ? (
+                    <Button size="sm" variant="outline" disabled className="gap-2">
+                      <Link2 className="h-4 w-4" />
                       Connect
                     </Button>
+                  ) : (
+                    <>
+                      {status === "expired" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleConnect(connection.platform)}
+                          disabled={isThisConnecting}
+                          className="gap-2"
+                        >
+                          {isThisConnecting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                          Reconnect
+                        </Button>
+                      )}
+                      {connection.connected ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDisconnect(connection.platform)}
+                          disabled={isThisDisconnecting}
+                          className="gap-2"
+                        >
+                          {isThisDisconnecting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Unlink className="h-4 w-4" />
+                          )}
+                          Disconnect
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleConnect(connection.platform)}
+                          disabled={isThisConnecting}
+                          className="gap-2"
+                        >
+                          {isThisConnecting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Link2 className="h-4 w-4" />
+                          )}
+                          Connect
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

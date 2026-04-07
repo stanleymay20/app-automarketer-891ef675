@@ -14,8 +14,11 @@ Deno.serve(async (req) => {
     if (!clientId) throw new Error("X_CLIENT_ID is not configured");
     if (!clientSecret) throw new Error("X_CLIENT_SECRET is not configured");
 
-    // Determine the app URL for redirects
-    const appUrl = Deno.env.get("APP_URL") || "https://id-preview--130c11f0-d7a3-425d-8777-403d718af1e7.lovable.app";
+    // Determine the app URL for redirects — use APP_URL env, or derive from Referer/Origin
+    const appUrl = Deno.env.get("APP_URL") 
+      || req.headers.get("referer")?.replace(/\/settings.*$/, "")
+      || req.headers.get("origin")
+      || "https://app-automarketer.lovable.app";
 
     if (error) {
       console.error("X OAuth error:", error);
@@ -113,7 +116,7 @@ Deno.serve(async (req) => {
     return Response.redirect(`${appUrl}/settings?tab=platforms&connected=x`, 302);
   } catch (err) {
     console.error("Error in x-auth-callback:", err);
-    const appUrl = Deno.env.get("APP_URL") || "https://id-preview--130c11f0-d7a3-425d-8777-403d718af1e7.lovable.app";
+    const appUrl = Deno.env.get("APP_URL") || "https://app-automarketer.lovable.app";
     return Response.redirect(`${appUrl}/settings?tab=platforms&error=server_error`, 302);
   }
 });

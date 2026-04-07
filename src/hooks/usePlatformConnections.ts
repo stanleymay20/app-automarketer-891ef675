@@ -122,6 +122,18 @@ export function useDisconnectPlatform() {
     mutationFn: async (platform: Platform) => {
       if (!user) throw new Error("Not authenticated");
 
+      // Check if a real DB record exists (temp connections start with "temp-")
+      const { data: existing } = await supabase
+        .from("platform_connections")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("platform", platform)
+        .maybeSingle();
+
+      if (!existing) {
+        throw new Error("No connection to disconnect");
+      }
+
       const { error } = await supabase
         .from("platform_connections")
         .update({
