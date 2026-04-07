@@ -1,5 +1,24 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+function getRedirectUri(supabaseUrl: string): string {
+  const configuredRedirectUri = Deno.env.get("X_REDIRECT_URI")?.trim();
+  const fallbackRedirectUri = `${supabaseUrl}/functions/v1/x-auth-callback`;
+
+  if (!configuredRedirectUri) {
+    return fallbackRedirectUri;
+  }
+
+  try {
+    const parsed = new URL(configuredRedirectUri);
+    const isLegacyLovableCallback =
+      parsed.hostname === "lovable.dev" && parsed.pathname === "/api/x/callback";
+
+    return isLegacyLovableCallback ? fallbackRedirectUri : configuredRedirectUri;
+  } catch {
+    return fallbackRedirectUri;
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
@@ -53,7 +72,7 @@ Deno.serve(async (req) => {
     }
 
     const codeVerifier = connection.token_type;
-    const redirectUri = Deno.env.get("X_REDIRECT_URI") || `${supabaseUrl}/functions/v1/x-auth-callback`;
+    const redirectUri = getRedirectUri(supabaseUrl);
 
     // Exchange code for tokens
     const tokenResponse = await fetch("https://api.x.com/2/oauth2/token", {
