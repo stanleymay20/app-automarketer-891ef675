@@ -51,7 +51,7 @@ export function PlatformConnections() {
         server_error: "Something went wrong. Please try again.",
       };
       toast.error(messages[error] || `Connection error: ${error}`);
-      setSearchParams({}, { replace: true });
+      setSearchParams({ tab: "platforms" }, { replace: true });
     }
   }, [searchParams, setSearchParams, queryClient]);
 

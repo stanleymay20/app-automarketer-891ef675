@@ -66,6 +66,7 @@ export function usePlatformConnections() {
 
 export function useConnectPlatform() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (platform: Platform) => {
