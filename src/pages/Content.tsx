@@ -178,6 +178,11 @@ export default function Content() {
                           View on X
                         </a>
                       )}
+                      {!externalUrl && item.status === "published" && (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          Simulated (no live link)
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-foreground whitespace-pre-wrap">{item.content_text}</p>
                     
