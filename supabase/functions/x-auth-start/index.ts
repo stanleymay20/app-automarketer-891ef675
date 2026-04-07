@@ -135,6 +135,7 @@ Deno.serve(async (req) => {
     authUrl.searchParams.set("state", statePayload);
     authUrl.searchParams.set("code_challenge", codeChallenge);
     authUrl.searchParams.set("code_challenge_method", "S256");
+    authUrl.searchParams.set("force_login", "true");
 
     return new Response(JSON.stringify({ url: authUrl.toString() }), {
       status: 200,
