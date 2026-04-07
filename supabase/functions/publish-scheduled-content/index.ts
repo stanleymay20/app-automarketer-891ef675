@@ -260,8 +260,10 @@ Deno.serve(async (req) => {
             continue;
           }
         } else {
-          // Simulated publish for other platforms (no real API yet)
-          console.log(`[Publisher] Simulated publish to ${item.platform}: "${item.content_text.substring(0, 50)}..."`);
+          // No real API for non-X platforms yet — skip, don't fake publish
+          console.log(`[Publisher] Skipping content ${item.id} — no real API for ${item.platform} yet`);
+          skippedIds.push(item.id);
+          continue;
         }
 
         // Real X posts get metrics from collect-signals; simulated posts start at 0
