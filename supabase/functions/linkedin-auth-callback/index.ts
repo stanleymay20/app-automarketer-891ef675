@@ -10,6 +10,24 @@ function buildRedirectUrl(appUrl: string, params: Record<string, string | null |
   return redirectUrl.toString();
 }
 
+function parseJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const [, payload] = token.split(".");
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), "=");
+    const decoded = atob(padded);
+    return JSON.parse(decoded) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeLinkedInPersonId(value: unknown): string {
+  const raw = typeof value === "string" ? value.trim() : "";
+  return raw.replace(/^urn:li:person:/, "");
+}
+
 Deno.serve(async (req) => {
   let appUrl = PUBLISHED_APP_URL;
 
