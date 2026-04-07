@@ -6,6 +6,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const MAX_RETRIES = 3;
+const INITIAL_DELAY_MS = 2000;
+
+async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const response = await fetch(url, options);
+    if (response.status !== 429 || attempt === retries) return response;
+    const delay = INITIAL_DELAY_MS * Math.pow(2, attempt);
+    console.warn(`[generate-post-image] 429 hit, retrying in ${delay}ms (attempt ${attempt + 1}/${retries})`);
+    await new Promise((r) => setTimeout(r, delay));
+  }
+  throw new Error("unreachable");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -39,7 +53,7 @@ The image should be a modern, clean design that complements this marketing post 
 
 Style: Professional marketing graphic, modern minimalist design, bold colors, no text overlays, abstract or conceptual imagery that evokes the theme of the post. High quality, suitable for social media.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
