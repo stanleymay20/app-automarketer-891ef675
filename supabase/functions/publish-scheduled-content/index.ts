@@ -6,14 +6,6 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Non-X platforms are simulated — no real API calls, so no real metrics
-function getSimulatedMetrics() {
-  return {
-    impressions: 0,
-    engagements: 0,
-    clicks: 0,
-  };
-}
 
 interface PublishResult {
   success: boolean;
