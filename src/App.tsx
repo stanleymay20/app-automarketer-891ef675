@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
+import CreatePost from "./pages/CreatePost";
 import Onboarding from "./pages/Onboarding";
 import Apps from "./pages/Apps";
 import Content from "./pages/Content";
