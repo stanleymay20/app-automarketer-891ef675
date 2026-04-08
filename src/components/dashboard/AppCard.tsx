@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Users, TrendingUp, MoreVertical, Sparkles, Loader2 } from "lucide-react";
+import { FileText, Users, TrendingUp, MoreVertical, Sparkles, Loader2, Eye } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,8 @@ import { useDeleteApp } from "@/hooks/useApps";
 import { useGenerateContent } from "@/hooks/useGenerateContent";
 import { Link } from "react-router-dom";
 import { App } from "@/hooks/useApps";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AppCardProps {
   id: string;
@@ -22,9 +24,29 @@ interface AppCardProps {
   platforms?: string[];
 }
 
-export function AppCard({ id, name, description, posts, engagements, traffic, platforms }: AppCardProps) {
+export function AppCard({ id, name, description, posts, platforms }: AppCardProps) {
   const deleteApp = useDeleteApp();
   const { generateContent, isGenerating } = useGenerateContent();
+
+  // Fetch real metrics from content table for this app
+  const { data: metrics } = useQuery({
+    queryKey: ["app-metrics", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("content")
+        .select("impressions, engagements, clicks, status")
+        .eq("app_id", id)
+        .eq("status", "published");
+
+      if (error) throw error;
+
+      const totalImpressions = (data || []).reduce((sum, c) => sum + (c.impressions || 0), 0);
+      const totalEngagements = (data || []).reduce((sum, c) => sum + (c.engagements || 0), 0);
+      const totalClicks = (data || []).reduce((sum, c) => sum + (c.clicks || 0), 0);
+
+      return { impressions: totalImpressions, engagements: totalEngagements, clicks: totalClicks };
+    },
+  });
 
   const handleGenerateContent = async () => {
     await generateContent({
@@ -32,11 +54,17 @@ export function AppCard({ id, name, description, posts, engagements, traffic, pl
       name,
       description,
       posts_count: posts,
-      engagements_count: engagements,
-      traffic_count: traffic,
+      engagements_count: metrics?.engagements || 0,
+      traffic_count: metrics?.clicks || 0,
       platforms: platforms || [],
     } as App);
   };
+
+  function formatNumber(num: number): string {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+    if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+    return num.toString();
+  }
 
   return (
     <Card className="group relative overflow-hidden shadow-card transition-all duration-200 hover:shadow-card-hover">
@@ -90,21 +118,21 @@ export function AppCard({ id, name, description, posts, engagements, traffic, pl
 
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
-            <p className="text-lg font-bold text-foreground">{posts}</p>
+            <p className="text-lg font-bold text-foreground">{formatNumber(metrics?.impressions || 0)}</p>
             <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
-              <FileText className="h-2.5 w-2.5" /> Posts
+              <Eye className="h-2.5 w-2.5" /> Views
             </p>
           </div>
           <div>
-            <p className="text-lg font-bold text-foreground">{engagements.toLocaleString()}</p>
+            <p className="text-lg font-bold text-foreground">{formatNumber(metrics?.engagements || 0)}</p>
             <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
               <Users className="h-2.5 w-2.5" /> Engage
             </p>
           </div>
           <div>
-            <p className="text-lg font-bold text-foreground">{traffic.toLocaleString()}</p>
+            <p className="text-lg font-bold text-foreground">{formatNumber(metrics?.clicks || 0)}</p>
             <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
-              <TrendingUp className="h-2.5 w-2.5" /> Traffic
+              <TrendingUp className="h-2.5 w-2.5" /> Clicks
             </p>
           </div>
         </div>
