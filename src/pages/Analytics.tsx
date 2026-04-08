@@ -1,7 +1,9 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Eye, MousePointerClick, Users, Share2, Loader2, BarChart3 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Eye, MousePointerClick, Users, TrendingUp, TrendingDown, Loader2, BarChart3, ArrowRight } from "lucide-react";
 import { useContentAnalytics, useWeeklyTrend } from "@/hooks/useAnalytics";
+import { useContent } from "@/hooks/useContent";
+import { Badge } from "@/components/ui/badge";
 import {
   LineChart,
   Line,
@@ -11,6 +13,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 function formatNumber(num: number): string {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
@@ -18,57 +22,46 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
-function formatTrend(value: number): string {
-  if (value > 0) return `+${value.toFixed(0)}%`;
-  if (value < 0) return `${value.toFixed(0)}%`;
-  return "0%";
-}
-
 export default function Analytics() {
   const { data: analytics, isLoading: analyticsLoading } = useContentAnalytics();
   const { data: trend, isLoading: trendLoading } = useWeeklyTrend();
+  const { data: content } = useContent();
 
   const isLoading = analyticsLoading || trendLoading;
+  const hasData = (analytics?.totalPosts || 0) > 0;
 
-  const overviewStats = [
-    { 
-      label: "Impressions", 
-      value: formatNumber(analytics?.totalImpressions || 0), 
-      change: trend?.impressionsChange || 0,
-      icon: Eye 
-    },
-    { 
-      label: "Engagements", 
-      value: formatNumber(analytics?.totalEngagements || 0), 
-      change: trend?.engagementsChange || 0,
-      icon: MousePointerClick 
-    },
-    { 
-      label: "Clicks", 
-      value: formatNumber(analytics?.totalClicks || 0), 
-      change: trend?.clicksChange || 0,
-      icon: Users 
-    },
-    { 
-      label: "Posts", 
-      value: formatNumber(analytics?.totalPosts || 0), 
-      change: trend?.postsChange || 0,
-      icon: Share2 
-    },
+  // Find top post
+  const publishedPosts = (content || []).filter((c) => c.status === "published");
+  const topPost = publishedPosts.sort((a, b) => (b.impressions || 0) - (a.impressions || 0))[0];
+
+  const stats = [
+    { label: "Views", value: analytics?.totalImpressions || 0, change: trend?.impressionsChange || 0, icon: Eye },
+    { label: "Engagements", value: analytics?.totalEngagements || 0, change: trend?.engagementsChange || 0, icon: MousePointerClick },
+    { label: "Clicks", value: analytics?.totalClicks || 0, change: trend?.clicksChange || 0, icon: Users },
   ];
 
   const weeklyData = (trend?.weeklyData || []).map((w) => ({
     name: new Date(w.weekStart).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    impressions: w.impressions,
+    views: w.impressions,
     engagements: w.engagements,
     clicks: w.clicks,
   }));
 
-  const hasData = (analytics?.totalPosts || 0) > 0;
+  // Simple insight message
+  const engagementRate = (analytics?.totalImpressions || 0) > 0
+    ? ((analytics?.totalEngagements || 0) / (analytics?.totalImpressions || 1) * 100)
+    : 0;
+  
+  let insightMessage = "Start publishing to see how your content performs.";
+  if (hasData) {
+    if (engagementRate > 5) insightMessage = "🔥 Your content is performing great! Keep this momentum going.";
+    else if (engagementRate > 2) insightMessage = "📈 Solid engagement. Try stronger hooks to boost it further.";
+    else insightMessage = "💡 Tip: Posts with a strong opening hook get 2x more engagement.";
+  }
 
   return (
-    <DashboardLayout title="Analytics">
-      <div className="space-y-6">
+    <DashboardLayout title="Performance">
+      <div className="space-y-6 max-w-3xl mx-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -76,93 +69,97 @@ export default function Analytics() {
         ) : !hasData ? (
           <div className="rounded-xl border-2 border-dashed border-border bg-muted/30 p-12 text-center">
             <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="font-display text-lg font-semibold mb-2">No analytics data yet</h3>
-            <p className="text-muted-foreground">
-              Publish some content to start tracking performance metrics.
-            </p>
+            <h3 className="font-display text-lg font-semibold mb-2">No performance data yet</h3>
+            <p className="text-muted-foreground mb-4">Publish your first post to start tracking results.</p>
+            <Link to="/create">
+              <Button className="gap-1.5">
+                Create a Post <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         ) : (
           <>
-            {/* 4 Key Metrics with Week-over-Week Trends */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {overviewStats.map((stat) => {
+            {/* Insight Banner */}
+            <Card className="bg-gradient-to-r from-primary/5 to-info/5 border-primary/10">
+              <CardContent className="p-4">
+                <p className="text-sm font-medium text-foreground">{insightMessage}</p>
+              </CardContent>
+            </Card>
+
+            {/* Key Metrics */}
+            <div className="grid gap-3 grid-cols-3">
+              {stats.map((stat) => {
                 const isUp = stat.change >= 0;
                 return (
                   <Card key={stat.label} className="shadow-card">
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <div className="rounded-lg bg-accent p-3">
-                        <stat.icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">{stat.label}</p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                          <span
-                            className={`flex items-center text-xs font-medium ${
-                              isUp ? "text-success" : "text-destructive"
-                            }`}
-                          >
-                            {isUp ? (
-                              <TrendingUp className="mr-0.5 h-3 w-3" />
-                            ) : (
-                              <TrendingDown className="mr-0.5 h-3 w-3" />
-                            )}
-                            {formatTrend(stat.change)}
-                          </span>
+                    <CardContent className="p-4 text-center space-y-1">
+                      <stat.icon className="h-5 w-5 text-muted-foreground mx-auto" />
+                      <p className="text-2xl font-bold text-foreground">{formatNumber(stat.value)}</p>
+                      <p className="text-xs text-muted-foreground">{stat.label}</p>
+                      {stat.change !== 0 && (
+                        <div className={`flex items-center justify-center gap-0.5 text-[10px] font-medium ${isUp ? "text-success" : "text-destructive"}`}>
+                          {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {isUp ? "+" : ""}{stat.change.toFixed(0)}% vs last week
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">vs last week</p>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
               })}
             </div>
 
-            {/* Weekly Performance Chart */}
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="font-display">Weekly Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {weeklyData.length > 0 ? (
-                  <div className="h-72">
+            {/* Trend Chart */}
+            {weeklyData.length > 1 && (
+              <Card className="shadow-card">
+                <CardContent className="p-4">
+                  <h3 className="font-display text-sm font-semibold mb-4">Performance Trend</h3>
+                  <div className="h-52">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={weeklyData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="name" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
-                        <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                         <Tooltip
                           contentStyle={{
                             backgroundColor: "hsl(var(--card))",
                             border: "1px solid hsl(var(--border))",
                             borderRadius: "8px",
+                            fontSize: "12px",
                           }}
                         />
-                        <Line type="monotone" dataKey="impressions" stroke="hsl(var(--info))" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="views" stroke="hsl(var(--info))" strokeWidth={2} dot={false} />
                         <Line type="monotone" dataKey="engagements" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="clicks" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">No weekly data available yet.</p>
-                )}
-                <div className="mt-4 flex justify-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-info" />
-                    <span className="text-sm text-muted-foreground">Impressions</span>
+                  <div className="mt-3 flex justify-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2 w-2 rounded-full bg-info" />
+                      <span className="text-xs text-muted-foreground">Views</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2 w-2 rounded-full bg-success" />
+                      <span className="text-xs text-muted-foreground">Engagements</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-success" />
-                    <span className="text-sm text-muted-foreground">Engagements</span>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Top Post */}
+            {topPost && (
+              <Card className="shadow-card">
+                <CardContent className="p-4 space-y-2">
+                  <h3 className="font-display text-sm font-semibold">🏆 Top Post This Week</h3>
+                  <p className="text-sm text-foreground line-clamp-3">{topPost.content_text}</p>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <Badge variant="secondary" className="text-[10px]">{topPost.platform}</Badge>
+                    <span>{formatNumber(topPost.impressions || 0)} views</span>
+                    <span>{formatNumber(topPost.engagements || 0)} engagements</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-primary" />
-                    <span className="text-sm text-muted-foreground">Clicks</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </div>
