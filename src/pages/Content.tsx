@@ -58,6 +58,7 @@ function getScoreVariant(score: number, invert = false): "good" | "warn" | "bad"
 }
 
 export default function Content() {
+  const [publishingId, setPublishingId] = useState<string | null>(null);
   const { data: content, isLoading } = useContent();
   const { data: apps } = useApps();
   const { data: connections } = usePlatformConnections();
