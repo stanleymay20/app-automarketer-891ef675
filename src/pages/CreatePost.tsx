@@ -47,6 +47,7 @@ export default function CreatePost() {
   const { data: allContent } = useContent();
   const approveContent = useApproveContent();
   const publishNow = usePublishNow();
+  const [publishingId, setPublishingId] = useState<string | null>(null);
   const { data: connections } = usePlatformConnections();
   const connectPlatform = useConnectPlatform();
 
