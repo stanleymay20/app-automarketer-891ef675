@@ -81,7 +81,10 @@ export default function CreatePost() {
       setShowConnectModal(true);
       return;
     }
-    publishNow.mutate(postId);
+    setPublishingId(postId);
+    publishNow.mutate(postId, {
+      onSettled: () => setPublishingId(null),
+    });
   };
 
   const handleConnect = (platform: Platform) => {
