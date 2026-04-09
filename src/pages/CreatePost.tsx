@@ -242,9 +242,9 @@ export default function CreatePost() {
                             size="sm"
                             className="flex-1 gap-1.5"
                             onClick={() => handlePublish(post.id, post.platform)}
-                            disabled={publishNow.isPending || (!isApproved && post.status !== "approved")}
+                            disabled={publishingId === post.id || (!isApproved && post.status !== "approved")}
                           >
-                            {publishNow.isPending ? (
+                            {publishingId === post.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                               <Send className="h-3.5 w-3.5" />
