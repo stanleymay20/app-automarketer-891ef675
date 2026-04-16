@@ -445,7 +445,7 @@ export default function Content() {
             </TabsList>
 
             <TabsContent value="all" className="mt-6">
-              {renderContentList(content)}
+              {renderContentList(appFilteredContent)}
             </TabsContent>
             <TabsContent value="pending" className="mt-6">
               {renderContentList(filterContent("pending"))}
