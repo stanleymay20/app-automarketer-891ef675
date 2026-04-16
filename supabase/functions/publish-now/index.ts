@@ -392,7 +392,7 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ app_id, user_id }),
+      body: JSON.stringify({ app_id: contentItem.app_id, user_id: userId }),
     }).catch((e) => console.error("[ManualPublish] Insight refresh failed:", e));
 
     console.log(`[ManualPublish] Success | content=${content_id} platform=${normalizedPlatform} url=${externalUrl}`);
