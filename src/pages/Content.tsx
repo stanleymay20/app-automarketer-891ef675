@@ -63,6 +63,7 @@ export default function Content() {
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [appFilter, setAppFilter] = useState<string>("all");
   const { data: content, isLoading } = useContent();
   const { data: apps } = useApps();
   const { data: connections } = usePlatformConnections();
@@ -81,11 +82,18 @@ export default function Content() {
     connections?.filter((c) => c.connected).map((c) => c.platform) || []
   );
 
+  // Apply app filter first, then status
+  const appFilteredContent = !content
+    ? []
+    : appFilter === "all"
+      ? content
+      : content.filter((c) => c.app_id === appFilter);
+
   const filterContent = (status?: string) => {
-    if (!content) return [];
-    if (!status || status === "all") return content;
-    if (status === "failed") return content.filter((c) => c.status === "failed");
-    return content.filter((c) => c.status === status);
+    if (!appFilteredContent) return [];
+    if (!status || status === "all") return appFilteredContent;
+    if (status === "failed") return appFilteredContent.filter((c) => c.status === "failed");
+    return appFilteredContent.filter((c) => c.status === status);
   };
 
   const handleStartEdit = (id: string, currentText: string) => {
