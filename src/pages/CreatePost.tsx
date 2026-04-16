@@ -123,13 +123,37 @@ export default function CreatePost() {
           Back to Home
         </Link>
 
-        {/* Step 1: Topic + Tone */}
+        {/* Step 1: App + Topic + Tone */}
         <Card>
           <CardContent className="p-5 space-y-4">
             <div>
               <h2 className="font-display text-lg font-semibold text-foreground">What do you want to post about?</h2>
-              <p className="text-sm text-muted-foreground mt-1">Describe your topic and we'll create platform-ready content.</p>
+              <p className="text-sm text-muted-foreground mt-1">Pick an app, describe your topic, and we'll create platform-ready content.</p>
             </div>
+
+            {/* App Selector */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">App</label>
+              <Select value={selectedAppId} onValueChange={setSelectedAppId} disabled={!apps?.length}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={apps?.length ? "Select an app" : "No apps yet"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {apps?.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      <span className="font-medium">{a.name}</span>
+                      {a.platforms && a.platforms.length > 0 && (
+                        <span className="text-muted-foreground ml-1.5 text-xs">— {a.platforms.join(", ")}</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {apps && apps.length > 1 && (
+                <p className="text-[11px] text-muted-foreground">Posts will be saved under the selected app only.</p>
+              )}
+            </div>
+
             <Textarea
               placeholder={placeholder}
               value={topic}
@@ -157,7 +181,7 @@ export default function CreatePost() {
 
             <Button
               onClick={handleGenerate}
-              disabled={isGenerating || !topic.trim() || !apps?.length}
+              disabled={isGenerating || !topic.trim() || !apps?.length || !selectedAppId}
               className="w-full gap-2"
               size="lg"
             >
