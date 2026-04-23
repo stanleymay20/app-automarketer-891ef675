@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Eye, MousePointerClick, Users, TrendingUp, TrendingDown, Loader2, BarChart3, ArrowRight } from "lucide-react";
@@ -26,7 +27,20 @@ function formatNumber(num: number): string {
 }
 
 export default function Analytics() {
-  const [appFilter, setAppFilter] = useState<string>("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [appFilter, setAppFilter] = useState<string>(searchParams.get("app") || "all");
+  useEffect(() => {
+    const urlApp = searchParams.get("app") || "all";
+    if (urlApp !== appFilter) setAppFilter(urlApp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+  const handleAppFilterChange = (val: string) => {
+    setAppFilter(val);
+    const next = new URLSearchParams(searchParams);
+    if (val === "all") next.delete("app");
+    else next.set("app", val);
+    setSearchParams(next, { replace: true });
+  };
   const { data: analytics, isLoading: analyticsLoading } = useContentAnalytics();
   const { data: trend, isLoading: trendLoading } = useWeeklyTrend();
   const { data: content } = useContent();
@@ -89,7 +103,7 @@ export default function Analytics() {
           <div className="flex items-center justify-end">
             <select
               value={appFilter}
-              onChange={(e) => setAppFilter(e.target.value)}
+              onChange={(e) => handleAppFilterChange(e.target.value)}
               className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               aria-label="Filter by app"
             >
