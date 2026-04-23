@@ -68,6 +68,28 @@ export default function Analytics() {
   const hasData = filtered.totalPosts > 0;
   const topPost = filtered.items.slice().sort((a, b) => (b.impressions || 0) - (a.impressions || 0))[0];
 
+  // Per-app breakdown (only when viewing "all apps" and multiple apps exist)
+  const appBreakdown = useMemo(() => {
+    if (appFilter !== "all" || !apps || apps.length < 2) return [];
+    const published = (content || []).filter((c) => c.status === "published");
+    return apps.map((a) => {
+      const items = published.filter((c) => c.app_id === a.id);
+      const impressions = items.reduce((s, c) => s + (c.impressions || 0), 0);
+      const engagements = items.reduce((s, c) => s + (c.engagements || 0), 0);
+      const clicks = items.reduce((s, c) => s + (c.clicks || 0), 0);
+      const rate = impressions > 0 ? (engagements / impressions) * 100 : 0;
+      return {
+        id: a.id,
+        name: a.name,
+        posts: items.length,
+        impressions,
+        engagements,
+        clicks,
+        rate,
+      };
+    }).sort((a, b) => b.impressions - a.impressions);
+  }, [apps, content, appFilter]);
+
   // Stats: when filtering by app, hide week-over-week % (trend is global)
   const showTrend = appFilter === "all";
   const stats = [
