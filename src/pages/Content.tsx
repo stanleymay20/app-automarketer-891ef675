@@ -411,7 +411,7 @@ export default function Content() {
             {apps && apps.length > 1 && (
               <select
                 value={appFilter}
-                onChange={(e) => setAppFilter(e.target.value)}
+                onChange={(e) => handleAppFilterChange(e.target.value)}
                 className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 aria-label="Filter by app"
               >
