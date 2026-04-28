@@ -58,9 +58,16 @@ export default function Funding() {
 
   const openApp = applications.find(a => a.id === openDraft);
 
+  const getItems = (a: any): Array<{ question: string; answer: string }> => {
+    const j = a?.answers_json;
+    if (j && typeof j === "object" && Array.isArray((j as any).items)) return (j as any).items;
+    return [];
+  };
+
   const handleApply = (app: any) => {
     const grant = app.grants;
-    const text = `${app.generated_pitch}\n\n---\n\n${(app.answers_json?.items ?? []).map((q: any) => `Q: ${q.question}\n\n${q.answer}`).join("\n\n---\n\n")}`;
+    const items = getItems(app);
+    const text = `${app.generated_pitch}\n\n---\n\n${items.map((q) => `Q: ${q.question}\n\n${q.answer}`).join("\n\n---\n\n")}`;
     navigator.clipboard.writeText(text);
     updateApp.mutate({ id: app.id, updates: { status: "submitted", submitted_at: new Date().toISOString() } });
     updateGrant.mutate({ id: grant.id, updates: { status: "applied" } });
@@ -70,8 +77,8 @@ export default function Funding() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 p-4 md:p-6 lg:p-8">
+    <DashboardLayout title="Funding">
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold sm:text-3xl">Funding</h1>
