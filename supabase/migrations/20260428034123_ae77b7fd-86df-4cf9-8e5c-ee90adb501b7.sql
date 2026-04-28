@@ -1,0 +1,1 @@
+SELECT cron.unschedule('discover-grants-daily') WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'discover-grants-daily');
