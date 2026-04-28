@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,11 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, ExternalLink, RefreshCw, Plus, FileText, Copy, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import {
   useGrants, useGrantApplications, useDiscoverGrants, useQualifyGrant,
   useGenerateApplication, useUpdateGrant, useUpdateApplication, useAddGrantManually,
 } from "@/hooks/useGrants";
+import { useApps } from "@/hooks/useApps";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -38,8 +40,15 @@ function statusColor(status: string) {
 }
 
 export default function Funding() {
-  const { data: grants = [], isLoading } = useGrants();
-  const { data: applications = [] } = useGrantApplications();
+  const { data: apps = [] } = useApps();
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedAppId && apps.length > 0) setSelectedAppId(apps[0].id);
+  }, [apps, selectedAppId]);
+
+  const { data: grants = [], isLoading } = useGrants(selectedAppId);
+  const { data: applications = [] } = useGrantApplications(selectedAppId);
   const discover = useDiscoverGrants();
   const qualify = useQualifyGrant();
   const generate = useGenerateApplication();
@@ -82,12 +91,18 @@ export default function Funding() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold sm:text-3xl">Funding</h1>
-            <p className="text-sm text-muted-foreground">AI-discovered grants, drafted applications, and your pipeline.</p>
+            <p className="text-sm text-muted-foreground">Grants and applications for the selected app.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={selectedAppId ?? ""} onValueChange={(v) => setSelectedAppId(v)}>
+              <SelectTrigger className="w-[200px]"><SelectValue placeholder="Choose an app" /></SelectTrigger>
+              <SelectContent>
+                {apps.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm"><Plus className="mr-1.5 h-4 w-4" />Add manually</Button>
+                <Button variant="outline" size="sm" disabled={!selectedAppId}><Plus className="mr-1.5 h-4 w-4" />Add manually</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>Add a grant</DialogTitle></DialogHeader>
@@ -99,21 +114,25 @@ export default function Funding() {
                 </div>
                 <DialogFooter>
                   <Button
-                    onClick={() => addManual.mutate(
-                      { ...newGrant, deadline: newGrant.deadline || null },
+                    onClick={() => selectedAppId && addManual.mutate(
+                      { ...newGrant, deadline: newGrant.deadline || null, app_id: selectedAppId },
                       { onSuccess: () => { setAddOpen(false); setNewGrant({ title: "", url: "", provider: "", deadline: "" }); } }
                     )}
-                    disabled={!newGrant.title || !newGrant.url || addManual.isPending}
+                    disabled={!newGrant.title || !newGrant.url || !selectedAppId || addManual.isPending}
                   >Add</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <Button size="sm" onClick={() => discover.mutate()} disabled={discover.isPending}>
+            <Button size="sm" onClick={() => selectedAppId && discover.mutate(selectedAppId)} disabled={!selectedAppId || discover.isPending}>
               {discover.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
               Discover grants
             </Button>
           </div>
         </div>
+
+        {apps.length === 0 && (
+          <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Add an app first to discover funding tailored to it.</CardContent></Card>
+        )}
 
         <Tabs defaultValue="opportunities">
           <TabsList>
