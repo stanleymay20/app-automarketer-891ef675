@@ -41,8 +41,19 @@ Deno.serve(async (req) => {
     const { data: grant } = await admin.from("grants").select("*").eq("id", grant_id).eq("user_id", userId).single();
     if (!grant) throw new Error("Grant not found");
 
-    const { data: apps } = await admin.from("apps").select("*").eq("user_id", userId).limit(3);
-    const appContext = (apps ?? []).map(a => `App: ${a.name}\nDescription: ${a.description ?? ""}\nAudience: ${a.target_audience ?? ""}\nGoal: ${a.primary_goal ?? ""}\nWebsite: ${a.website_url ?? ""}`).join("\n\n");
+    // Use the app this grant belongs to (fall back to first app for legacy grants)
+    let app: any = null;
+    if (grant.app_id) {
+      const { data } = await admin.from("apps").select("*").eq("id", grant.app_id).eq("user_id", userId).maybeSingle();
+      app = data;
+    }
+    if (!app) {
+      const { data } = await admin.from("apps").select("*").eq("user_id", userId).limit(1).maybeSingle();
+      app = data;
+    }
+    const appContext = app
+      ? `App: ${app.name}\nDescription: ${app.description ?? ""}\nAudience: ${app.target_audience ?? ""}\nGoal: ${app.primary_goal ?? ""}\nWebsite: ${app.website_url ?? ""}`
+      : "";
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -97,27 +108,27 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .maybeSingle();
 
-    let app;
+    let application;
     if (existing) {
       const { data, error } = await admin
         .from("grant_applications")
-        .update({ generated_pitch: parsed.pitch, answers_json: { items: parsed.answers }, status: "draft" })
+        .update({ generated_pitch: parsed.pitch, answers_json: { items: parsed.answers }, status: "draft", app_id: grant.app_id ?? null })
         .eq("id", existing.id)
         .select()
         .single();
       if (error) throw error;
-      app = data;
+      application = data;
     } else {
       const { data, error } = await admin
         .from("grant_applications")
-        .insert({ user_id: userId, grant_id, generated_pitch: parsed.pitch, answers_json: { items: parsed.answers }, status: "draft" })
+        .insert({ user_id: userId, grant_id, app_id: grant.app_id ?? null, generated_pitch: parsed.pitch, answers_json: { items: parsed.answers }, status: "draft" })
         .select()
         .single();
       if (error) throw error;
-      app = data;
+      application = data;
     }
 
-    return new Response(JSON.stringify({ application: app }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ application }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("generate-grant-application error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), {

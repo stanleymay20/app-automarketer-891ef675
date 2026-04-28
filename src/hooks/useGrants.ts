@@ -2,32 +2,33 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-export function useGrants() {
+export function useGrants(appId?: string | null) {
   return useQuery({
-    queryKey: ["grants"],
+    queryKey: ["grants", appId ?? "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("grants")
-        .select("*")
+      let q = supabase.from("grants").select("*");
+      if (appId) q = q.eq("app_id", appId);
+      const { data, error } = await q
         .order("fit_score", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
+    enabled: appId !== undefined,
   });
 }
 
-export function useGrantApplications() {
+export function useGrantApplications(appId?: string | null) {
   return useQuery({
-    queryKey: ["grant_applications"],
+    queryKey: ["grant_applications", appId ?? "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("grant_applications")
-        .select("*, grants(*)")
-        .order("updated_at", { ascending: false });
+      let q = supabase.from("grant_applications").select("*, grants(*)");
+      if (appId) q = q.eq("app_id", appId);
+      const { data, error } = await q.order("updated_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
+    enabled: appId !== undefined,
   });
 }
 
@@ -50,8 +51,8 @@ export function useDiscoverGrants() {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("discover-grants", { body: {} });
+    mutationFn: async (app_id: string) => {
+      const { data, error } = await supabase.functions.invoke("discover-grants", { body: { app_id } });
       if (error) throw new Error(await parseFnError(error));
       return data;
     },
@@ -125,7 +126,7 @@ export function useAddGrantManually() {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async (input: { title: string; url: string; provider?: string; deadline?: string | null }) => {
+    mutationFn: async (input: { title: string; url: string; provider?: string; deadline?: string | null; app_id: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
