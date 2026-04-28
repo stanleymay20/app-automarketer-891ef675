@@ -495,6 +495,7 @@ export type Database = {
       grant_applications: {
         Row: {
           answers_json: Json | null
+          app_id: string | null
           created_at: string
           generated_pitch: string | null
           grant_id: string
@@ -507,6 +508,7 @@ export type Database = {
         }
         Insert: {
           answers_json?: Json | null
+          app_id?: string | null
           created_at?: string
           generated_pitch?: string | null
           grant_id: string
@@ -519,6 +521,7 @@ export type Database = {
         }
         Update: {
           answers_json?: Json | null
+          app_id?: string | null
           created_at?: string
           generated_pitch?: string | null
           grant_id?: string
@@ -541,6 +544,7 @@ export type Database = {
       }
       grants: {
         Row: {
+          app_id: string | null
           country: string | null
           created_at: string
           deadline: string | null
@@ -561,6 +565,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          app_id?: string | null
           country?: string | null
           created_at?: string
           deadline?: string | null
@@ -581,6 +586,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          app_id?: string | null
           country?: string | null
           created_at?: string
           deadline?: string | null
