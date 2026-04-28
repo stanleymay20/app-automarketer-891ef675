@@ -258,14 +258,14 @@ export default function Funding() {
                     rows={6}
                   />
                 </div>
-                {(openApp.answers_json?.items ?? []).map((q: any, i: number) => (
+                {getItems(openApp).map((q, i: number) => (
                   <div key={i}>
                     <Label className="mb-1 block text-xs font-semibold">{q.question}</Label>
                     <Textarea
                       defaultValue={q.answer}
                       rows={4}
                       onBlur={(e) => {
-                        const items = [...(openApp.answers_json?.items ?? [])];
+                        const items = [...getItems(openApp)];
                         items[i] = { ...items[i], answer: e.target.value };
                         updateApp.mutate({ id: openApp.id, updates: { answers_json: { items } } });
                       }}
@@ -277,7 +277,7 @@ export default function Funding() {
             <DialogFooter className="flex-wrap gap-2">
               <Button variant="outline" onClick={() => {
                 if (!openApp) return;
-                const text = `${openApp.generated_pitch}\n\n${(openApp.answers_json?.items ?? []).map((q: any) => `${q.question}\n\n${q.answer}`).join("\n\n")}`;
+                const text = `${openApp.generated_pitch}\n\n${getItems(openApp).map((q) => `${q.question}\n\n${q.answer}`).join("\n\n")}`;
                 navigator.clipboard.writeText(text);
                 toast({ title: "Copied to clipboard" });
               }}><Copy className="mr-1.5 h-4 w-4" />Copy</Button>
