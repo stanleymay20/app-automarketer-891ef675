@@ -41,8 +41,19 @@ Deno.serve(async (req) => {
     const { data: grant } = await admin.from("grants").select("*").eq("id", grant_id).eq("user_id", userId).single();
     if (!grant) throw new Error("Grant not found");
 
-    const { data: apps } = await admin.from("apps").select("*").eq("user_id", userId).limit(3);
-    const appContext = (apps ?? []).map(a => `App: ${a.name}\nDescription: ${a.description ?? ""}\nAudience: ${a.target_audience ?? ""}\nGoal: ${a.primary_goal ?? ""}\nWebsite: ${a.website_url ?? ""}`).join("\n\n");
+    // Use the app this grant belongs to (fall back to first app for legacy grants)
+    let app: any = null;
+    if (grant.app_id) {
+      const { data } = await admin.from("apps").select("*").eq("id", grant.app_id).eq("user_id", userId).maybeSingle();
+      app = data;
+    }
+    if (!app) {
+      const { data } = await admin.from("apps").select("*").eq("user_id", userId).limit(1).maybeSingle();
+      app = data;
+    }
+    const appContext = app
+      ? `App: ${app.name}\nDescription: ${app.description ?? ""}\nAudience: ${app.target_audience ?? ""}\nGoal: ${app.primary_goal ?? ""}\nWebsite: ${app.website_url ?? ""}`
+      : "";
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
