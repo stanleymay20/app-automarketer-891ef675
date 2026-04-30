@@ -199,23 +199,31 @@ export default function Funding() {
                       </div>
                     )}
                     <div className="flex flex-wrap gap-2 pt-1">
-                      {!g.enriched_at && (
-                        <Button size="sm" variant="outline" onClick={() => qualify.mutate(g.id)} disabled={qualify.isPending}>
-                          {qualify.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
-                          Analyze fit
-                        </Button>
-                      )}
-                      {!hasApp ? (
-                        <Button size="sm" onClick={() => generate.mutate(g.id)} disabled={generate.isPending}>
-                          {generate.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <FileText className="mr-1.5 h-3.5 w-3.5" />}
-                          Generate application
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="secondary" onClick={() => {
-                          const a = applications.find(x => x.grant_id === g.id);
-                          if (a) setOpenDraft(a.id);
-                        }}><FileText className="mr-1.5 h-3.5 w-3.5" />Open draft</Button>
-                      )}
+                      {(() => {
+                        const isQualifying = busyGrantId?.id === g.id && busyGrantId.action === "qualify";
+                        const isGenerating = busyGrantId?.id === g.id && busyGrantId.action === "generate";
+                        return (
+                          <>
+                            {!g.enriched_at && (
+                              <Button size="sm" variant="outline" onClick={() => runQualify(g.id)} disabled={isQualifying}>
+                                {isQualifying ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
+                                Analyze fit
+                              </Button>
+                            )}
+                            {!hasApp ? (
+                              <Button size="sm" onClick={() => runGenerate(g.id)} disabled={isGenerating}>
+                                {isGenerating ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <FileText className="mr-1.5 h-3.5 w-3.5" />}
+                                Generate application
+                              </Button>
+                            ) : (
+                              <Button size="sm" variant="secondary" onClick={() => {
+                                const a = applications.find(x => x.grant_id === g.id);
+                                if (a) setOpenDraft(a.id);
+                              }}><FileText className="mr-1.5 h-3.5 w-3.5" />Open draft</Button>
+                            )}
+                          </>
+                        );
+                      })()}
                       <Button size="sm" variant="ghost" asChild>
                         <a href={g.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1.5 h-3.5 w-3.5" />Source</a>
                       </Button>
