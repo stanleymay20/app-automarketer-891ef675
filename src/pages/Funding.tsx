@@ -287,13 +287,23 @@ export default function Funding() {
           <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
             <DialogHeader><DialogTitle>{openApp?.grants?.title}</DialogTitle></DialogHeader>
             {openApp && (
-              <div className="space-y-4">
+              <div key={openApp.id} className="space-y-4">
                 <div>
                   <Label className="mb-1 block">Pitch</Label>
                   <Textarea
-                    value={openApp.generated_pitch ?? ""}
-                    onChange={(e) => updateApp.mutate({ id: openApp.id, updates: { generated_pitch: e.target.value } })}
+                    defaultValue={openApp.generated_pitch ?? ""}
                     rows={6}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (pitchTimer.current) clearTimeout(pitchTimer.current);
+                      pitchTimer.current = setTimeout(() => {
+                        updateApp.mutate({ id: openApp.id, updates: { generated_pitch: value } });
+                      }, 600);
+                    }}
+                    onBlur={(e) => {
+                      if (pitchTimer.current) { clearTimeout(pitchTimer.current); pitchTimer.current = null; }
+                      updateApp.mutate({ id: openApp.id, updates: { generated_pitch: e.target.value } });
+                    }}
                   />
                 </div>
                 {getItems(openApp).map((q, i: number) => (
