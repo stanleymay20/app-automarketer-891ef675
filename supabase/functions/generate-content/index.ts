@@ -240,6 +240,18 @@ No markdown, no code blocks, no explanations. Just the JSON array.`;
         const jsonMatch = content.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           const posts = JSON.parse(jsonMatch[0]);
+          // Hard safeguard: X has a 280 char limit. Even with a strong directive,
+          // Gemini occasionally overshoots and the post then fails at publish time.
+          // Trim to 270 to leave a small safety margin.
+          for (const p of posts) {
+            if (
+              normalizedPlatform === "x" &&
+              typeof p?.content === "string" &&
+              p.content.length > 270
+            ) {
+              p.content = p.content.slice(0, 267).trimEnd() + "…";
+            }
+          }
           allPosts.push(...posts);
         }
       } catch (parseError) {

@@ -345,8 +345,15 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authError || !user) throw new Error("Unauthorized");
 
-    const { contentId, contentText, appName, platform, visualMode, appId } = await req.json();
+    const { contentId, contentText, appName, platform, visualMode, appId, topic } = await req.json();
     if (!contentId || !contentText) throw new Error("Missing contentId or contentText");
+
+    // Anchor the planner on the user's chosen topic when present, so the image
+    // headline and core message stay on-topic instead of drifting to the post's
+    // hook line (which may be deliberately contrarian and off-subject).
+    const planContext = topic && typeof topic === "string" && topic.trim().length > 0
+      ? `User topic focus: "${topic.trim()}"\n\n${contentText}`
+      : contentText;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");

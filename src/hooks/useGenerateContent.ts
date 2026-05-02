@@ -130,6 +130,7 @@ export function useGenerateContent() {
             appName: app.name,
             platform: item.platform,
             appId: app.id,
+            topic: topic?.trim() || undefined,
           },
         }).catch((err) => console.error("Image generation error:", err));
       }
