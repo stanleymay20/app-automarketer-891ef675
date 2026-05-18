@@ -129,16 +129,73 @@ serve(async (req) => {
   }
 
   try {
-    const { app, postsPerPlatform = 2, topic } = await req.json() as {
+    const {
+      app,
+      postsPerPlatform = 2,
+      topic,
+      persona_id,
+      journey_stage,
+      messaging_angle,
+    } = await req.json() as {
       app: AppDetails;
       postsPerPlatform?: number;
       topic?: string;
+      persona_id?: string;
+      journey_stage?: string;
+      messaging_angle?: string;
     };
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
+
+    // Load persona + journey stage from DB if provided
+    let persona: any = null;
+    let stage: any = null;
+    if (persona_id || (journey_stage && app.id)) {
+      try {
+        const sb = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+        if (persona_id) {
+          const { data } = await sb.from("personas").select("*").eq("id", persona_id).maybeSingle();
+          persona = data;
+        }
+        if (journey_stage && app.id) {
+          const { data } = await sb.from("journey_stages").select("*")
+            .eq("app_id", app.id).eq("stage", journey_stage).maybeSingle();
+          stage = data;
+        }
+      } catch (e) {
+        console.error("[generate-content] strategy fetch failed:", e);
+      }
+    }
+
+    const strategyBlock = (() => {
+      const parts: string[] = [];
+      if (persona) {
+        parts.push(`## TARGET PERSONA (write FOR this person specifically)
+- Title: ${persona.title}${persona.company_size ? ` at ${persona.company_size}` : ""}
+- Their pains: ${(persona.pains || []).join("; ") || "(none specified)"}
+- Their goals: ${(persona.goals || []).join("; ") || "(none specified)"}
+- Their buying triggers: ${(persona.triggers || []).join("; ") || "(none)"}
+- Their objections: ${(persona.objections || []).join("; ") || "(none)"}
+- Content style they prefer: ${persona.content_style || "professional, insight-driven"}`);
+      }
+      if (stage) {
+        parts.push(`## JOURNEY STAGE: ${String(stage.stage).toUpperCase()}
+- What they're thinking: "${stage.customer_thinking || ""}"
+- Best content format: ${stage.best_content || ""}
+- Recommended CTA direction: ${stage.best_cta || ""}`);
+      }
+      if (messaging_angle) {
+        parts.push(`## MESSAGING ANGLE TO USE
+${messaging_angle}`);
+      }
+      return parts.length ? `\n${parts.join("\n\n")}\n` : "";
+    })();
 
     // Generate content for each platform separately for true platform-native output
     const allPosts: { platform: string; content: string }[] = [];
@@ -168,18 +225,18 @@ Your job: Create ${postsPerPlatform} unique, high-performance posts for ${normal
 - What they do: ${app.description || "A B2B SaaS product"}
 - Target audience: ${app.target_audience || "business leaders and operators"}
 - Brand voice: ${app.brand_tone || "professional, authoritative"}
-
-${platformDirective}
+${strategyBlock}${platformDirective}
 ${insightBlock}
 ## ABSOLUTE RULES (NEVER BREAK THESE)
-1. NEVER sound like AI-generated content or a marketing brochure
-2. NEVER use these words: "revolutionize", "game-changer", "unlock", "leverage", "empower", "cutting-edge", "seamless"
-3. NEVER start with "Excited to announce" or "Thrilled to share"
-4. Every post must have a UNIQUE angle — no two posts should make the same point
-5. Write like a human expert sharing real insight, not a company promoting itself
-6. The company/product should appear naturally (mid-post or late), NEVER in the hook
-7. Each post MUST end with relevant hashtags on the final line
-8. Content must be PRODUCTION-READY — publishable as-is with zero edits`;
+1. NEVER sound like AI-generated content or a marketing brochure.
+2. BANNED WORDS (instant rewrite if any appear): "revolutionize", "game-changer", "unlock", "leverage", "empower", "cutting-edge", "seamless", "synergy", "in today's fast-paced", "harness", "elevate", "dive into", "navigate the", "unleash", "robust", "world-class", "delve".
+3. NEVER start with "Excited to announce", "Thrilled to share", "I'm happy to", or any variant.
+4. Every post must have a UNIQUE angle — no two posts should make the same point.
+5. Write like a human expert sharing real insight, not a company promoting itself.
+6. The company/product should appear naturally (mid-post or late), NEVER in the hook.
+7. Each post MUST end with relevant hashtags on the final line.
+8. Content must be PRODUCTION-READY — publishable as-is with zero edits.
+${persona ? "9. The post must speak DIRECTLY to the target persona above — reference their specific pain or trigger." : ""}`;
 
       const userPrompt = `Create ${postsPerPlatform} unique ${normalizedPlatform.toUpperCase()} posts for ${app.name}.
 ${topic ? `\n## TOPIC FOCUS (MANDATORY)\nThe user wants posts specifically about: "${topic}"\nEvery post MUST be on this topic. Do NOT drift to generic brand messaging.\n` : ""}

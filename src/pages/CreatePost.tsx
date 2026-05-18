@@ -12,6 +12,7 @@ import { usePlatformConnections, useConnectPlatform, Platform } from "@/hooks/us
 import { Sparkles, Loader2, Send, ArrowLeft, CheckCircle2, Linkedin, Twitter, RefreshCw, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useContentScores } from "@/hooks/useContentScores";
+import { usePersonas, useJourneyStages, useMessagingAngles } from "@/hooks/useAudience";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,9 @@ export default function CreatePost() {
   const [topic, setTopic] = useState("");
   const [tone, setTone] = useState("professional");
   const [selectedAppId, setSelectedAppId] = useState<string>("");
+  const [personaId, setPersonaId] = useState<string>("auto");
+  const [journeyStage, setJourneyStage] = useState<string>("auto");
+  const [angleId, setAngleId] = useState<string>("auto");
   const [generatedIds, setGeneratedIds] = useState<string[]>([]);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [pendingPublishId, setPendingPublishId] = useState<string | null>(null);
@@ -51,6 +55,9 @@ export default function CreatePost() {
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const { data: connections } = usePlatformConnections();
   const connectPlatform = useConnectPlatform();
+  const { data: personas = [] } = usePersonas(selectedAppId || undefined);
+  const { data: journeyStages = [] } = useJourneyStages(selectedAppId || undefined);
+  const { data: angles = [] } = useMessagingAngles(selectedAppId || undefined);
 
   // Default to first app once loaded
   useEffect(() => {
@@ -72,9 +79,13 @@ export default function CreatePost() {
     if (!apps || apps.length === 0 || !topic.trim() || !selectedAppId) return;
     const app = apps.find((a) => a.id === selectedAppId);
     if (!app) return;
+    const angle = angleId !== "auto" ? angles.find((a) => a.id === angleId) : null;
     const result = await generateContent({
       app: { ...app, brand_tone: tone },
       topic: topic.trim(),
+      persona_id: personaId !== "auto" ? personaId : undefined,
+      journey_stage: journeyStage !== "auto" ? journeyStage : undefined,
+      messaging_angle: angle ? `${angle.angle_name}${angle.hook_template ? ` — pattern: ${angle.hook_template}` : ""}` : undefined,
     } as any);
     if (result) {
       setGeneratedIds(result.map((r: any) => r.id));
@@ -177,6 +188,66 @@ export default function CreatePost() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Strategy selectors (only show if app has audience built) */}
+            {(personas.length > 0 || journeyStages.length > 0 || angles.length > 0) && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-primary">Strategy</span>
+                  <Link to="/audience" className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline">
+                    Manage
+                  </Link>
+                </div>
+                {personas.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Persona</label>
+                    <Select value={personaId} onValueChange={setPersonaId}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto (general audience)</SelectItem>
+                        {personas.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {journeyStages.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Journey stage</label>
+                    <Select value={journeyStage} onValueChange={setJourneyStage}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto</SelectItem>
+                        {journeyStages.map((s) => (
+                          <SelectItem key={s.id} value={s.stage}>{s.stage.charAt(0).toUpperCase() + s.stage.slice(1)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {angles.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Angle</label>
+                    <Select value={angleId} onValueChange={setAngleId}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto</SelectItem>
+                        {angles.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>{a.angle_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {personas.length === 0 && selectedAppId && (
+              <Link to="/audience" className="block rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground hover:bg-primary/10 transition-colors">
+                <span className="font-medium text-primary">Build your audience</span> first to generate strategy-anchored posts that target a specific persona and journey stage.
+              </Link>
+            )}
 
             <Button
               onClick={handleGenerate}
