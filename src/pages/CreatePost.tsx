@@ -189,6 +189,66 @@ export default function CreatePost() {
               </Select>
             </div>
 
+            {/* Strategy selectors (only show if app has audience built) */}
+            {(personas.length > 0 || journeyStages.length > 0 || angles.length > 0) && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-primary">Strategy</span>
+                  <Link to="/audience" className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline">
+                    Manage
+                  </Link>
+                </div>
+                {personas.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Persona</label>
+                    <Select value={personaId} onValueChange={setPersonaId}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto (general audience)</SelectItem>
+                        {personas.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {journeyStages.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Journey stage</label>
+                    <Select value={journeyStage} onValueChange={setJourneyStage}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto</SelectItem>
+                        {journeyStages.map((s) => (
+                          <SelectItem key={s.id} value={s.stage}>{s.stage.charAt(0).toUpperCase() + s.stage.slice(1)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {angles.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Angle</label>
+                    <Select value={angleId} onValueChange={setAngleId}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto</SelectItem>
+                        {angles.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>{a.angle_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {personas.length === 0 && selectedAppId && (
+              <Link to="/audience" className="block rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground hover:bg-primary/10 transition-colors">
+                <span className="font-medium text-primary">Build your audience</span> first to generate strategy-anchored posts that target a specific persona and journey stage.
+              </Link>
+            )}
+
             <Button
               onClick={handleGenerate}
               disabled={isGenerating || !topic.trim() || !apps?.length || !selectedAppId}
