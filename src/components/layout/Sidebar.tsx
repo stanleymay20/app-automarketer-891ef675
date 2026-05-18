@@ -13,6 +13,7 @@ import {
   Send,
   DollarSign,
   Landmark,
+  Users,
   X,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -22,8 +23,9 @@ import logo from "@/assets/logo.png";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Home", path: "/dashboard" },
+  { icon: Users, label: "Audience", path: "/audience" },
   { icon: FileText, label: "Create Post", path: "/create" },
-  { icon: AppWindow, label: "Content", path: "/content" },
+  { icon: AppWindow, label: "Campaigns", path: "/content" },
   { icon: BarChart3, label: "Performance", path: "/analytics" },
   { icon: DollarSign, label: "Revenue", path: "/revenue" },
   { icon: Landmark, label: "Funding", path: "/funding" },
