@@ -39,6 +39,9 @@ export default function CreatePost() {
   const [topic, setTopic] = useState("");
   const [tone, setTone] = useState("professional");
   const [selectedAppId, setSelectedAppId] = useState<string>("");
+  const [personaId, setPersonaId] = useState<string>("auto");
+  const [journeyStage, setJourneyStage] = useState<string>("auto");
+  const [angleId, setAngleId] = useState<string>("auto");
   const [generatedIds, setGeneratedIds] = useState<string[]>([]);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [pendingPublishId, setPendingPublishId] = useState<string | null>(null);
@@ -52,6 +55,9 @@ export default function CreatePost() {
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const { data: connections } = usePlatformConnections();
   const connectPlatform = useConnectPlatform();
+  const { data: personas = [] } = usePersonas(selectedAppId || undefined);
+  const { data: journeyStages = [] } = useJourneyStages(selectedAppId || undefined);
+  const { data: angles = [] } = useMessagingAngles(selectedAppId || undefined);
 
   // Default to first app once loaded
   useEffect(() => {
