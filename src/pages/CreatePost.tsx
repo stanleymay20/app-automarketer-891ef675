@@ -79,9 +79,13 @@ export default function CreatePost() {
     if (!apps || apps.length === 0 || !topic.trim() || !selectedAppId) return;
     const app = apps.find((a) => a.id === selectedAppId);
     if (!app) return;
+    const angle = angleId !== "auto" ? angles.find((a) => a.id === angleId) : null;
     const result = await generateContent({
       app: { ...app, brand_tone: tone },
       topic: topic.trim(),
+      persona_id: personaId !== "auto" ? personaId : undefined,
+      journey_stage: journeyStage !== "auto" ? journeyStage : undefined,
+      messaging_angle: angle ? `${angle.angle_name}${angle.hook_template ? ` — pattern: ${angle.hook_template}` : ""}` : undefined,
     } as any);
     if (result) {
       setGeneratedIds(result.map((r: any) => r.id));
