@@ -60,6 +60,7 @@ function AppRoutes() {
        <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
        <Route path="/weekly-reports" element={<ProtectedRoute><WeeklyReports /></ProtectedRoute>} />
        <Route path="/revenue" element={<ProtectedRoute><Revenue /></ProtectedRoute>} />
+       <Route path="/audience" element={<ProtectedRoute><Audience /></ProtectedRoute>} />
        <Route path="/funding" element={<ProtectedRoute><Funding /></ProtectedRoute>} />
        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/lp/:slug" element={<LandingPage />} />
