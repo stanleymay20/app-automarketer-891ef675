@@ -18,6 +18,7 @@ import Auth from "./pages/Auth";
 import OAuthCallback from "./pages/OAuthCallback";
 import Revenue from "./pages/Revenue";
 import Funding from "./pages/Funding";
+import Audience from "./pages/Audience";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 
