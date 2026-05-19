@@ -20,6 +20,7 @@ import Revenue from "./pages/Revenue";
 import Funding from "./pages/Funding";
 import Audience from "./pages/Audience";
 import LandingPage from "./pages/LandingPage";
+import AppLanding from "./pages/AppLanding";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
