@@ -162,26 +162,6 @@ export default function Revenue() {
                                     </Button>
                                   )}
                                 </div>
-                                {convDialogLead === lead.id && (
-                                  <Dialog open onOpenChange={(o) => !o && setConvDialogLead(null)}>
-                                    <DialogContent>
-                                      <DialogHeader><DialogTitle>Record conversion</DialogTitle></DialogHeader>
-                                      <div className="space-y-3">
-                                        <div className="space-y-1">
-                                          <Label>Amount (USD)</Label>
-                                          <Input type="number" min="0" step="0.01" value={convAmount} onChange={(e) => setConvAmount(e.target.value)} placeholder="49.00" />
-                                        </div>
-                                        <div className="space-y-1">
-                                          <Label>Notes (optional)</Label>
-                                          <Input value={convNotes} onChange={(e) => setConvNotes(e.target.value)} placeholder="Plan, deal name…" />
-                                        </div>
-                                      </div>
-                                      <DialogFooter>
-                                        <Button onClick={() => handleRecordConversion(lead.id, lead.app_id, lead.source_content_id)} disabled={addConversion.isPending}>Save</Button>
-                                      </DialogFooter>
-                                    </DialogContent>
-                                  </Dialog>
-                                )}
                               </div>
                             ))}
                           </div>
