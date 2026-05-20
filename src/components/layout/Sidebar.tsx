@@ -14,6 +14,7 @@ import {
   DollarSign,
   Landmark,
   Users,
+  Lightbulb,
   X,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
