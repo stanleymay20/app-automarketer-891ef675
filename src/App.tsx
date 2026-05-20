@@ -21,6 +21,7 @@ import Funding from "./pages/Funding";
 import Audience from "./pages/Audience";
 import LandingPage from "./pages/LandingPage";
 import AppLanding from "./pages/AppLanding";
+import Intelligence from "./pages/Intelligence";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
