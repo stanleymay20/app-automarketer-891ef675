@@ -28,6 +28,7 @@ const navItems = [
   { icon: FileText, label: "Create Post", path: "/create" },
   { icon: AppWindow, label: "Campaigns", path: "/content" },
   { icon: BarChart3, label: "Performance", path: "/analytics" },
+  { icon: Lightbulb, label: "Intelligence", path: "/intelligence" },
   { icon: DollarSign, label: "Revenue", path: "/revenue" },
   { icon: Landmark, label: "Funding", path: "/funding" },
   { icon: Calendar, label: "Calendar", path: "/calendar" },
