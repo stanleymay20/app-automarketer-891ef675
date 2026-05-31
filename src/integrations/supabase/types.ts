@@ -1372,6 +1372,138 @@ export type Database = {
           },
         ]
       }
+      prospect_actions: {
+        Row: {
+          action_type: string
+          body: string | null
+          campaign_id: string | null
+          channel: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          prospect_id: string
+          subject: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          body?: string | null
+          campaign_id?: string | null
+          channel?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          prospect_id: string
+          subject?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          body?: string | null
+          campaign_id?: string | null
+          channel?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          prospect_id?: string
+          subject?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prospects: {
+        Row: {
+          app_id: string | null
+          category: string
+          contacted_at: string | null
+          converted_at: string | null
+          created_at: string
+          deadline: string | null
+          description: string | null
+          evidence: Json
+          fit_score: number
+          id: string
+          location: string | null
+          match_reason: string | null
+          matched_icp_id: string | null
+          matched_persona_id: string | null
+          name: string
+          opportunity_score: number
+          prospect_score: number
+          reachability_score: number
+          responded_at: string | null
+          revenue_attributed: number
+          saved_at: string | null
+          signals: Json
+          source: string
+          status: string
+          updated_at: string
+          urgency_score: number
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          app_id?: string | null
+          category: string
+          contacted_at?: string | null
+          converted_at?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          evidence?: Json
+          fit_score?: number
+          id?: string
+          location?: string | null
+          match_reason?: string | null
+          matched_icp_id?: string | null
+          matched_persona_id?: string | null
+          name: string
+          opportunity_score?: number
+          prospect_score?: number
+          reachability_score?: number
+          responded_at?: string | null
+          revenue_attributed?: number
+          saved_at?: string | null
+          signals?: Json
+          source?: string
+          status?: string
+          updated_at?: string
+          urgency_score?: number
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          app_id?: string | null
+          category?: string
+          contacted_at?: string | null
+          converted_at?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          evidence?: Json
+          fit_score?: number
+          id?: string
+          location?: string | null
+          match_reason?: string | null
+          matched_icp_id?: string | null
+          matched_persona_id?: string | null
+          name?: string
+          opportunity_score?: number
+          prospect_score?: number
+          reachability_score?: number
+          responded_at?: string | null
+          revenue_attributed?: number
+          saved_at?: string | null
+          signals?: Json
+          source?: string
+          status?: string
+          updated_at?: string
+          urgency_score?: number
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           approval_mode: boolean | null
