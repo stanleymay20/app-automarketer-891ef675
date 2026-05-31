@@ -24,7 +24,24 @@ export function useMarketIntelligence(appId?: string) {
       const [market, competitors, opportunities, customers, recommendations] = await Promise.all(
         tables.map(fetchTable)
       );
-      return { market, competitors, opportunities, customers, recommendations };
+
+      // Real attribution evidence for display
+      const baseFilter = (q: any) => (appId ? q.eq("app_id", appId) : q);
+      const [postsRes, clicksRes, leadsRes, convsRes] = await Promise.all([
+        baseFilter(supabase.from("content").select("id", { count: "exact", head: true }).eq("status", "published")),
+        baseFilter(supabase.from("click_events").select("id", { count: "exact", head: true })),
+        baseFilter(supabase.from("leads").select("id", { count: "exact", head: true })),
+        baseFilter(supabase.from("conversions").select("amount")),
+      ]);
+      const evidence = {
+        posts_analyzed: postsRes.count ?? 0,
+        clicks: clicksRes.count ?? 0,
+        leads: leadsRes.count ?? 0,
+        conversions: convsRes.data?.length ?? 0,
+        revenue: (convsRes.data ?? []).reduce((s: number, c: any) => s + Number(c.amount ?? 0), 0),
+      };
+
+      return { market, competitors, opportunities, customers, recommendations, evidence };
     },
   });
 }
