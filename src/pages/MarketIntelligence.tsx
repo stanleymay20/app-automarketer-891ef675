@@ -1,11 +1,16 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApps } from "@/hooks/useApps";
-import { useMarketIntelligence, useGenerateGrowthIntelligence } from "@/hooks/useMarketIntelligence";
+import {
+  useMarketIntelligence,
+  useGenerateGrowthIntelligence,
+  useExecuteRecommendation,
+} from "@/hooks/useMarketIntelligence";
 import {
   TrendingUp,
   Swords,
@@ -15,6 +20,12 @@ import {
   RefreshCw,
   ExternalLink,
   Calendar,
+  Rocket,
+  Layout,
+  Layers,
+  Bookmark,
+  X,
+  CheckCircle2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
