@@ -619,13 +619,13 @@ Deno.serve(async (req) => {
           errors.push({ id: item.id, error: reason });
         } else {
           // Transient failure — bump retry_count, skip; cron loop retries on next tick
-          await supabase.rpc('increment', {}).catch(() => null); // best-effort no-op if rpc not present
           await supabase.from('content').update({
-            retry_count: (item as any).retry_count ? (item as any).retry_count + 1 : 1,
+            retry_count: ((item as any).retry_count ?? 0) + 1,
           }).eq('id', item.id).eq('status', 'approved');
           console.log(`[Publisher] Transient skip for ${item.id}: ${result.error}`);
           skippedIds.push(item.id);
         }
+
       } catch (itemError) {
         console.error(`[Publisher] Error processing ${item.id}:`, itemError);
         const reason = String(itemError);
