@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
+import Reality from "./pages/Reality";
+
 import CreatePost from "./pages/CreatePost";
 import Onboarding from "./pages/Onboarding";
 import Apps from "./pages/Apps";
@@ -54,9 +56,10 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={user ? <ProtectedRoute><Reality /></ProtectedRoute> : <Landing />} />
       <Route path="/index" element={<Navigate to="/" replace />} />
-      <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <Auth />} />
+      <Route path="/auth" element={user ? <Navigate to="/" replace /> : <Auth />} />
+
       <Route path="/oauth/callback" element={<OAuthCallback />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
        <Route path="/create" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
