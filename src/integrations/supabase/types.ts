@@ -259,6 +259,51 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_assets: {
+        Row: {
+          app_id: string
+          asset_type: string
+          body: string | null
+          campaign_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          ref_id: string | null
+          ref_table: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          asset_type: string
+          body?: string | null
+          campaign_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          ref_id?: string | null
+          ref_table?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          asset_type?: string
+          body?: string | null
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          ref_id?: string | null
+          ref_table?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           active: boolean
