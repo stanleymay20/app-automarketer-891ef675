@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import {
   Radio, Users, Mic, CalendarDays, Sparkles, Loader2, ExternalLink,
-  Bookmark, Play, X, Send, Check, MessageSquare, Lightbulb,
+  Bookmark, Play, X, Send, Check, MessageSquare, Lightbulb, Trophy,
 } from "lucide-react";
 import {
   useDistribution, useDiscoverDistribution, useDistributionAction, useDistributionActionsFor,
@@ -247,6 +247,54 @@ export default function Distribution() {
             </CardContent>
           </Card>
         )}
+
+        {/* Revenue per Distribution Target */}
+        {targets.some((t) => Number(t.revenue_attributed) > 0 || t.conversions_count > 0 || t.clicks_count > 0) && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Trophy className="h-4 w-4 text-secondary" /> Revenue per distribution target
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <table className="w-full text-sm">
+                <thead className="border-b text-xs text-muted-foreground">
+                  <tr>
+                    <th className="text-left p-3">Target</th>
+                    <th className="text-left p-3">Type</th>
+                    <th className="text-right p-3">Clicks</th>
+                    <th className="text-right p-3">Leads</th>
+                    <th className="text-right p-3">Conv.</th>
+                    <th className="text-right p-3">Revenue</th>
+                    <th className="text-right p-3">$/click</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {targets
+                    .slice()
+                    .sort((a, b) => Number(b.revenue_attributed) - Number(a.revenue_attributed) || b.conversions_count - a.conversions_count || b.clicks_count - a.clicks_count)
+                    .slice(0, 10)
+                    .map((t) => {
+                      const rev = Number(t.revenue_attributed) || 0;
+                      const rpc = t.clicks_count ? rev / t.clicks_count : 0;
+                      return (
+                        <tr key={t.id} className="border-b last:border-0 hover:bg-accent/30 cursor-pointer" onClick={() => setOpen(t)}>
+                          <td className="p-3 font-medium">{t.name}</td>
+                          <td className="p-3 text-xs text-muted-foreground capitalize">{t.target_type}{t.platform ? ` · ${t.platform}` : ""}</td>
+                          <td className="text-right p-3 tabular-nums">{t.clicks_count}</td>
+                          <td className="text-right p-3 tabular-nums">{t.leads_count}</td>
+                          <td className="text-right p-3 tabular-nums">{t.conversions_count}</td>
+                          <td className="text-right p-3 font-semibold text-primary tabular-nums">${rev.toFixed(0)}</td>
+                          <td className="text-right p-3 text-xs text-muted-foreground tabular-nums">${rpc.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        )}
+
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
           <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">

@@ -55,17 +55,26 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
-    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData } = await userClient.auth.getUser();
-    const user = userData.user;
+    const body = await req.json().catch(() => ({}));
+
+    // Service-role internal invocation (used by weekly rediscovery cron)
+    let user: { id: string } | null = null;
+    const isService = authHeader.includes(SUPABASE_SERVICE_ROLE_KEY);
+    if (isService && body.internal_user_id) {
+      user = { id: String(body.internal_user_id) };
+    } else {
+      const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: userData } = await userClient.auth.getUser();
+      user = userData.user ? { id: userData.user.id } : null;
+    }
     if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const body = await req.json().catch(() => ({}));
-    const appId: string | undefined = body.app_id;
+    const appId: string | undefined = body.app_id ?? body.internal_app_id;
     const requested: TargetType[] = (body.types?.length ? body.types : TYPES).filter((t: string) => TYPES.includes(t as TargetType));
+
 
     const [appRes, icpsRes, personasRes, anglesRes, learnRes] = await Promise.all([
       appId ? admin.from("apps").select("*").eq("id", appId).maybeSingle() : Promise.resolve({ data: null } as any),
