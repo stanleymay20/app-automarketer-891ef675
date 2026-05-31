@@ -60,13 +60,22 @@ export default function MarketIntelligence() {
   const effectiveAppId = appId ?? apps?.[0]?.id;
   const { data, isLoading } = useMarketIntelligence(effectiveAppId);
   const generate = useGenerateGrowthIntelligence();
+  const execute = useExecuteRecommendation();
+  const [busyRec, setBusyRec] = useState<string | null>(null);
+
+  const run = (id: string, action: Parameters<typeof execute.mutate>[0]["action"]) => {
+    setBusyRec(`${id}:${action}`);
+    execute.mutate({ id, action }, { onSettled: () => setBusyRec(null) });
+  };
+
+  const visibleRecs = (data?.recommendations ?? []).filter((r: any) => r.status !== "dismissed");
 
   const totalItems =
     (data?.market.length ?? 0) +
     (data?.competitors.length ?? 0) +
     (data?.opportunities.length ?? 0) +
     (data?.customers.length ?? 0) +
-    (data?.recommendations.length ?? 0);
+    visibleRecs.length;
 
   return (
     <DashboardLayout title="Market Intelligence">
