@@ -39,13 +39,27 @@ export function useCreateApp() {
       if (error) throw error;
       return data as App;
     },
-    onSuccess: () => {
+    onSuccess: (app) => {
       queryClient.invalidateQueries({ queryKey: ["apps"] });
       toast({
         title: "App created",
-        description: "Your new app has been added successfully.",
+        description: "Bootstrapping audience, distribution, prospects, signals…",
       });
+      // Fire-and-forget bootstrap; user sees per-engine results in toast from the function itself
+      supabase.functions.invoke("bootstrap-app", { body: { app_id: app.id } })
+        .then(({ data }) => {
+          if (data?.results) {
+            const ok = data.ok ?? 0;
+            const total = data.total ?? 4;
+            toast({
+              title: `Workspace setup ${ok}/${total} completed`,
+              description: Object.entries(data.results).map(([k, v]: any) => `${k}: ${v.status}`).join(" • "),
+            });
+          }
+        })
+        .catch(() => { /* non-blocking */ });
     },
+
     onError: (error) => {
       toast({
         title: "Error",

@@ -485,6 +485,7 @@ export type Database = {
           engagements: number | null
           external_post_id: string | null
           external_url: string | null
+          failure_category: string | null
           failure_reason: string | null
           id: string
           image_url: string | null
@@ -493,7 +494,9 @@ export type Database = {
           messaging_angle: string | null
           persona_id: string | null
           platform: string
+          publish_latency_ms: number | null
           published_at: string | null
+          retry_count: number
           scheduled_for: string | null
           seed_recommendation_id: string | null
           status: string
@@ -512,6 +515,7 @@ export type Database = {
           engagements?: number | null
           external_post_id?: string | null
           external_url?: string | null
+          failure_category?: string | null
           failure_reason?: string | null
           id?: string
           image_url?: string | null
@@ -520,7 +524,9 @@ export type Database = {
           messaging_angle?: string | null
           persona_id?: string | null
           platform: string
+          publish_latency_ms?: number | null
           published_at?: string | null
+          retry_count?: number
           scheduled_for?: string | null
           seed_recommendation_id?: string | null
           status?: string
@@ -539,6 +545,7 @@ export type Database = {
           engagements?: number | null
           external_post_id?: string | null
           external_url?: string | null
+          failure_category?: string | null
           failure_reason?: string | null
           id?: string
           image_url?: string | null
@@ -547,7 +554,9 @@ export type Database = {
           messaging_angle?: string | null
           persona_id?: string | null
           platform?: string
+          publish_latency_ms?: number | null
           published_at?: string | null
+          retry_count?: number
           scheduled_for?: string | null
           seed_recommendation_id?: string | null
           status?: string

@@ -20,6 +20,7 @@ import {
   Megaphone,
   Rocket,
   Brain,
+  Gauge,
   X,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -28,6 +29,7 @@ import { useUserSettings, useUpdateUserSettings } from "@/hooks/useUserSettings"
 import logo from "@/assets/logo.png";
 
 const navItems = [
+  { icon: Gauge, label: "Reality", path: "/" },
   { icon: LayoutDashboard, label: "Home", path: "/dashboard" },
   { icon: Users, label: "Audience", path: "/audience" },
   { icon: FileText, label: "Create Post", path: "/create" },
@@ -44,6 +46,7 @@ const navItems = [
   { icon: Calendar, label: "Calendar", path: "/calendar" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
+
 
 interface SidebarProps {
   open: boolean;

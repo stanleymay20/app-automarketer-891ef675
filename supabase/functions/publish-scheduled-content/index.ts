@@ -16,6 +16,19 @@ interface PublishResult {
   permanent?: boolean; // true = don't retry, mark as failed
 }
 
+function categorizeFailure(reason: string | null | undefined): string {
+  if (!reason) return "unknown";
+  const r = reason.toLowerCase();
+  if (r.includes("token expired") || r.includes("reconnect") || r.includes("not connected")) return "token_expired";
+  if (r.includes("credits") || r.includes("402")) return "account_no_credits";
+  if (r.includes("character limit") || r.includes("too long") || r.includes("exceeds")) return "content_too_long";
+  if (r.includes("429") || r.includes("rate limit")) return "rate_limit";
+  if (/\b5\d{2}\b/.test(r)) return "platform_5xx";
+  if (r.includes("validation") || r.includes("too short") || r.includes("unattached") || r.includes("overdue")) return "validation";
+  return "platform_error";
+}
+
+
 // ─── X Token Refresh ────────────────────────────────────────────────
 async function refreshXToken(
   supabase: ReturnType<typeof createClient>,
@@ -498,12 +511,13 @@ Deno.serve(async (req) => {
     const errors: { id: string; error: string }[] = [];
 
     for (const item of normalizedContent) {
+      const itemStartedAt = Date.now();
       try {
         // Fail stale posts that have been stuck for too long
         if (isStalePost(item.scheduled_for)) {
           const failureReason = `Post overdue by more than ${MAX_OVERDUE_HOURS} hours. Marked as failed.`;
           await supabase.from('content').update({
-            status: 'failed', failure_reason: failureReason,
+            status: 'failed', failure_reason: failureReason, failure_category: 'validation',
           }).eq('id', item.id).eq('status', 'approved');
           console.log(`[Publisher] Stale post failed: ${item.id}`);
           errors.push({ id: item.id, error: failureReason });
@@ -512,12 +526,29 @@ Deno.serve(async (req) => {
 
         console.log(`[Publisher] Processing ${item.platform} content ${item.id} for user ${item.user_id}`);
 
+        // Pre-flight: connection must exist before we attempt
+        const { data: conn } = await supabase
+          .from('platform_connections')
+          .select('id, connected, expires_at')
+          .eq('user_id', item.user_id)
+          .eq('platform', item.platform)
+          .eq('connected', true)
+          .maybeSingle();
+        if (!conn) {
+          const reason = `No active ${item.platform} connection. Connect the account first.`;
+          await supabase.from('content').update({
+            status: 'failed', failure_reason: reason, failure_category: 'no_connection',
+          }).eq('id', item.id).eq('status', 'approved');
+          errors.push({ id: item.id, error: reason });
+          continue;
+        }
+
         // Pre-publish content validation
         const contentValidationError = validateContentForPublish(item.content_text, item.platform);
         if (contentValidationError) {
           console.error(`[Publisher] Content validation failed for ${item.id}: ${contentValidationError}`);
           await supabase.from('content').update({
-            status: 'failed', failure_reason: contentValidationError,
+            status: 'failed', failure_reason: contentValidationError, failure_category: 'validation',
           }).eq('id', item.id).eq('status', 'approved');
           errors.push({ id: item.id, error: contentValidationError });
           continue;
@@ -537,6 +568,8 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        const latencyMs = Date.now() - itemStartedAt;
+
         if (result.success) {
           const externalPostId = result.tweetId || result.postId || null;
           const externalUrl = result.tweetUrl || result.postUrl || null;
@@ -546,6 +579,7 @@ Deno.serve(async (req) => {
             .update({
               status: 'published',
               published_at: new Date().toISOString(),
+              publish_latency_ms: latencyMs,
               impressions: 0,
               engagements: 0,
               clicks: 0,
@@ -561,7 +595,7 @@ Deno.serve(async (req) => {
             errors.push({ id: item.id, error: updateError.message });
           } else {
             publishedIds.push(item.id);
-            console.log(`[Publisher] Published ${item.id} → ${externalUrl || 'no URL'}`);
+            console.log(`[Publisher] Published ${item.id} → ${externalUrl || 'no URL'} (${latencyMs}ms)`);
 
             // Fire-and-forget: regenerate learning insights for this app (Marketing Intelligence Loop)
             fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-learning-insights`, {
@@ -575,27 +609,36 @@ Deno.serve(async (req) => {
           }
         } else if (result.permanent) {
           // Permanent failure — mark as failed, don't retry
+          const reason = result.error || "Permanent publishing error";
           await supabase.from('content').update({
             status: 'failed',
-            failure_reason: result.error || "Permanent publishing error",
+            failure_reason: reason,
+            failure_category: categorizeFailure(reason),
           }).eq('id', item.id).eq('status', 'approved');
-          console.log(`[Publisher] Permanent failure for ${item.id}: ${result.error}`);
-          errors.push({ id: item.id, error: result.error || "Unknown error" });
+          console.log(`[Publisher] Permanent failure for ${item.id}: ${reason}`);
+          errors.push({ id: item.id, error: reason });
         } else {
-          // Transient failure — skip for now, will retry on next run
+          // Transient failure — bump retry_count, skip; cron loop retries on next tick
+          await supabase.from('content').update({
+            retry_count: ((item as any).retry_count ?? 0) + 1,
+          }).eq('id', item.id).eq('status', 'approved');
           console.log(`[Publisher] Transient skip for ${item.id}: ${result.error}`);
           skippedIds.push(item.id);
         }
+
       } catch (itemError) {
         console.error(`[Publisher] Error processing ${item.id}:`, itemError);
-        errors.push({ id: item.id, error: String(itemError) });
+        const reason = String(itemError);
+        errors.push({ id: item.id, error: reason });
 
         await supabase.from('content').update({
           status: 'failed',
-          failure_reason: String(itemError),
+          failure_reason: reason,
+          failure_category: categorizeFailure(reason),
         }).eq('id', item.id).eq('status', 'approved');
       }
     }
+
 
     const result = {
       message: `Published ${publishedIds.length} items`,
