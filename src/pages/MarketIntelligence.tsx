@@ -95,6 +95,27 @@ export default function MarketIntelligence() {
           <EmptyState onGenerate={() => generate.mutate(effectiveAppId)} loading={generate.isPending} />
         ) : (
           <div className="space-y-8">
+            {/* Evidence banner */}
+            {data?.evidence && (
+              <Card className="p-4 bg-muted/40 border-dashed">
+                <div className="flex flex-wrap items-center gap-3 text-xs">
+                  <span className="font-semibold text-muted-foreground">Evidence basis:</span>
+                  <Badge variant="outline">{data.evidence.posts_analyzed} posts</Badge>
+                  <Badge variant="outline">{data.evidence.clicks} clicks</Badge>
+                  <Badge variant="outline">{data.evidence.leads} leads</Badge>
+                  <Badge variant="outline">{data.evidence.conversions} conversions</Badge>
+                  {data.evidence.revenue > 0 && (
+                    <Badge variant="outline">${data.evidence.revenue.toFixed(0)} revenue</Badge>
+                  )}
+                  {data.evidence.posts_analyzed === 0 && data.evidence.clicks === 0 && (
+                    <span className="text-muted-foreground">
+                      · No attribution yet — recommendations are initial hypotheses.
+                    </span>
+                  )}
+                </div>
+              </Card>
+            )}
+
             {/* Recommendations first — the punchline */}
             {!!data?.recommendations.length && (
               <section className="space-y-3">
@@ -102,19 +123,29 @@ export default function MarketIntelligence() {
                   <Sparkles className="h-5 w-5 text-primary" /> Campaign Opportunities
                 </h2>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {data.recommendations.map((r: any) => (
-                    <Card key={r.id} className="p-4 space-y-2 border-l-4 border-l-primary">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-semibold text-sm leading-tight">{r.title}</h3>
-                        <Badge variant="outline" className="text-[10px] capitalize shrink-0">{r.recommendation_type}</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{r.explanation}</p>
-                      <div className="flex items-center gap-2 pt-1">
-                        <ScorePill label="Confidence" value={r.confidence_score} />
-                        <Badge variant="secondary" className="text-[10px] capitalize">{r.expected_impact} impact</Badge>
-                      </div>
-                    </Card>
-                  ))}
+                  {data.recommendations.map((r: any) => {
+                    const ev = data.evidence;
+                    const basisLabel =
+                      ev && (ev.posts_analyzed > 0 || ev.clicks > 0 || ev.leads > 0)
+                        ? `${ev.posts_analyzed} posts · ${ev.clicks} clicks · ${ev.leads} leads · ${ev.conversions} conv.`
+                        : "Initial hypothesis — no attribution yet";
+                    return (
+                      <Card key={r.id} className="p-4 space-y-2 border-l-4 border-l-primary">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-semibold text-sm leading-tight">{r.title}</h3>
+                          <Badge variant="outline" className="text-[10px] capitalize shrink-0">{r.recommendation_type}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{r.explanation}</p>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <ScorePill label="Confidence" value={r.confidence_score} />
+                          <Badge variant="secondary" className="text-[10px] capitalize">{r.expected_impact} impact</Badge>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground pt-1 border-t border-dashed">
+                          Evidence: {basisLabel}
+                        </p>
+                      </Card>
+                    );
+                  })}
                 </div>
               </section>
             )}
