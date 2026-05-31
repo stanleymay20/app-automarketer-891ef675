@@ -159,7 +159,9 @@ Critical:
       journey_stage: body.journey_stage ?? null,
       messaging_angle: body.messaging_angle ?? null,
       seed_recommendation_id: body.seed_recommendation_id ?? null,
+      campaign_id: campaign.id,
     });
+
     (payload.linkedin_posts ?? []).slice(0, 4).forEach((t: string, i: number) => contentRows.push(buildRow("linkedin", t, i)));
     (payload.x_posts ?? []).slice(0, 4).forEach((t: string, i: number) => contentRows.push(buildRow("x", t, i + 4)));
 

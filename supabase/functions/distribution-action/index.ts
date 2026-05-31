@@ -121,7 +121,7 @@ Return plain text only. ${isEmail ? 'If channel is email, you may start with "Su
         body: bodyText,
       }).select().single();
 
-      // also seed a campaign for channel_campaign
+      // also seed a campaign for channel_campaign — stamp distribution lineage
       if (action === "generate_channel_campaign") {
         const { data: campaign } = await admin.from("campaigns").insert({
           user_id: user.id,
@@ -131,12 +131,16 @@ Return plain text only. ${isEmail ? 'If channel is email, you may start with "Su
           themes: target.signals ?? [],
           platform_mix: target.platform ? [target.platform] : [],
           posting_frequency: 3,
+          seed_distribution_target_id: target_id,
+          seed_distribution_action_id: act!.id,
+          seed_distribution_source_type: target.target_type,
         }).select().single();
         if (campaign) {
           await admin.from("distribution_actions").update({ campaign_id: campaign.id }).eq("id", act!.id);
           result.campaign = campaign;
         }
       }
+
 
       result.action = act;
     }

@@ -241,7 +241,9 @@ Rules:
         journey_stage: rec.journey_stage ?? null,
         messaging_angle: rec.angle ?? CREATIVE_VARIANTS[i]?.key ?? null,
         seed_recommendation_id: rec.id,
+        campaign_id: rec.campaign_id ?? null,
       }));
+
 
       const { data: inserted, error: iErr } = await supabase.from("content").insert(rows).select("id");
       if (iErr) throw iErr;
