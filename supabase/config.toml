@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.analyze-conversions]
 verify_jwt = false
+
+[functions.generate-growth-intelligence]
+verify_jwt = false

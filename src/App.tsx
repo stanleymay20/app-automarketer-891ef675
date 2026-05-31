@@ -22,6 +22,7 @@ import Audience from "./pages/Audience";
 import LandingPage from "./pages/LandingPage";
 import AppLanding from "./pages/AppLanding";
 import Intelligence from "./pages/Intelligence";
+import MarketIntelligence from "./pages/MarketIntelligence";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ function AppRoutes() {
        <Route path="/intelligence" element={<ProtectedRoute><Intelligence /></ProtectedRoute>} />
        <Route path="/revenue" element={<ProtectedRoute><Revenue /></ProtectedRoute>} />
        <Route path="/audience" element={<ProtectedRoute><Audience /></ProtectedRoute>} />
+       <Route path="/market-intelligence" element={<ProtectedRoute><MarketIntelligence /></ProtectedRoute>} />
        <Route path="/funding" element={<ProtectedRoute><Funding /></ProtectedRoute>} />
        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/lp/:slug" element={<LandingPage />} />
