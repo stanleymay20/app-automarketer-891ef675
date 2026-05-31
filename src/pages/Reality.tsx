@@ -33,7 +33,7 @@ export default function Reality() {
     <div className="min-h-screen bg-background">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="lg:pl-64">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header title="Reality" onMenuToggle={() => setSidebarOpen(true)} />
         <main className="container mx-auto max-w-6xl space-y-6 p-4 md:p-8">
           <div className="flex items-center justify-between">
             <div>
