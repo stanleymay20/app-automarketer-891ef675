@@ -16,6 +16,19 @@ interface PublishResult {
   permanent?: boolean; // true = don't retry, mark as failed
 }
 
+function categorizeFailure(reason: string | null | undefined): string {
+  if (!reason) return "unknown";
+  const r = reason.toLowerCase();
+  if (r.includes("token expired") || r.includes("reconnect") || r.includes("not connected")) return "token_expired";
+  if (r.includes("credits") || r.includes("402")) return "account_no_credits";
+  if (r.includes("character limit") || r.includes("too long") || r.includes("exceeds")) return "content_too_long";
+  if (r.includes("429") || r.includes("rate limit")) return "rate_limit";
+  if (/\b5\d{2}\b/.test(r)) return "platform_5xx";
+  if (r.includes("validation") || r.includes("too short") || r.includes("unattached") || r.includes("overdue")) return "validation";
+  return "platform_error";
+}
+
+
 // ─── X Token Refresh ────────────────────────────────────────────────
 async function refreshXToken(
   supabase: ReturnType<typeof createClient>,
