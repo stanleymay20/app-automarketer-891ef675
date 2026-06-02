@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     // --- Publish SLOs ---
     const { data: content } = await db
       .from("content")
-      .select("id, status, retry_count, publish_latency_ms, persona_id, distribution_target_id, seed_recommendation_id, campaign_id")
+      .select("id, status, platform, retry_count, publish_latency_ms, persona_id, distribution_target_id, seed_recommendation_id, campaign_id")
       .eq("user_id", uid)
       .limit(10000);
 
@@ -42,6 +42,24 @@ Deno.serve(async (req) => {
     const latencies = c.map((r) => r.publish_latency_ms).filter((x): x is number => typeof x === "number" && x > 0);
     const avgLatency = latencies.length ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : null;
     const successRate = pct(published, published + failed);
+
+    // Fix 3: per-platform breakdown so 100% LinkedIn isn't dragged down by 0% X.
+    const byPlatformMap = new Map<string, { published: number; failed: number }>();
+    for (const r of c) {
+      const plat = (r.platform || "unknown").toLowerCase().replace("x (twitter)", "x").replace("twitter", "x");
+      const slot = byPlatformMap.get(plat) ?? { published: 0, failed: 0 };
+      if (r.status === "published") slot.published += 1;
+      else if (r.status === "failed") slot.failed += 1;
+      byPlatformMap.set(plat, slot);
+    }
+    const byPlatform = Array.from(byPlatformMap.entries())
+      .map(([platform, v]) => ({
+        platform,
+        published: v.published,
+        failed: v.failed,
+        success_rate: pct(v.published, v.published + v.failed),
+      }))
+      .sort((a, b) => (b.published + b.failed) - (a.published + a.failed));
 
     // --- Attribution coverage ---
     const contentToPersona = pct(c.filter((r) => r.persona_id).length, total);
@@ -132,6 +150,7 @@ Deno.serve(async (req) => {
           success_rate: successRate,
           avg_latency_ms: avgLatency,
           recovered_by_retry: recovered,
+          by_platform: byPlatform,
         },
         funnel: {
           clicks: clicksCount ?? 0,
