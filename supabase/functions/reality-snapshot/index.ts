@@ -150,6 +150,7 @@ Deno.serve(async (req) => {
           success_rate: successRate,
           avg_latency_ms: avgLatency,
           recovered_by_retry: recovered,
+          by_platform: byPlatform,
         },
         funnel: {
           clicks: clicksCount ?? 0,
