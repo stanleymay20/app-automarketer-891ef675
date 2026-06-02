@@ -118,10 +118,13 @@ export default function Audience() {
           <Card className="shadow-card">
             <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
               <Users className="h-10 w-10 text-muted-foreground/60" />
-              <h3 className="font-display text-lg font-semibold">No audience yet</h3>
+              <h3 className="font-display text-lg font-semibold">
+                {previousFailed ? "Last run didn't finish" : "No audience yet"}
+              </h3>
               <p className="max-w-md text-sm text-muted-foreground">
-                Tap <strong>Build my audience</strong> above. The AI will research your market and generate
-                your ICPs, personas, customer journey, and messaging angles in about a minute.
+                {previousFailed
+                  ? "Something went wrong last time. Tap Rebuild above to try again — it usually takes about a minute."
+                  : <>Tap <strong>Build my audience</strong> above. The AI will research your market and generate your ICPs, personas, customer journey, and messaging angles in about a minute.</>}
               </p>
             </CardContent>
           </Card>
