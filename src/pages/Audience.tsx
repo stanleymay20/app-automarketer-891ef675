@@ -53,7 +53,13 @@ export default function Audience() {
   const generate = useGenerateAudience();
 
   const hasData = icps.length > 0 || personas.length > 0;
-  const isGenerating = generate.isPending || profile?.status === "generating";
+  // Only treat as "generating" if (a) mutation is currently in flight, OR
+  // (b) status says generating AND it started within the last 3 minutes.
+  // This prevents permanently-stuck rows from blocking the rebuild button.
+  const startedAt = profile?.last_generated_at ? new Date(profile.last_generated_at).getTime() : 0;
+  const recentlyStarted = profile?.status === "generating" && Date.now() - startedAt < 3 * 60_000 && startedAt > 0;
+  const isGenerating = generate.isPending || recentlyStarted;
+  const previousFailed = profile?.status === "failed" && !generate.isPending;
 
   return (
     <DashboardLayout title="Audience">
@@ -112,10 +118,13 @@ export default function Audience() {
           <Card className="shadow-card">
             <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
               <Users className="h-10 w-10 text-muted-foreground/60" />
-              <h3 className="font-display text-lg font-semibold">No audience yet</h3>
+              <h3 className="font-display text-lg font-semibold">
+                {previousFailed ? "Last run didn't finish" : "No audience yet"}
+              </h3>
               <p className="max-w-md text-sm text-muted-foreground">
-                Tap <strong>Build my audience</strong> above. The AI will research your market and generate
-                your ICPs, personas, customer journey, and messaging angles in about a minute.
+                {previousFailed
+                  ? "Something went wrong last time. Tap Rebuild above to try again — it usually takes about a minute."
+                  : <>Tap <strong>Build my audience</strong> above. The AI will research your market and generate your ICPs, personas, customer journey, and messaging angles in about a minute.</>}
               </p>
             </CardContent>
           </Card>
