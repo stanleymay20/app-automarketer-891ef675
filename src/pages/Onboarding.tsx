@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, ArrowLeft, Rocket, Sparkles, Check } from "lucide-react";
+import { ArrowRight, ArrowLeft, Rocket, Sparkles, Check, Wand2, Loader2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 const PLATFORMS = [
@@ -36,6 +37,15 @@ const GOALS = [
   { value: "engagement", label: "Community Engagement" },
 ];
 
+interface Analyzed {
+  name: string;
+  description: string;
+  target_audience: string;
+  brand_tone: string;
+  key_themes: string[];
+  value_props: string[];
+}
+
 export default function Onboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -44,6 +54,8 @@ export default function Onboarding() {
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzed, setAnalyzed] = useState<Analyzed | null>(null);
 
   // Form state
   const [appName, setAppName] = useState("");
@@ -62,6 +74,40 @@ export default function Onboarding() {
         ? prev.filter((p) => p !== platformId)
         : [...prev, platformId]
     );
+  };
+
+  const handleAnalyze = async () => {
+    if (!websiteUrl.trim()) {
+      toast({ title: "Add a URL first", description: "Paste your website or app URL." });
+      return;
+    }
+    setIsAnalyzing(true);
+    setAnalyzed(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-website", {
+        body: { url: websiteUrl.trim() },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const result = data as Analyzed;
+      setAnalyzed(result);
+      // Pre-fill (don't overwrite if user already typed name)
+      if (!appName && result.name) setAppName(result.name);
+      if (!description && result.description) setDescription(result.description);
+      if (!targetAudience && result.target_audience) setTargetAudience(result.target_audience);
+      if (result.brand_tone) setBrandTone(result.brand_tone);
+
+      toast({ title: "Got it", description: "We've drafted your setup — review on the next steps." });
+    } catch (e: any) {
+      toast({
+        title: "Couldn't analyze that URL",
+        description: e.message || "Try again or fill the fields manually.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleComplete = async () => {
@@ -165,11 +211,76 @@ export default function Onboarding() {
                 </div>
                 <h1 className="font-display text-2xl font-bold mb-2">Let's add your first app</h1>
                 <p className="text-muted-foreground">
-                  Tell us about the app you want to market
+                  Paste your website — we'll read it and draft your setup
                 </p>
               </div>
 
               <div className="space-y-4">
+                <div>
+                  <Label htmlFor="websiteUrl">Website or App Store URL</Label>
+                  <div className="mt-1.5 flex gap-2">
+                    <Input
+                      id="websiteUrl"
+                      value={websiteUrl}
+                      onChange={(e) => setWebsiteUrl(e.target.value)}
+                      placeholder="https://yoursite.com"
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAnalyze(); } }}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAnalyze}
+                      disabled={isAnalyzing || !websiteUrl.trim()}
+                      className="shrink-0 gap-1.5"
+                    >
+                      {isAnalyzing ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" />Reading…</>
+                      ) : (
+                        <><Wand2 className="h-4 w-4" />Analyze</>
+                      )}
+                    </Button>
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Takes ~15 seconds. We'll pre-fill the next steps so you can launch faster.
+                  </p>
+                </div>
+
+                {analyzed && (
+                  <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3 animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-primary">Here's what we learned</span>
+                    </div>
+                    <div className="grid gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Product: </span>
+                        <span className="font-medium">{analyzed.name || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">What it does: </span>
+                        <span>{analyzed.description || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Who it's for: </span>
+                        <span>{analyzed.target_audience || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs">Tone:</span>
+                        <Badge variant="secondary" className="text-xs capitalize">{analyzed.brand_tone}</Badge>
+                      </div>
+                      {analyzed.key_themes.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {analyzed.key_themes.map((t) => (
+                            <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground pt-1 border-t border-primary/10">
+                      You can edit any of this on the next steps.
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <Label htmlFor="appName">App Name *</Label>
                   <Input
@@ -177,17 +288,6 @@ export default function Onboarding() {
                     value={appName}
                     onChange={(e) => setAppName(e.target.value)}
                     placeholder="e.g., My Awesome App"
-                    className="mt-1.5"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="websiteUrl">Website or App Store URL</Label>
-                  <Input
-                    id="websiteUrl"
-                    value={websiteUrl}
-                    onChange={(e) => setWebsiteUrl(e.target.value)}
-                    placeholder="https://..."
                     className="mt-1.5"
                   />
                 </div>
@@ -200,7 +300,7 @@ export default function Onboarding() {
               <div className="text-center">
                 <h1 className="font-display text-2xl font-bold mb-2">Describe your app</h1>
                 <p className="text-muted-foreground">
-                  This helps us create authentic marketing content
+                  {analyzed ? "Review what we drafted — edit anything that's off" : "This helps us create authentic marketing content"}
                 </p>
               </div>
 
