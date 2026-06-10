@@ -1,5 +1,6 @@
-import { HelpCircle, Menu, User } from "lucide-react";
+import { Menu, User } from "lucide-react";
 import { NotificationsBell } from "./NotificationsBell";
+import { CommandBar } from "./CommandBar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,20 +16,19 @@ interface HeaderProps {
 
 export function Header({ title, onMenuToggle }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="lg:hidden h-8 w-8"
-          onClick={onMenuToggle}
-        >
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex items-center gap-3 shrink-0">
+        <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8" onClick={onMenuToggle}>
           <Menu className="h-5 w-5" />
         </Button>
-        <h1 className="font-display text-lg font-bold text-foreground lg:text-xl">{title}</h1>
+        <h1 className="font-display text-lg font-bold text-foreground lg:text-xl hidden sm:block">{title}</h1>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex-1 flex justify-center">
+        <CommandBar />
+      </div>
+
+      <div className="flex items-center gap-1 shrink-0">
         <NotificationsBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
