@@ -1,26 +1,27 @@
 import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  AppWindow,
+  Gauge,
   FileText,
+  AppWindow,
   Calendar,
-  BarChart3,
-  Mail,
-  Settings,
-  Bell,
-  LogOut,
-  Send,
-  DollarSign,
-  Landmark,
+  Rocket,
   Users,
-  Lightbulb,
-  Radar,
   Target,
   Megaphone,
-  Rocket,
+  Landmark,
+  Settings,
+  Bell,
+  Send,
+  LogOut,
+  ChevronDown,
+  FlaskConical,
+  Radar,
   Brain,
-  Gauge,
+  Lightbulb,
+  BarChart3,
+  DollarSign,
   X,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -28,25 +29,50 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserSettings, useUpdateUserSettings } from "@/hooks/useUserSettings";
 import logo from "@/assets/logo.png";
 
-const navItems = [
-  { icon: Gauge, label: "Reality", path: "/" },
-  { icon: LayoutDashboard, label: "Home", path: "/dashboard" },
-  { icon: Users, label: "Audience", path: "/audience" },
-  { icon: FileText, label: "Create Post", path: "/create" },
-  { icon: AppWindow, label: "Campaigns", path: "/content" },
-  { icon: Rocket, label: "Orchestrator", path: "/orchestrator" },
-  { icon: Brain, label: "Portfolio Intel", path: "/content-intelligence" },
-  { icon: Radar, label: "Market Intel", path: "/market-intelligence" },
-  { icon: Target, label: "Prospects", path: "/prospects" },
-  { icon: Megaphone, label: "Distribution", path: "/distribution" },
-  { icon: BarChart3, label: "Performance", path: "/analytics" },
-  { icon: Lightbulb, label: "Intelligence", path: "/intelligence" },
-  { icon: DollarSign, label: "Revenue", path: "/revenue" },
-  { icon: Landmark, label: "Funding", path: "/funding" },
-  { icon: Calendar, label: "Calendar", path: "/calendar" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+type NavItem = { icon: any; label: string; path: string };
+type NavSection = { label: string; items: NavItem[] };
+
+// Top-level information architecture — outcomes, not engines.
+const SECTIONS: NavSection[] = [
+  {
+    label: "Growth OS",
+    items: [
+      { icon: Gauge, label: "Home", path: "/dashboard" },
+      { icon: Gauge, label: "Reality", path: "/" },
+      { icon: DollarSign, label: "Revenue", path: "/revenue" },
+      { icon: BarChart3, label: "Performance", path: "/analytics" },
+      { icon: FileText, label: "Executive Briefs", path: "/weekly-reports" },
+    ],
+  },
+  {
+    label: "Campaigns",
+    items: [
+      { icon: FileText, label: "Create Post", path: "/create" },
+      { icon: AppWindow, label: "Campaigns", path: "/content" },
+      { icon: Calendar, label: "Calendar", path: "/calendar" },
+      { icon: Rocket, label: "Orchestrator", path: "/orchestrator" },
+    ],
+  },
+  {
+    label: "Customers",
+    items: [
+      { icon: Users, label: "Audience", path: "/audience" },
+      { icon: Target, label: "Prospects", path: "/prospects" },
+      { icon: Megaphone, label: "Distribution", path: "/distribution" },
+    ],
+  },
+  {
+    label: "Funding",
+    items: [{ icon: Landmark, label: "Grants", path: "/funding" }],
+  },
 ];
 
+const ADVANCED: NavItem[] = [
+  { icon: Radar, label: "Market Intelligence", path: "/market-intelligence" },
+  { icon: Brain, label: "Portfolio Intelligence", path: "/content-intelligence" },
+  { icon: Lightbulb, label: "Growth Patterns", path: "/intelligence" },
+  { icon: AppWindow, label: "Apps", path: "/apps" },
+];
 
 interface SidebarProps {
   open: boolean;
@@ -58,19 +84,35 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const { signOut } = useAuth();
   const { data: settings } = useUserSettings();
   const updateSettings = useUpdateUserSettings();
+  const [advancedOpen, setAdvancedOpen] = useState(
+    ADVANCED.some((i) => i.path === location.pathname)
+  );
 
   const handleApprovalModeChange = (checked: boolean) => {
-    updateSettings.mutate({
-      approval_mode: checked,
-      autopilot_mode: !checked,
-    });
+    updateSettings.mutate({ approval_mode: checked, autopilot_mode: !checked });
+  };
+  const handleAutopilotChange = (checked: boolean) => {
+    updateSettings.mutate({ autopilot_mode: checked, approval_mode: !checked });
   };
 
-  const handleAutopilotChange = (checked: boolean) => {
-    updateSettings.mutate({
-      autopilot_mode: checked,
-      approval_mode: !checked,
-    });
+  const renderItem = (item: NavItem) => {
+    const isActive = location.pathname === item.path;
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={onClose}
+        className={cn(
+          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          isActive
+            ? "bg-accent text-primary"
+            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+        )}
+      >
+        <item.icon className={cn("h-4 w-4 shrink-0", isActive && "text-primary")} />
+        {item.label}
+      </Link>
+    );
   };
 
   return (
@@ -81,7 +123,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         open ? "translate-x-0" : "-translate-x-full"
       )}
     >
-      {/* Logo + close */}
       <div className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2">
           <img src={logo} alt="ScrollMarketer" className="h-9 w-9" />
@@ -90,40 +131,43 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <span className="text-secondary">Marketer</span>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="rounded-md p-1 text-muted-foreground hover:bg-accent lg:hidden"
-        >
+        <button onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-accent lg:hidden">
           <X className="h-5 w-5" />
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onClose}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-accent text-primary"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-              )}
-            >
-              <item.icon className={cn("h-4.5 w-4.5 shrink-0", isActive && "text-info")} />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto px-3 py-1 space-y-4">
+        {SECTIONS.map((section) => (
+          <div key={section.label} className="space-y-0.5">
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              {section.label}
+            </p>
+            {section.items.map(renderItem)}
+          </div>
+        ))}
+
+        {/* Advanced — hidden by default, no power lost */}
+        <div className="space-y-0.5 pt-2 border-t border-sidebar-border">
+          <button
+            onClick={() => setAdvancedOpen((v) => !v)}
+            className="flex w-full items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-foreground"
+          >
+            <span className="flex items-center gap-1.5">
+              <FlaskConical className="h-3 w-3" />
+              Advanced
+            </span>
+            <ChevronDown className={cn("h-3 w-3 transition-transform", advancedOpen && "rotate-180")} />
+          </button>
+          {advancedOpen && ADVANCED.map(renderItem)}
+        </div>
+
+        <div className="space-y-0.5 pt-2 border-t border-sidebar-border">
+          {renderItem({ icon: Settings, label: "Settings", path: "/settings" })}
+        </div>
       </nav>
 
-      {/* Mode toggles */}
       <div className="border-t border-sidebar-border p-3 space-y-2">
-        <div className="flex items-center justify-between rounded-lg bg-accent/50 px-3 py-2.5">
+        <div className="flex items-center justify-between rounded-lg bg-accent/50 px-3 py-2">
           <div className="flex items-center gap-2">
             <Bell className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-medium">Approval</span>
@@ -134,15 +178,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             className="data-[state=checked]:bg-info scale-90"
           />
         </div>
-
-        <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 px-3 py-2.5">
+        <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 px-3 py-2">
           <div className="flex items-center gap-2">
             <Send className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-medium">Autopilot</span>
             {settings?.autopilot_mode && (
-              <span className="rounded bg-success/20 px-1.5 py-0.5 text-[10px] font-semibold text-success">
-                ON
-              </span>
+              <span className="rounded bg-success/20 px-1.5 py-0.5 text-[10px] font-semibold text-success">ON</span>
             )}
           </div>
           <Switch
@@ -151,7 +192,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             className="data-[state=checked]:bg-secondary scale-90"
           />
         </div>
-
         <button
           onClick={() => signOut()}
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"

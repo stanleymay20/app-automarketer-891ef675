@@ -1,165 +1,235 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useApps } from "@/hooks/useApps";
 import { useContent } from "@/hooks/useContent";
+import { useRealitySnapshot } from "@/hooks/useReality";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link, Navigate } from "react-router-dom";
-import { PenLine, Zap, BarChart3, Clock, CheckCircle2, XCircle, AlertCircle, ArrowRight, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import {
+  DollarSign,
+  Users,
+  Rocket,
+  Landmark,
+  ArrowRight,
+  MousePointerClick,
+  UserPlus,
+  CheckCircle2,
+  Sparkles,
+} from "lucide-react";
+
+function useFundingCount() {
+  return useQuery({
+    queryKey: ["funding-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("grants")
+        .select("*", { count: "exact", head: true })
+        .gte("fit_score", 70);
+      return count ?? 0;
+    },
+  });
+}
+
+function useLeadsCount() {
+  return useQuery({
+    queryKey: ["leads-count"],
+    queryFn: async () => {
+      const { count } = await supabase.from("leads").select("*", { count: "exact", head: true });
+      return count ?? 0;
+    },
+  });
+}
+
+type Action = {
+  title: string;
+  reason: string;
+  cta: string;
+  path: string;
+  impact: "High" | "Medium";
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: apps, isLoading } = useApps();
   const { data: content } = useContent();
-  const appNameById = new Map((apps || []).map((a) => [a.id, a.name]));
+  const { data: reality } = useRealitySnapshot();
+  const { data: fundingCount = 0 } = useFundingCount();
+  const { data: leadsCount = 0 } = useLeadsCount();
 
   if (!isLoading && apps && apps.length === 0) {
     return <Navigate to="/onboarding" replace />;
   }
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "there";
-  const recentPosts = (content || []).slice(0, 5);
+  const revenue = reality?.funnel.revenue ?? 0;
+  const clicks = reality?.funnel.clicks ?? 0;
+  const conversions = reality?.funnel.conversions ?? 0;
+  const activeCampaigns = (content || []).filter((c) => c.status === "approved" || c.status === "pending").length;
+  const drafts = (content || []).filter((c) => c.status === "pending").length;
+  const publishFails = reality?.publish.failed ?? 0;
 
-  const statusConfig: Record<string, { icon: typeof CheckCircle2; color: string; label: string }> = {
-    published: { icon: CheckCircle2, color: "text-success", label: "Published" },
-    approved: { icon: Clock, color: "text-info", label: "Ready" },
-    pending: { icon: AlertCircle, color: "text-warning", label: "Draft" },
-    failed: { icon: XCircle, color: "text-destructive", label: "Failed" },
-  };
+  // Recommendation engine — driven by real signals, not random.
+  const actions: Action[] = [];
+  if (drafts > 0) {
+    actions.push({
+      title: `Approve ${drafts} pending post${drafts > 1 ? "s" : ""}`,
+      reason: "Drafts ready to ship today",
+      cta: "Review & approve",
+      path: "/content",
+      impact: "High",
+    });
+  }
+  if (fundingCount > 0) {
+    actions.push({
+      title: `Apply for ${fundingCount} matched grant${fundingCount > 1 ? "s" : ""}`,
+      reason: "Funding opportunities with 70%+ fit",
+      cta: "Open Funding",
+      path: "/funding",
+      impact: "High",
+    });
+  }
+  if (clicks === 0) {
+    actions.push({
+      title: "Drive your first attributed click",
+      reason: "Proof chain starts with a real visitor",
+      cta: "Launch campaign",
+      path: "/orchestrator",
+      impact: "High",
+    });
+  }
+  if (publishFails > 5) {
+    actions.push({
+      title: `Resolve ${publishFails} failed publishes`,
+      reason: "Recover lost reach in minutes",
+      cta: "Open Reality",
+      path: "/",
+      impact: "Medium",
+    });
+  }
+  if (leadsCount > 0 && conversions === 0) {
+    actions.push({
+      title: "Convert your leads",
+      reason: `${leadsCount} leads waiting for follow-up`,
+      cta: "Open Prospects",
+      path: "/prospects",
+      impact: "High",
+    });
+  }
+  while (actions.length < 3) {
+    actions.push({
+      title: "Generate a new post",
+      reason: "Keep the content engine warm",
+      cta: "Create post",
+      path: "/create",
+      impact: "Medium",
+    });
+  }
+  const topActions = actions.slice(0, 3);
+
+  const snapshot = [
+    { icon: DollarSign, label: "Revenue Attributed", value: `$${revenue.toLocaleString()}`, tone: "text-success" },
+    { icon: Users, label: "Leads Generated", value: leadsCount, tone: "text-info" },
+    { icon: Rocket, label: "Campaigns Active", value: activeCampaigns, tone: "text-primary" },
+    { icon: Landmark, label: "Funding Matches", value: fundingCount, tone: "text-secondary" },
+  ];
 
   return (
-    <DashboardLayout title="Home">
-      <div className="space-y-6 max-w-3xl mx-auto">
+    <DashboardLayout title="Growth OS">
+      <div className="space-y-6 max-w-5xl mx-auto">
         {/* Greeting */}
         <div className="space-y-1">
           <h1 className="font-display text-2xl font-bold text-foreground lg:text-3xl">
             Hey {firstName} 👋
           </h1>
-          <p className="text-muted-foreground">What do you want to do today?</p>
+          <p className="text-muted-foreground">Here's where your growth stands today.</p>
         </div>
 
-        {/* Action Cards */}
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Link to="/create">
-            <Card className="group cursor-pointer border-2 border-transparent transition-all hover:border-primary hover:shadow-card-hover h-full">
-              <CardContent className="flex flex-col items-center text-center p-6 gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                  <PenLine className="h-6 w-6 text-primary" />
+        {/* Growth Snapshot */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          {snapshot.map((s) => (
+            <Card key={s.label} className="shadow-sm">
+              <CardContent className="p-4 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <s.icon className={`h-4 w-4 ${s.tone}`} />
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {s.label}
+                  </span>
                 </div>
-                <div>
-                  <h3 className="font-display font-semibold text-foreground">Create a Post</h3>
-                  <p className="text-xs text-muted-foreground mt-1">AI writes it, you publish it</p>
-                </div>
-                <Button size="sm" className="mt-auto gap-1.5 w-full">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Start Creating
-                </Button>
+                <div className="text-2xl font-bold text-foreground">{s.value}</div>
               </CardContent>
             </Card>
-          </Link>
-
-          <Link to="/content">
-            <Card className="group cursor-pointer border-2 border-transparent transition-all hover:border-secondary hover:shadow-card-hover h-full">
-              <CardContent className="flex flex-col items-center text-center p-6 gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
-                  <Zap className="h-6 w-6 text-secondary" />
-                </div>
-                <div>
-                  <h3 className="font-display font-semibold text-foreground">Manage Content</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Review, approve & publish</p>
-                </div>
-                <Button size="sm" variant="outline" className="mt-auto gap-1.5 w-full">
-                  View Queue
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to="/analytics">
-            <Card className="group cursor-pointer border-2 border-transparent transition-all hover:border-info hover:shadow-card-hover h-full">
-              <CardContent className="flex flex-col items-center text-center p-6 gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-info/10 group-hover:bg-info/20 transition-colors">
-                  <BarChart3 className="h-6 w-6 text-info" />
-                </div>
-                <div>
-                  <h3 className="font-display font-semibold text-foreground">View Performance</h3>
-                  <p className="text-xs text-muted-foreground mt-1">See what's working</p>
-                </div>
-                <Button size="sm" variant="outline" className="mt-auto gap-1.5 w-full">
-                  See Insights
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </CardContent>
-            </Card>
-          </Link>
+          ))}
         </div>
 
-        {/* Recent Activity */}
+        {/* Top 3 Recommended Actions */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-base font-semibold text-foreground">Recent Activity</h2>
-            {recentPosts.length > 0 && (
-              <Link to="/content" className="text-xs text-primary hover:underline">
-                View all
-              </Link>
-            )}
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="font-display text-base font-semibold text-foreground">
+                Top 3 actions for you
+              </h2>
+            </div>
+            <Link to="/" className="text-xs text-primary hover:underline">
+              See full Reality →
+            </Link>
           </div>
+          <div className="space-y-2">
+            {topActions.map((a, i) => (
+              <Card key={i} className="border-l-4 border-l-primary shadow-sm hover:shadow-card-hover transition-shadow">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                    {i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-foreground text-sm">{a.title}</h3>
+                      <Badge variant={a.impact === "High" ? "default" : "outline"} className="text-[10px]">
+                        {a.impact} impact
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{a.reason}</p>
+                  </div>
+                  <Button size="sm" onClick={() => navigate(a.path)} className="gap-1.5 shrink-0">
+                    {a.cta}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
 
-          {isLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 rounded-lg bg-muted animate-pulse" />
+        {/* Proof Chain — the moat, reinforced */}
+        <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-foreground">Content → Revenue</h3>
+              <Link to="/" className="text-[11px] text-primary hover:underline">
+                Open Reality
+              </Link>
+            </div>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              {[
+                { icon: MousePointerClick, label: "Clicks", value: clicks },
+                { icon: UserPlus, label: "Leads", value: leadsCount },
+                { icon: CheckCircle2, label: "Conversions", value: conversions },
+                { icon: DollarSign, label: "Revenue", value: `$${revenue.toLocaleString()}` },
+              ].map((s, i) => (
+                <div key={i} className="space-y-1">
+                  <s.icon className="h-4 w-4 mx-auto text-muted-foreground" />
+                  <div className="text-lg font-bold text-foreground">{s.value}</div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</div>
+                </div>
               ))}
             </div>
-          ) : recentPosts.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center text-center py-8">
-                <PenLine className="h-8 w-8 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">No posts yet. Create your first one!</p>
-                <Link to="/create">
-                  <Button size="sm" className="mt-3 gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Create Post
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {recentPosts.map((post) => {
-                const config = statusConfig[post.status] || statusConfig.pending;
-                const StatusIcon = config.icon;
-                return (
-                  <Card key={post.id} className="shadow-sm">
-                    <CardContent className="flex items-center gap-3 p-3">
-                      <StatusIcon className={`h-4 w-4 shrink-0 ${config.color}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground truncate">{post.content_text}</p>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            {appNameById.get(post.app_id) || "Unknown app"}
-                          </Badge>
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {post.platform}
-                          </Badge>
-                          <span className="text-[10px] text-muted-foreground">
-                            {format(new Date(post.created_at), "MMM d")}
-                          </span>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className={`text-[10px] shrink-0 ${config.color}`}>
-                        {config.label}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
