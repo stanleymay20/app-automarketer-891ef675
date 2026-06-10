@@ -49,7 +49,10 @@ export default function Reality() {
                 <PlayCircle className="mr-2 h-4 w-4" />
                 {funnelTest.isPending ? "Running…" : "Fire test funnel"}
               </Button>
+            </div>
           </div>
+
+
 
           {/* Proof Chain — the moat made visible */}
           {(() => {
