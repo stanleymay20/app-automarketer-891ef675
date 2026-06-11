@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useApps } from "@/hooks/useApps";
 import { useContent } from "@/hooks/useContent";
 import { useRealitySnapshot } from "@/hooks/useReality";
+import { usePlatformConnections } from "@/hooks/usePlatformConnections";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +22,10 @@ import {
   CheckCircle2,
   Sparkles,
   Info,
+  Check,
+  Circle,
+  Plug,
+  Send,
 } from "lucide-react";
 
 function useFundingCount() {
@@ -65,6 +70,7 @@ export default function Dashboard() {
   const { data: reality } = useRealitySnapshot();
   const { data: fundingCount = 0 } = useFundingCount();
   const { data: leadsCount = 0 } = useLeadsCount();
+  const { data: connections } = usePlatformConnections();
 
   if (!isLoading && apps && apps.length === 0) {
     return <Navigate to="/onboarding" replace />;
@@ -77,6 +83,18 @@ export default function Dashboard() {
   const activeCampaigns = (content || []).filter((c) => c.status === "approved" || c.status === "pending").length;
   const drafts = (content || []).filter((c) => c.status === "pending").length;
   const publishFails = reality?.publish.failed ?? 0;
+  const publishedCount = (content || []).filter((c) => c.status === "published").length;
+  const hasConnection = (connections || []).some((c) => c.connected);
+
+  // First Win checklist — shown until user gets their first attributed click.
+  const firstWinSteps = [
+    { label: "Connect a platform", done: hasConnection, path: "/settings?tab=connections", icon: Plug },
+    { label: "Publish your first post", done: publishedCount > 0, path: "/content", icon: Send },
+    { label: "Drive your first attributed click", done: clicks > 0, path: "/orchestrator", icon: MousePointerClick },
+  ];
+  const firstWinComplete = firstWinSteps.every((s) => s.done);
+  const nextStep = firstWinSteps.find((s) => !s.done);
+  const completedCount = firstWinSteps.filter((s) => s.done).length;
 
   // Recommendation engine — driven by real signals, always traceable.
   const actions: Action[] = [];
@@ -171,6 +189,71 @@ export default function Dashboard() {
           </h1>
           <p className="text-muted-foreground">Here's where your growth stands today.</p>
         </div>
+
+        {/* First Win checklist — only while user is still proving the loop */}
+        {!firstWinComplete && (
+          <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-secondary/5">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <h2 className="font-display text-base font-semibold text-foreground">
+                      Your first win
+                    </h2>
+                    <Badge variant="outline" className="text-[10px]">
+                      {completedCount}/{firstWinSteps.length}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Close the loop end-to-end. Most users finish in under 10 minutes.
+                  </p>
+                </div>
+                {nextStep && (
+                  <Button size="sm" onClick={() => navigate(nextStep.path)} className="gap-1.5 shrink-0">
+                    {nextStep.label.startsWith("Connect") ? "Connect" : nextStep.label.startsWith("Publish") ? "Publish" : "Launch"}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-2">
+                {firstWinSteps.map((step, i) => {
+                  const isNext = step === nextStep;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => navigate(step.path)}
+                      className={`w-full flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
+                        step.done
+                          ? "border-success/30 bg-success/5"
+                          : isNext
+                          ? "border-primary/40 bg-background hover:bg-accent"
+                          : "border-border bg-background hover:bg-accent"
+                      }`}
+                    >
+                      <div
+                        className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 ${
+                          step.done ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {step.done ? <Check className="h-3.5 w-3.5" /> : <Circle className="h-3 w-3" />}
+                      </div>
+                      <step.icon className={`h-4 w-4 shrink-0 ${step.done ? "text-success" : "text-muted-foreground"}`} />
+                      <span className={`flex-1 text-sm ${step.done ? "text-muted-foreground line-through" : "text-foreground font-medium"}`}>
+                        {step.label}
+                      </span>
+                      {isNext && (
+                        <Badge className="text-[10px]" variant="default">
+                          Next
+                        </Badge>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Growth Snapshot */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
