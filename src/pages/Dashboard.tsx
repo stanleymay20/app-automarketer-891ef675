@@ -22,6 +22,10 @@ import {
   CheckCircle2,
   Sparkles,
   Info,
+  Check,
+  Circle,
+  Plug,
+  Send,
 } from "lucide-react";
 
 function useFundingCount() {
