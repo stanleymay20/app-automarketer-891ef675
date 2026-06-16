@@ -189,6 +189,11 @@ Deno.serve(async (req) => {
     if (userErr || !userData?.user) throw new Error("Unauthorized");
     userId = userData.user.id;
 
+    const { checkRateLimit } = await import("../_shared/guard.ts");
+    const rl = await checkRateLimit(userId, "generate-audience-intelligence", 3, 60);
+    if (rl) return rl;
+
+
     const body = await req.json().catch(() => ({}));
     appId = body?.app_id ?? null;
     if (!appId) throw new Error("app_id is required");
