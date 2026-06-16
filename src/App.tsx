@@ -29,6 +29,7 @@ import Prospects from "./pages/Prospects";
 import Distribution from "./pages/Distribution";
 import Orchestrator from "./pages/Orchestrator";
 import ContentIntelligence from "./pages/ContentIntelligence";
+import Today from "./pages/Today";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
