@@ -8,6 +8,8 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 type Action =
   | "save" | "watch" | "dismiss" | "view"
   | "mark_contacted" | "mark_responded" | "mark_converted"
+  | "mark_qualified" | "mark_meeting" | "mark_proposal" | "mark_won" | "mark_lost"
+  | "update_contact" | "set_stage"
   | "generate_outreach" | "generate_campaign";
 
 async function aiText(system: string, user: string): Promise<string> {
