@@ -46,6 +46,9 @@ export interface Prospect {
   industry: string | null;
   notes: string | null;
   owner_id: string | null;
+  source_type: string | null;
+  evidence_summary: string | null;
+  discovery_run_id: string | null;
   created_at: string;
 }
 
