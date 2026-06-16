@@ -99,6 +99,8 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
       name: "",
       description: "",
       target_audience: "",
+      offering_type: undefined,
+      goal_type: undefined,
       primary_goal: undefined,
       brand_tone: "professional",
       website_url: "",
@@ -112,11 +114,13 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
         name: values.name,
         description: values.description || null,
         target_audience: values.target_audience || null,
+        offering_type: values.offering_type || null,
+        goal_type: values.goal_type || null,
         primary_goal: values.primary_goal || null,
         brand_tone: values.brand_tone || null,
         website_url: values.website_url || null,
         platforms: values.platforms,
-      },
+      } as any,
       {
         onSuccess: () => {
           setOpen(false);
@@ -132,17 +136,18 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
         {trigger || (
           <Button className="gap-2">
             <Plus className="h-4 w-4" />
-            Add App
+            Add Offering
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display">Add New App</DialogTitle>
+          <DialogTitle className="font-display">Add New Offering</DialogTitle>
           <DialogDescription>
-            Add your app details so ScrollMarketer can create tailored marketing content.
+            Tell us what you're growing — a SaaS, service, book, agency, community or any product — so we can tailor everything to your audience.
           </DialogDescription>
         </DialogHeader>
+
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
