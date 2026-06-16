@@ -1,14 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders, requireUser, checkRateLimit, errorResponse } from "../_shared/guard.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  const auth = await requireUser(req);
+  if (auth instanceof Response) return auth;
+  const rl = await checkRateLimit(auth.id, "generate-campaign", 5, 60);
+  if (rl) return rl;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -16,13 +17,11 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey);
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
-    const { app_id, user_id } = await req.json();
+    const { app_id } = await req.json();
+    const user_id = auth.id; // always trust JWT, never client body
 
-    if (!app_id || !user_id) {
-      return new Response(JSON.stringify({ error: "app_id and user_id required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!app_id) {
+      return errorResponse("app_id required", 400);
     }
 
     console.log(`[CampaignPlanner] Generating plan for app ${app_id}`);

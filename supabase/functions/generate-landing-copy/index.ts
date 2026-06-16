@@ -34,6 +34,11 @@ serve(async (req) => {
       });
     }
 
+    const { checkRateLimit } = await import("../_shared/guard.ts");
+    const rl = await checkRateLimit(user.id, "generate-landing-copy", 5, 60);
+    if (rl) return rl;
+
+
     const { data: app } = await supabase
       .from("apps")
       .select("id, user_id, name, description, target_audience, primary_goal, brand_tone, website_url, landing_slug")

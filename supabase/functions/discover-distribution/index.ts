@@ -71,6 +71,11 @@ Deno.serve(async (req) => {
     }
     if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+    const { checkRateLimit } = await import("../_shared/guard.ts");
+    const rl = await checkRateLimit(user.id, "discover-distribution", 5, 60);
+    if (rl) return rl;
+
+
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const appId: string | undefined = body.app_id ?? body.internal_app_id;
     const requested: TargetType[] = (body.types?.length ? body.types : TYPES).filter((t: string) => TYPES.includes(t as TargetType));

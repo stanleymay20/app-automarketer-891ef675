@@ -53,6 +53,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { checkRateLimit } = await import("../_shared/guard.ts");
+    const rl = await checkRateLimit(user.id, "orchestrate-campaign", 3, 60);
+    if (rl) return rl;
+
+
     const body = (await req.json()) as OrchestrateBody;
     if (!body.app_id) {
       return new Response(JSON.stringify({ error: "app_id required" }), {

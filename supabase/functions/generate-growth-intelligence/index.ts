@@ -50,6 +50,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { checkRateLimit } = await import("../_shared/guard.ts");
+    const rl = await checkRateLimit(user.id, "generate-growth-intelligence", 3, 60);
+    if (rl) return rl;
+
+
     const body = await req.json().catch(() => ({}));
     const appId: string | undefined = body.app_id;
 
