@@ -1766,9 +1766,11 @@ export type Database = {
         Row: {
           app_id: string | null
           category: string
+          company_size: string | null
           contact_email: string | null
           contact_linkedin: string | null
           contact_name: string | null
+          contact_role: string | null
           contacted_at: string | null
           converted_at: string | null
           created_at: string
@@ -1777,6 +1779,8 @@ export type Database = {
           evidence: Json
           fit_score: number
           id: string
+          industry: string | null
+          last_contacted_at: string | null
           location: string | null
           match_reason: string | null
           matched_icp_id: string | null
@@ -1795,6 +1799,8 @@ export type Database = {
           sent_at: string | null
           signals: Json
           source: string
+          source_confidence: number
+          stage: string
           status: string
           updated_at: string
           urgency_score: number
@@ -1804,9 +1810,11 @@ export type Database = {
         Insert: {
           app_id?: string | null
           category: string
+          company_size?: string | null
           contact_email?: string | null
           contact_linkedin?: string | null
           contact_name?: string | null
+          contact_role?: string | null
           contacted_at?: string | null
           converted_at?: string | null
           created_at?: string
@@ -1815,6 +1823,8 @@ export type Database = {
           evidence?: Json
           fit_score?: number
           id?: string
+          industry?: string | null
+          last_contacted_at?: string | null
           location?: string | null
           match_reason?: string | null
           matched_icp_id?: string | null
@@ -1833,6 +1843,8 @@ export type Database = {
           sent_at?: string | null
           signals?: Json
           source?: string
+          source_confidence?: number
+          stage?: string
           status?: string
           updated_at?: string
           urgency_score?: number
@@ -1842,9 +1854,11 @@ export type Database = {
         Update: {
           app_id?: string | null
           category?: string
+          company_size?: string | null
           contact_email?: string | null
           contact_linkedin?: string | null
           contact_name?: string | null
+          contact_role?: string | null
           contacted_at?: string | null
           converted_at?: string | null
           created_at?: string
@@ -1853,6 +1867,8 @@ export type Database = {
           evidence?: Json
           fit_score?: number
           id?: string
+          industry?: string | null
+          last_contacted_at?: string | null
           location?: string | null
           match_reason?: string | null
           matched_icp_id?: string | null
@@ -1871,6 +1887,8 @@ export type Database = {
           sent_at?: string | null
           signals?: Json
           source?: string
+          source_confidence?: number
+          stage?: string
           status?: string
           updated_at?: string
           urgency_score?: number
