@@ -34,6 +34,11 @@ Deno.serve(async (req) => {
     if (!userData?.user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const userId = userData.user.id;
 
+    const { checkRateLimit } = await import("../_shared/guard.ts");
+    const rl = await checkRateLimit(userId, "generate-grant-application", 5, 60);
+    if (rl) return rl;
+
+
     const { grant_id } = await req.json();
     if (!grant_id) throw new Error("grant_id required");
 
