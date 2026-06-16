@@ -79,7 +79,9 @@ export function useDiscoverProspects() {
     },
     onSuccess: (d) => {
       qc.invalidateQueries({ queryKey: ["prospects"] });
-      toast({ title: `${d?.created ?? 0} prospects discovered` });
+      const m = d?.metrics;
+      const desc = m ? `dedup ${m.dropped_duplicate} · low-conf ${m.low_confidence} · avg conf ${m.average_confidence}` : undefined;
+      toast({ title: `${d?.created ?? 0} prospects discovered`, description: desc });
     },
     onError: (e: any) => toast({ title: "Discovery failed", description: e.message, variant: "destructive" }),
   });
