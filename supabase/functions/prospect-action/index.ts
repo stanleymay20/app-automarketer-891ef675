@@ -38,7 +38,14 @@ Deno.serve(async (req) => {
     if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { prospect_id, action, channel } = (await req.json()) as { prospect_id: string; action: Action; channel?: string };
+    const body = (await req.json()) as {
+      prospect_id: string;
+      action: Action;
+      channel?: string;
+      stage?: string;
+      contact?: Record<string, unknown>;
+    };
+    const { prospect_id, action, channel, stage, contact } = body;
     if (!prospect_id || !action) {
       return new Response(JSON.stringify({ error: "prospect_id and action required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -50,22 +57,73 @@ Deno.serve(async (req) => {
       await admin.from("prospect_actions").insert({ user_id: user.id, prospect_id, action_type: action, channel: channel ?? null, ...extra });
     };
 
+    const nowIso = new Date().toISOString();
+    const daysFromNow = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
+    const ALLOWED_STAGES = ["new","saved","qualified","contacted","responded","meeting","proposal","won","lost"] as const;
+    const ALLOWED_CONTACT_FIELDS = [
+      "contact_email","contact_name","contact_linkedin","contact_role",
+      "company_size","industry","notes","next_action_at",
+    ];
+
     let result: any = { ok: true };
 
     if (["save", "watch", "dismiss"].includes(action)) {
       const status = action === "save" ? "saved" : action === "watch" ? "watching" : "dismissed";
-      await admin.from("prospects").update({ status, saved_at: status === "saved" || status === "watching" ? new Date().toISOString() : prospect.saved_at }).eq("id", prospect_id);
+      const nextStage = action === "dismiss" ? "lost" : "saved";
+      await admin.from("prospects").update({
+        status,
+        stage: nextStage,
+        saved_at: status === "saved" || status === "watching" ? nowIso : prospect.saved_at,
+      }).eq("id", prospect_id);
       await logAction();
     } else if (action === "view") {
       await logAction();
     } else if (action === "mark_contacted") {
-      await admin.from("prospects").update({ status: "contacted", contacted_at: new Date().toISOString() }).eq("id", prospect_id);
+      await admin.from("prospects").update({
+        status: "contacted",
+        stage: "contacted",
+        contacted_at: nowIso,
+        last_contacted_at: nowIso,
+        next_action_at: daysFromNow(3),
+      }).eq("id", prospect_id);
       await logAction();
     } else if (action === "mark_responded") {
-      await admin.from("prospects").update({ status: "responded", responded_at: new Date().toISOString() }).eq("id", prospect_id);
+      await admin.from("prospects").update({
+        status: "responded", stage: "responded", responded_at: nowIso, next_action_at: daysFromNow(1),
+      }).eq("id", prospect_id);
       await logAction();
-    } else if (action === "mark_converted") {
-      await admin.from("prospects").update({ status: "converted", converted_at: new Date().toISOString() }).eq("id", prospect_id);
+    } else if (action === "mark_qualified") {
+      await admin.from("prospects").update({ stage: "qualified" }).eq("id", prospect_id);
+      await logAction();
+    } else if (action === "mark_meeting") {
+      await admin.from("prospects").update({ stage: "meeting", next_action_at: daysFromNow(7) }).eq("id", prospect_id);
+      await logAction();
+    } else if (action === "mark_proposal") {
+      await admin.from("prospects").update({ stage: "proposal", next_action_at: daysFromNow(5) }).eq("id", prospect_id);
+      await logAction();
+    } else if (action === "mark_won" || action === "mark_converted") {
+      await admin.from("prospects").update({
+        status: "converted", stage: "won", converted_at: nowIso, next_action_at: null,
+      }).eq("id", prospect_id);
+      await logAction();
+    } else if (action === "mark_lost") {
+      await admin.from("prospects").update({ stage: "lost", next_action_at: null }).eq("id", prospect_id);
+      await logAction();
+    } else if (action === "set_stage") {
+      if (!stage || !ALLOWED_STAGES.includes(stage as any)) {
+        return new Response(JSON.stringify({ error: "invalid stage" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      await admin.from("prospects").update({ stage }).eq("id", prospect_id);
+      await logAction({ body: stage });
+    } else if (action === "update_contact") {
+      const patch: Record<string, unknown> = {};
+      for (const k of ALLOWED_CONTACT_FIELDS) {
+        if (contact && k in contact) patch[k] = (contact as any)[k];
+      }
+      if (Object.keys(patch).length === 0) {
+        return new Response(JSON.stringify({ error: "no valid fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      await admin.from("prospects").update(patch).eq("id", prospect_id);
       await logAction();
     } else if (action === "generate_outreach") {
       // pull product + persona context
