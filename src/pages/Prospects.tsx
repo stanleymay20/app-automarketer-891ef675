@@ -82,13 +82,19 @@ function ProspectCard({ p, onOpen }: { p: Prospect; onOpen: (p: Prospect) => voi
           <ScoreBar label="Urgency" value={p.urgency_score} />
           <ScoreBar label="Reachability" value={p.reachability_score} />
         </div>
-        {p.match_reason && (
-          <p className="rounded-md bg-muted/50 p-2 text-xs italic text-muted-foreground">{p.match_reason}</p>
+        {(p.evidence_summary || p.match_reason) && (
+          <p className="rounded-md bg-muted/50 p-2 text-xs italic text-muted-foreground">
+            {p.evidence_summary ?? p.match_reason}
+          </p>
         )}
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={stage === "won" ? "default" : stage === "lost" ? "destructive" : "secondary"}>
             {STAGE_LABEL[stage]}
           </Badge>
+          {p.source_confidence != null && (
+            <Badge variant="outline" className="text-[10px]">conf {p.source_confidence}</Badge>
+          )}
+          {p.source_type && <Badge variant="outline" className="text-[10px] capitalize">{p.source_type}</Badge>}
           {p.industry && <Badge variant="outline">{p.industry}</Badge>}
           {p.deadline && <Badge variant="outline">Closes {new Date(p.deadline).toLocaleDateString()}</Badge>}
           {p.next_action_at && (

@@ -33,10 +33,33 @@ import {
 import { Plus } from "lucide-react";
 import { useCreateApp } from "@/hooks/useApps";
 
+const OFFERING_TYPES = [
+  "SaaS", "Service", "Agency", "Consulting", "Coaching",
+  "Marketplace", "Ecommerce", "Book", "Creator Product",
+  "Community", "Enterprise Product", "Nonprofit", "Other",
+] as const;
+
+const GOAL_TYPES = [
+  { value: "acquire_customers", label: "Acquire customers" },
+  { value: "acquire_users", label: "Acquire users" },
+  { value: "acquire_clients", label: "Acquire clients" },
+  { value: "acquire_members", label: "Acquire members" },
+  { value: "acquire_readers", label: "Acquire readers" },
+  { value: "acquire_donors", label: "Acquire donors" },
+  { value: "acquire_sponsors", label: "Acquire sponsors" },
+  { value: "acquire_investors", label: "Acquire investors" },
+  { value: "acquire_partners", label: "Acquire partners" },
+  { value: "validate_idea", label: "Validate idea" },
+  { value: "launch_product", label: "Launch product" },
+  { value: "reactivate_audience", label: "Reactivate audience" },
+];
+
 const appSchema = z.object({
-  name: z.string().min(1, "App name is required").max(100),
+  name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
   target_audience: z.string().max(200).optional(),
+  offering_type: z.enum(OFFERING_TYPES).optional(),
+  goal_type: z.string().optional(),
   primary_goal: z.enum(["growth", "installs", "signups", "engagement", "awareness"]).optional(),
   brand_tone: z.enum(["professional", "friendly", "bold", "casual", "faith-aligned", "technical"]).optional(),
   website_url: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
@@ -51,14 +74,6 @@ const platformOptions = [
   { id: "instagram", label: "Instagram" },
   { id: "facebook", label: "Facebook" },
   { id: "email", label: "Email Newsletter" },
-];
-
-const goalOptions = [
-  { value: "growth", label: "Growth" },
-  { value: "installs", label: "App Installs" },
-  { value: "signups", label: "Signups" },
-  { value: "engagement", label: "Engagement" },
-  { value: "awareness", label: "Brand Awareness" },
 ];
 
 const toneOptions = [
@@ -84,6 +99,8 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
       name: "",
       description: "",
       target_audience: "",
+      offering_type: undefined,
+      goal_type: undefined,
       primary_goal: undefined,
       brand_tone: "professional",
       website_url: "",
@@ -97,11 +114,13 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
         name: values.name,
         description: values.description || null,
         target_audience: values.target_audience || null,
+        offering_type: values.offering_type || null,
+        goal_type: values.goal_type || null,
         primary_goal: values.primary_goal || null,
         brand_tone: values.brand_tone || null,
         website_url: values.website_url || null,
         platforms: values.platforms,
-      },
+      } as any,
       {
         onSuccess: () => {
           setOpen(false);
@@ -117,17 +136,18 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
         {trigger || (
           <Button className="gap-2">
             <Plus className="h-4 w-4" />
-            Add App
+            Add Offering
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display">Add New App</DialogTitle>
+          <DialogTitle className="font-display">Add New Offering</DialogTitle>
           <DialogDescription>
-            Add your app details so ScrollMarketer can create tailored marketing content.
+            Tell us what you're growing — a SaaS, service, book, agency, community or any product — so we can tailor everything to your audience.
           </DialogDescription>
         </DialogHeader>
+
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -136,9 +156,9 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>App Name *</FormLabel>
+                  <FormLabel>Offering name *</FormLabel>
                   <FormControl>
-                    <Input placeholder="My Awesome App" {...field} />
+                    <Input placeholder="e.g. Acme Analytics, Northwind Consulting, The Climate Almanac" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -153,7 +173,7 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Briefly describe what your app does..."
+                      placeholder="What is it and who is it for?"
                       className="resize-none"
                       {...field}
                     />
@@ -168,9 +188,9 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
               name="target_audience"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Target Audience</FormLabel>
+                  <FormLabel>Target audience</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Professionals, Students, Fitness Enthusiasts" {...field} />
+                    <Input placeholder="e.g. operations leads at Series-B SaaS companies" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -180,18 +200,37 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
-                name="primary_goal"
+                name="offering_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Primary Goal</FormLabel>
+                    <FormLabel>Offering type</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select goal" />
-                        </SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {goalOptions.map((option) => (
+                        {OFFERING_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="goal_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Primary goal</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select goal" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {GOAL_TYPES.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -202,6 +241,7 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
                   </FormItem>
                 )}
               />
+
 
               <FormField
                 control={form.control}

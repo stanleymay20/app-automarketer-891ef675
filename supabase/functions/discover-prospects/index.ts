@@ -107,6 +107,14 @@ Deno.serve(async (req) => {
     };
 
     const created: any[] = [];
+    const metrics = {
+      dropped_no_url: 0,
+      dropped_no_evidence: 0,
+      dropped_duplicate: 0,
+      low_confidence: 0,
+      confidence_sum: 0,
+      confidence_count: 0,
+    };
 
     for (const category of requestedCats) {
       const catBrief: Record<Category, string> = {
@@ -137,31 +145,74 @@ Return JSON shape:
   "prospects": [
     {
       "name": "string (real org name)",
+      "company": "string (parent org if person, else same as name)",
       "description": "1 sentence",
-      "url": "https url or empty",
+      "url": "https url (REQUIRED — only include items with a real URL)",
       "location": "string or empty",
       "deadline": "YYYY-MM-DD or null (grants/accelerators only)",
       "fit_score": 0-100,
       "opportunity_score": 0-100,
       "urgency_score": 0-100,
       "reachability_score": 0-100,
+      "confidence_score": 0-100,
+      "source_type": "website | directory | investor database | social | news | grant database | referral",
+      "evidence_summary": "1 sentence explaining the specific evidence behind this match (cite the signal)",
       "match_reason": "1-2 sentences citing persona/ICP/learnings",
       "signals": ["short evidence point", "..."]
     }
   ]
 }
 
-Score honestly. Cap at 65 when context is thin. Prefer real, verifiable orgs. 5 items max.`;
+Rules:
+- A prospect WITHOUT a real https URL must be omitted.
+- A prospect without at least one concrete signal must be omitted.
+- confidence_score reflects how verifiable the source is: <60 = guessed, 60-79 = plausible from research, 80+ = directly cited in research above.
+- Score honestly. Cap at 65 when context is thin. Prefer real, verifiable orgs. 5 items max.`;
 
       const json = await aiJSON(aiPrompt);
       const items: any[] = Array.isArray(json.prospects) ? json.prospects.slice(0, 5) : [];
 
+      const runId = crypto.randomUUID();
+
+      // Preload existing (user_id) rows once per category for dedup. Cheap: indexed.
+      const { data: existingRows } = await admin
+        .from("prospects")
+        .select("name, url, contact_email")
+        .eq("user_id", user.id);
+      const seenUrl = new Set<string>();
+      const seenNameEmail = new Set<string>();
+      const seenName = new Set<string>();
+      (existingRows ?? []).forEach((r: any) => {
+        if (r.url) seenUrl.add(r.url.toLowerCase());
+        if (r.name && r.contact_email) seenNameEmail.add(`${r.name.toLowerCase()}|${r.contact_email.toLowerCase()}`);
+        if (r.name) seenName.add(r.name.toLowerCase());
+      });
+
       for (const p of items) {
-        const fit = clamp(p.fit_score ?? 50);
-        const opp = clamp(p.opportunity_score ?? 50);
-        const urg = clamp(p.urgency_score ?? 50);
-        const reach = clamp(p.reachability_score ?? 50);
+        const url: string | null = typeof p.url === "string" && /^https?:\/\//i.test(p.url) ? p.url : null;
+        const signals: any[] = Array.isArray(p.signals) ? p.signals.filter(Boolean) : [];
+        // Phase 8 quality gates
+        if (!url) { metrics.dropped_no_url++; continue; }
+        if (signals.length === 0) { metrics.dropped_no_evidence++; continue; }
+
+        const nameLc = String(p.name ?? "").toLowerCase().trim();
+        if (!nameLc) { metrics.dropped_no_evidence++; continue; }
+        if (seenUrl.has(url.toLowerCase()) || seenName.has(nameLc)) { metrics.dropped_duplicate++; continue; }
+
+        const fit  = clamp(p.fit_score ?? 50);
+        const opp  = clamp(p.opportunity_score ?? 50);
+        const urg  = clamp(p.urgency_score ?? 50);
+        const reach= clamp(p.reachability_score ?? 50);
+        const conf = clamp(p.confidence_score ?? (search ? 70 : 55));
         const overall = clamp(fit * 0.4 + opp * 0.3 + urg * 0.15 + reach * 0.15);
+        const status = conf >= 80 ? "saved" : conf >= 60 ? "new" : "low_confidence";
+        const stage  = conf >= 80 ? "saved" : "new";
+
+        if (conf < 60) metrics.low_confidence++;
+
+        const sourceType = typeof p.source_type === "string"
+          ? p.source_type.toLowerCase().slice(0, 40)
+          : (search ? "directory" : "ai");
 
         const { data: row, error } = await admin
           .from("prospects")
@@ -171,7 +222,7 @@ Score honestly. Cap at 65 when context is thin. Prefer real, verifiable orgs. 5 
             category,
             name: String(p.name ?? "Unnamed").slice(0, 200),
             description: p.description ?? null,
-            url: p.url ?? null,
+            url,
             location: p.location ?? null,
             deadline: p.deadline || null,
             fit_score: fit,
@@ -179,18 +230,45 @@ Score honestly. Cap at 65 when context is thin. Prefer real, verifiable orgs. 5 
             urgency_score: urg,
             reachability_score: reach,
             prospect_score: overall,
+            source_confidence: conf,
             match_reason: p.match_reason ?? null,
-            signals: p.signals ?? [],
-            evidence: { context_size: context.conversions, has_web: !!search },
+            evidence_summary: p.evidence_summary ?? null,
+            signals,
+            evidence: { context_size: context.conversions, has_web: !!search, run_id: runId },
             source: search ? "perplexity+ai" : "ai_only",
+            source_type: sourceType,
+            stage,
+            status,
+            discovery_run_id: runId,
           })
           .select()
           .single();
-        if (!error && row) created.push(row);
+        if (!error && row) {
+          created.push(row);
+          seenUrl.add(url.toLowerCase());
+          seenName.add(nameLc);
+          metrics.confidence_sum += conf;
+          metrics.confidence_count++;
+        }
       }
     }
 
-    return new Response(JSON.stringify({ created: created.length, prospects: created }), {
+    const avgConfidence = metrics.confidence_count > 0
+      ? Math.round(metrics.confidence_sum / metrics.confidence_count)
+      : 0;
+
+    return new Response(JSON.stringify({
+      created: created.length,
+      prospects: created,
+      metrics: {
+        created: created.length,
+        dropped_no_url: metrics.dropped_no_url,
+        dropped_no_evidence: metrics.dropped_no_evidence,
+        dropped_duplicate: metrics.dropped_duplicate,
+        low_confidence: metrics.low_confidence,
+        average_confidence: avgConfidence,
+      },
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {

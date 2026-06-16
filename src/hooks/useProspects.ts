@@ -46,6 +46,9 @@ export interface Prospect {
   industry: string | null;
   notes: string | null;
   owner_id: string | null;
+  source_type: string | null;
+  evidence_summary: string | null;
+  discovery_run_id: string | null;
   created_at: string;
 }
 
@@ -76,7 +79,9 @@ export function useDiscoverProspects() {
     },
     onSuccess: (d) => {
       qc.invalidateQueries({ queryKey: ["prospects"] });
-      toast({ title: `${d?.created ?? 0} prospects discovered` });
+      const m = d?.metrics;
+      const desc = m ? `dedup ${m.dropped_duplicate} · low-conf ${m.low_confidence} · avg conf ${m.average_confidence}` : undefined;
+      toast({ title: `${d?.created ?? 0} prospects discovered`, description: desc });
     },
     onError: (e: any) => toast({ title: "Discovery failed", description: e.message, variant: "destructive" }),
   });

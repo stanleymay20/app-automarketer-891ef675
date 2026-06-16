@@ -27,10 +27,10 @@ export default function Apps() {
   const { generateContent, isGenerating } = useGenerateContent();
 
   return (
-    <DashboardLayout title="Apps">
+    <DashboardLayout title="Offerings">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <p className="text-muted-foreground">Manage all your apps and their marketing settings.</p>
+          <p className="text-muted-foreground">Every product, service, book, agency or community you're growing — managed here.</p>
           <AddAppDialog />
         </div>
 

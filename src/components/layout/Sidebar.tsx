@@ -23,6 +23,7 @@ import {
   BarChart3,
   DollarSign,
   X,
+  Zap,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,6 +38,7 @@ const SECTIONS: NavSection[] = [
   {
     label: "Growth OS",
     items: [
+      { icon: Zap, label: "Today", path: "/today" },
       { icon: Gauge, label: "Home", path: "/dashboard" },
       { icon: Gauge, label: "Reality", path: "/" },
       { icon: DollarSign, label: "Revenue", path: "/revenue" },
@@ -71,7 +73,7 @@ const ADVANCED: NavItem[] = [
   { icon: Radar, label: "Market Intelligence", path: "/market-intelligence" },
   { icon: Brain, label: "Portfolio Intelligence", path: "/content-intelligence" },
   { icon: Lightbulb, label: "Growth Patterns", path: "/intelligence" },
-  { icon: AppWindow, label: "Apps", path: "/apps" },
+  { icon: AppWindow, label: "Offerings", path: "/apps" },
 ];
 
 interface SidebarProps {
