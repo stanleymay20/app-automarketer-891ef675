@@ -107,6 +107,14 @@ Deno.serve(async (req) => {
     };
 
     const created: any[] = [];
+    const metrics = {
+      dropped_no_url: 0,
+      dropped_no_evidence: 0,
+      dropped_duplicate: 0,
+      low_confidence: 0,
+      confidence_sum: 0,
+      confidence_count: 0,
+    };
 
     for (const category of requestedCats) {
       const catBrief: Record<Category, string> = {
