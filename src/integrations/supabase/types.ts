@@ -100,6 +100,7 @@ export type Database = {
           created_at: string
           description: string | null
           engagements_count: number | null
+          goal_type: string | null
           id: string
           landing_brand_color: string | null
           landing_cta_label: string | null
@@ -113,6 +114,7 @@ export type Database = {
           landing_subheadline: string | null
           landing_template: string
           name: string
+          offering_type: string | null
           platforms: string[] | null
           posts_count: number | null
           primary_goal: string | null
@@ -127,6 +129,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           engagements_count?: number | null
+          goal_type?: string | null
           id?: string
           landing_brand_color?: string | null
           landing_cta_label?: string | null
@@ -140,6 +143,7 @@ export type Database = {
           landing_subheadline?: string | null
           landing_template?: string
           name: string
+          offering_type?: string | null
           platforms?: string[] | null
           posts_count?: number | null
           primary_goal?: string | null
@@ -154,6 +158,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           engagements_count?: number | null
+          goal_type?: string | null
           id?: string
           landing_brand_color?: string | null
           landing_cta_label?: string | null
@@ -167,6 +172,7 @@ export type Database = {
           landing_subheadline?: string | null
           landing_template?: string
           name?: string
+          offering_type?: string | null
           platforms?: string[] | null
           posts_count?: number | null
           primary_goal?: string | null
@@ -1776,7 +1782,9 @@ export type Database = {
           created_at: string
           deadline: string | null
           description: string | null
+          discovery_run_id: string | null
           evidence: Json
+          evidence_summary: string | null
           fit_score: number
           id: string
           industry: string | null
@@ -1800,6 +1808,7 @@ export type Database = {
           signals: Json
           source: string
           source_confidence: number
+          source_type: string | null
           stage: string
           status: string
           updated_at: string
@@ -1820,7 +1829,9 @@ export type Database = {
           created_at?: string
           deadline?: string | null
           description?: string | null
+          discovery_run_id?: string | null
           evidence?: Json
+          evidence_summary?: string | null
           fit_score?: number
           id?: string
           industry?: string | null
@@ -1844,6 +1855,7 @@ export type Database = {
           signals?: Json
           source?: string
           source_confidence?: number
+          source_type?: string | null
           stage?: string
           status?: string
           updated_at?: string
@@ -1864,7 +1876,9 @@ export type Database = {
           created_at?: string
           deadline?: string | null
           description?: string | null
+          discovery_run_id?: string | null
           evidence?: Json
+          evidence_summary?: string | null
           fit_score?: number
           id?: string
           industry?: string | null
@@ -1888,6 +1902,7 @@ export type Database = {
           signals?: Json
           source?: string
           source_confidence?: number
+          source_type?: string | null
           stage?: string
           status?: string
           updated_at?: string
