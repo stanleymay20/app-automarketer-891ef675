@@ -117,6 +117,8 @@ Every X post MUST follow these rules:
 - 3–5 hashtags
 - End with a question to drive comments
 - Tone: warm, approachable, human`,
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
