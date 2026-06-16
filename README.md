@@ -1,73 +1,60 @@
-# Welcome to your Lovable project
+# app-automarketer
 
-## Project info
+**Universal AI Growth OS.** Define your offering, discover prospects, generate outreach, publish content, capture leads, and learn from conversions — for any product, service, book, agency, or SaaS.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## What it does
 
-## How can I edit this code?
+- **Offering setup.** Paste a URL; the AI extracts what you sell, who it's for, and the brand tone.
+- **Prospect discovery.** AI + web research surfaces real customers, partners, investors, communities, and grants.
+- **Outreach generation.** Persona-aware drafts you can copy, send by email, or open on LinkedIn.
+- **Content + publishing.** Generate platform-native posts and publish to LinkedIn and X on schedule.
+- **Landing pages + lead capture.** Premium per-offering landing pages with attribution.
+- **Distribution intelligence.** Channels, communities, influencers, and events ranked by audience fit.
+- **Conversion learning loop.** Revenue and lead signals feed back into the recommendation engine.
 
-There are several ways of editing your application.
+## Stack
 
-**Use Lovable**
+- **Frontend:** React 18 + Vite + TypeScript + Tailwind + shadcn/ui
+- **Backend:** Lovable Cloud (Supabase) — Postgres, Auth, Edge Functions (Deno), Storage
+- **AI:** Lovable AI Gateway (Google Gemini) for content, scoring, and insights
+- **Web data:** Firecrawl (scrape/map), Perplexity (live research)
+- **Email:** Resend (transactional + weekly reports)
+- **Social:** LinkedIn API, X API (OAuth 2.0 PKCE)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Local development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+App runs on `http://localhost:8080`. Environment is auto-populated from Lovable Cloud — no `.env` editing required.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Tests
 
-**Use GitHub Codespaces**
+```sh
+npx vitest run
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Project layout
 
-## What technologies are used for this project?
+- `src/pages/` — route components (Dashboard, Prospects, Distribution, Content, Settings, …)
+- `src/hooks/` — React Query data hooks
+- `src/components/` — UI and feature components
+- `supabase/functions/` — Edge Functions (Deno)
+- `supabase/migrations/` — schema, RLS, triggers, cron
 
-This project is built with:
+## Security
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- RLS enabled on every user-data table; policies scoped to `auth.uid()`.
+- Third-party OAuth tokens stored server-side only.
+- Public edge functions (`track-click`, `capture-lead`, `conversion-webhook`) validate input; `conversion-webhook` requires HMAC-SHA256 (`X-Signature: sha256=<hex>`) against `CONVERSION_WEBHOOK_SECRET`.
+- Service role key is never shipped to the client.
 
-## How can I deploy this project?
+## Deploying / publishing
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+This project deploys via Lovable. Open the project in Lovable and click **Publish**, or connect a custom domain in **Project Settings → Domains**.
 
-## Can I connect a custom domain to my Lovable project?
+## License
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Proprietary — all rights reserved.

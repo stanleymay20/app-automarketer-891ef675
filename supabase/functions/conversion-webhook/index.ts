@@ -3,34 +3,81 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-signature",
 };
 
+// Constant-time hex compare
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function hmacSha256Hex(secret: string, body: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 // POST body: { email, amount, currency?, notes?, slug? }
-// Matches most-recent lead by email (scoped to slug if provided).
+// Required header: X-Signature: sha256=<hex hmac of raw body using CONVERSION_WEBHOOK_SECRET>
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const body = await req.json();
+    const secret = Deno.env.get("CONVERSION_WEBHOOK_SECRET");
+    if (!secret) {
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const raw = await req.text();
+    const sigHeader = req.headers.get("x-signature") || req.headers.get("X-Signature") || "";
+    const provided = sigHeader.startsWith("sha256=") ? sigHeader.slice(7) : sigHeader;
+    if (!provided) {
+      return new Response(JSON.stringify({ error: "Missing X-Signature" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const expected = await hmacSha256Hex(secret, raw);
+    if (!timingSafeEqualHex(provided.toLowerCase(), expected)) {
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let body: any;
+    try { body = JSON.parse(raw); } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const email = (body.email || "").toString().trim().toLowerCase();
     const amount = Number(body.amount || 0);
-    const currency = (body.currency || "USD").toString().toUpperCase();
-    const notes = body.notes ? String(body.notes) : null;
-    const slug = body.slug ? String(body.slug) : null;
+    const currency = (body.currency || "USD").toString().toUpperCase().slice(0, 8);
+    const notes = body.notes ? String(body.notes).slice(0, 1000) : null;
+    const slug = body.slug ? String(body.slug).slice(0, 200) : null;
 
-    if (!email || !isFinite(amount)) {
-      return new Response(JSON.stringify({ error: "email and amount required" }), {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !isFinite(amount) || amount < 0) {
+      return new Response(JSON.stringify({ error: "valid email and non-negative amount required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Resolve app (optional) then find matching lead
     let appId: string | null = null;
     if (slug) {
       const { data: app } = await supabase
