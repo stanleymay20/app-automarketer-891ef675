@@ -156,9 +156,9 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>App Name *</FormLabel>
+                  <FormLabel>Offering name *</FormLabel>
                   <FormControl>
-                    <Input placeholder="My Awesome App" {...field} />
+                    <Input placeholder="e.g. Acme Analytics, Northwind Consulting, The Climate Almanac" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -173,7 +173,7 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Briefly describe what your app does..."
+                      placeholder="What is it and who is it for?"
                       className="resize-none"
                       {...field}
                     />
@@ -188,9 +188,9 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
               name="target_audience"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Target Audience</FormLabel>
+                  <FormLabel>Target audience</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Professionals, Students, Fitness Enthusiasts" {...field} />
+                    <Input placeholder="e.g. operations leads at Series-B SaaS companies" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -200,18 +200,37 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
-                name="primary_goal"
+                name="offering_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Primary Goal</FormLabel>
+                    <FormLabel>Offering type</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select goal" />
-                        </SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {goalOptions.map((option) => (
+                        {OFFERING_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="goal_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Primary goal</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select goal" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {GOAL_TYPES.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -222,6 +241,7 @@ export function AddAppDialog({ trigger }: AddAppDialogProps) {
                   </FormItem>
                 )}
               />
+
 
               <FormField
                 control={form.control}
