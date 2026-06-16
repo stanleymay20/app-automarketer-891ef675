@@ -33,10 +33,33 @@ import {
 import { Plus } from "lucide-react";
 import { useCreateApp } from "@/hooks/useApps";
 
+const OFFERING_TYPES = [
+  "SaaS", "Service", "Agency", "Consulting", "Coaching",
+  "Marketplace", "Ecommerce", "Book", "Creator Product",
+  "Community", "Enterprise Product", "Nonprofit", "Other",
+] as const;
+
+const GOAL_TYPES = [
+  { value: "acquire_customers", label: "Acquire customers" },
+  { value: "acquire_users", label: "Acquire users" },
+  { value: "acquire_clients", label: "Acquire clients" },
+  { value: "acquire_members", label: "Acquire members" },
+  { value: "acquire_readers", label: "Acquire readers" },
+  { value: "acquire_donors", label: "Acquire donors" },
+  { value: "acquire_sponsors", label: "Acquire sponsors" },
+  { value: "acquire_investors", label: "Acquire investors" },
+  { value: "acquire_partners", label: "Acquire partners" },
+  { value: "validate_idea", label: "Validate idea" },
+  { value: "launch_product", label: "Launch product" },
+  { value: "reactivate_audience", label: "Reactivate audience" },
+];
+
 const appSchema = z.object({
-  name: z.string().min(1, "App name is required").max(100),
+  name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
   target_audience: z.string().max(200).optional(),
+  offering_type: z.enum(OFFERING_TYPES).optional(),
+  goal_type: z.string().optional(),
   primary_goal: z.enum(["growth", "installs", "signups", "engagement", "awareness"]).optional(),
   brand_tone: z.enum(["professional", "friendly", "bold", "casual", "faith-aligned", "technical"]).optional(),
   website_url: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
@@ -51,14 +74,6 @@ const platformOptions = [
   { id: "instagram", label: "Instagram" },
   { id: "facebook", label: "Facebook" },
   { id: "email", label: "Email Newsletter" },
-];
-
-const goalOptions = [
-  { value: "growth", label: "Growth" },
-  { value: "installs", label: "App Installs" },
-  { value: "signups", label: "Signups" },
-  { value: "engagement", label: "Engagement" },
-  { value: "awareness", label: "Brand Awareness" },
 ];
 
 const toneOptions = [
