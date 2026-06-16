@@ -345,6 +345,10 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authError || !user) throw new Error("Unauthorized");
 
+    const { checkRateLimit } = await import("../_shared/guard.ts");
+    const rl = await checkRateLimit(user.id, "generate-post-image", 8, 60);
+    if (rl) return rl;
+
     const { contentId, contentText, appName, platform, visualMode, appId, topic } = await req.json();
     if (!contentId || !contentText) throw new Error("Missing contentId or contentText");
 
