@@ -52,7 +52,7 @@ function deriveRoutingState(p: {
   expected_value: number | null;
   expected_value_confidence: number | null;
   reviewWorthy: boolean;
-}): "queued" | "review_required" | "idle" {
+}): "queued" | "review_required" | null {
   const opp = Number(p.opportunity_score ?? 0);
   const oppConf = Number(p.opportunity_confidence ?? 0);
   const evConf = Number(p.expected_value_confidence ?? 0);
@@ -61,14 +61,14 @@ function deriveRoutingState(p: {
   if (p.reviewWorthy) return "review_required";
   if (oppConf < 50 || evConf < 50) return "review_required";
   if (opp >= 75 && oppConf >= 60 && ev > 0 && evConf >= 50) return "queued";
-  return "idle";
+  return null;
 }
 
 interface PerProspect {
   prospect_id: string;
   ok: boolean;
   steps: StepResult[];
-  routing: "queued" | "review_required" | "idle" | null;
+  routing: "queued" | "review_required" | null;
   summary: {
     enrichment_confidence?: number | null;
     opportunity_score?: number | null;

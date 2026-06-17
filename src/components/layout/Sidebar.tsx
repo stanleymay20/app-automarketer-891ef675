@@ -25,7 +25,9 @@ import {
   X,
   Zap,
   Inbox,
+  ShieldCheck,
 } from "lucide-react";
+import { useReviewPendingCount } from "@/hooks/useReviewQueue";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserSettings, useUpdateUserSettings } from "@/hooks/useUserSettings";
@@ -61,6 +63,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { icon: Users, label: "Audience", path: "/audience" },
       { icon: Target, label: "Prospects", path: "/prospects" },
+      { icon: ShieldCheck, label: "Review", path: "/review" },
       { icon: Inbox, label: "Inbox", path: "/inbox" },
       { icon: Megaphone, label: "Distribution", path: "/distribution" },
     ],
@@ -88,6 +91,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const { signOut } = useAuth();
   const { data: settings } = useUserSettings();
   const updateSettings = useUpdateUserSettings();
+  const { data: reviewCount = 0 } = useReviewPendingCount();
   const [advancedOpen, setAdvancedOpen] = useState(
     ADVANCED.some((i) => i.path === location.pathname)
   );
@@ -101,6 +105,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const renderItem = (item: NavItem) => {
     const isActive = location.pathname === item.path;
+    const showBadge = item.path === "/review" && reviewCount > 0;
     return (
       <Link
         key={item.path}
@@ -114,7 +119,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         )}
       >
         <item.icon className={cn("h-4 w-4 shrink-0", isActive && "text-primary")} />
-        {item.label}
+        <span className="flex-1">{item.label}</span>
+        {showBadge && (
+          <span className="rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-semibold leading-none text-destructive-foreground">
+            {reviewCount > 99 ? "99+" : reviewCount}
+          </span>
+        )}
       </Link>
     );
   };

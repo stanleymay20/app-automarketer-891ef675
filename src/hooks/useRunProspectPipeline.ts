@@ -12,7 +12,7 @@ export interface PipelineStepResult {
 export interface PipelinePerProspect {
   prospect_id: string;
   ok: boolean;
-  routing: "queued" | "review_required" | "idle" | null;
+  routing: "queued" | "review_required" | null;
   steps: PipelineStepResult[];
   summary: {
     enrichment_confidence?: number | null;
