@@ -164,7 +164,7 @@ async function callSendOutreach(
 
 async function processUser(s: AutopilotSettings) {
   const admin = adminClient();
-  const summary = { sent: 0, review_required: 0, blocked: 0, skipped: 0, failed: 0 };
+  const summary = { evaluated: 0, sent: 0, review_required: 0, blocked: 0, skipped: 0, failed: 0 };
 
   // Daily counter rollover
   let sentToday = s.sent_today ?? 0;
