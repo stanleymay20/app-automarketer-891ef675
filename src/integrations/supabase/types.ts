@@ -292,6 +292,54 @@ export type Database = {
         }
         Relationships: []
       }
+      autopilot_settings: {
+        Row: {
+          allowed_segments: string[]
+          approval_required_segments: string[]
+          created_at: string
+          daily_send_cap: number
+          enabled: boolean
+          id: string
+          max_auto_value: number
+          min_confidence: number
+          min_opportunity_score: number
+          sent_today: number
+          sent_today_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allowed_segments?: string[]
+          approval_required_segments?: string[]
+          created_at?: string
+          daily_send_cap?: number
+          enabled?: boolean
+          id?: string
+          max_auto_value?: number
+          min_confidence?: number
+          min_opportunity_score?: number
+          sent_today?: number
+          sent_today_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allowed_segments?: string[]
+          approval_required_segments?: string[]
+          created_at?: string
+          daily_send_cap?: number
+          enabled?: boolean
+          id?: string
+          max_auto_value?: number
+          min_confidence?: number
+          min_opportunity_score?: number
+          sent_today?: number
+          sent_today_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       campaign_assets: {
         Row: {
           app_id: string
@@ -1975,8 +2023,16 @@ export type Database = {
       }
       prospects: {
         Row: {
+          actual_value: number | null
           app_id: string | null
+          autopilot_routed_at: string | null
+          autopilot_state: string | null
+          buying_signal_confidence: number | null
+          buying_signal_evidence: Json
+          buying_signal_reasoning: string | null
+          buying_signal_score: number | null
           category: string
+          company_name: string | null
           company_size: string | null
           contact_email: string | null
           contact_linkedin: string | null
@@ -1986,29 +2042,61 @@ export type Database = {
           converted_at: string | null
           created_at: string
           deadline: string | null
+          deal_probability: number | null
+          decision_makers: Json
           description: string | null
           discovery_run_id: string | null
+          email_confidence: number | null
+          employee_count: number | null
+          enriched_at: string | null
+          enrichment_confidence: number | null
+          enrichment_source: string | null
+          estimated_value: number | null
           evidence: Json
           evidence_summary: string | null
+          expected_value: number | null
+          expected_value_confidence: number | null
           fit_score: number
+          funding_signals: Json
+          hiring_signals: Json
+          icp_fit_confidence: number | null
+          icp_fit_evidence: Json
+          icp_fit_reasoning: string | null
           id: string
           industry: string | null
           last_contacted_at: string | null
+          linkedin_url: string | null
           location: string | null
+          lost_at: string | null
           match_reason: string | null
           matched_icp_id: string | null
           matched_persona_id: string | null
           name: string
           next_action_at: string | null
           notes: string | null
+          opportunity_confidence: number | null
           opportunity_score: number
+          outcome: string | null
           owner_id: string | null
           pipeline_stage: string
           prospect_score: number
+          qualified_at: string | null
+          reachability_confidence: number | null
+          reachability_evidence: Json
+          reachability_reasoning: string | null
           reachability_score: number
+          recent_news: Json
           responded_at: string | null
           revenue_attributed: number
+          revenue_band: string | null
+          review_decided_at: string | null
+          review_decided_by: string | null
+          review_queued_at: string | null
+          review_reason: string | null
+          review_status: string | null
           saved_at: string | null
+          segment: string | null
+          segment_reason: string | null
           sent_at: string | null
           signals: Json
           source: string
@@ -2016,14 +2104,30 @@ export type Database = {
           source_type: string | null
           stage: string
           status: string
+          technology_stack: Json
           updated_at: string
+          urgency_confidence: number | null
+          urgency_evidence: Json
+          urgency_reasoning: string | null
           urgency_score: number
           url: string | null
           user_id: string
+          value_currency: string
+          value_reasoning: string | null
+          valued_at: string | null
+          won_at: string | null
         }
         Insert: {
+          actual_value?: number | null
           app_id?: string | null
+          autopilot_routed_at?: string | null
+          autopilot_state?: string | null
+          buying_signal_confidence?: number | null
+          buying_signal_evidence?: Json
+          buying_signal_reasoning?: string | null
+          buying_signal_score?: number | null
           category: string
+          company_name?: string | null
           company_size?: string | null
           contact_email?: string | null
           contact_linkedin?: string | null
@@ -2033,29 +2137,61 @@ export type Database = {
           converted_at?: string | null
           created_at?: string
           deadline?: string | null
+          deal_probability?: number | null
+          decision_makers?: Json
           description?: string | null
           discovery_run_id?: string | null
+          email_confidence?: number | null
+          employee_count?: number | null
+          enriched_at?: string | null
+          enrichment_confidence?: number | null
+          enrichment_source?: string | null
+          estimated_value?: number | null
           evidence?: Json
           evidence_summary?: string | null
+          expected_value?: number | null
+          expected_value_confidence?: number | null
           fit_score?: number
+          funding_signals?: Json
+          hiring_signals?: Json
+          icp_fit_confidence?: number | null
+          icp_fit_evidence?: Json
+          icp_fit_reasoning?: string | null
           id?: string
           industry?: string | null
           last_contacted_at?: string | null
+          linkedin_url?: string | null
           location?: string | null
+          lost_at?: string | null
           match_reason?: string | null
           matched_icp_id?: string | null
           matched_persona_id?: string | null
           name: string
           next_action_at?: string | null
           notes?: string | null
+          opportunity_confidence?: number | null
           opportunity_score?: number
+          outcome?: string | null
           owner_id?: string | null
           pipeline_stage?: string
           prospect_score?: number
+          qualified_at?: string | null
+          reachability_confidence?: number | null
+          reachability_evidence?: Json
+          reachability_reasoning?: string | null
           reachability_score?: number
+          recent_news?: Json
           responded_at?: string | null
           revenue_attributed?: number
+          revenue_band?: string | null
+          review_decided_at?: string | null
+          review_decided_by?: string | null
+          review_queued_at?: string | null
+          review_reason?: string | null
+          review_status?: string | null
           saved_at?: string | null
+          segment?: string | null
+          segment_reason?: string | null
           sent_at?: string | null
           signals?: Json
           source?: string
@@ -2063,14 +2199,30 @@ export type Database = {
           source_type?: string | null
           stage?: string
           status?: string
+          technology_stack?: Json
           updated_at?: string
+          urgency_confidence?: number | null
+          urgency_evidence?: Json
+          urgency_reasoning?: string | null
           urgency_score?: number
           url?: string | null
           user_id: string
+          value_currency?: string
+          value_reasoning?: string | null
+          valued_at?: string | null
+          won_at?: string | null
         }
         Update: {
+          actual_value?: number | null
           app_id?: string | null
+          autopilot_routed_at?: string | null
+          autopilot_state?: string | null
+          buying_signal_confidence?: number | null
+          buying_signal_evidence?: Json
+          buying_signal_reasoning?: string | null
+          buying_signal_score?: number | null
           category?: string
+          company_name?: string | null
           company_size?: string | null
           contact_email?: string | null
           contact_linkedin?: string | null
@@ -2080,29 +2232,61 @@ export type Database = {
           converted_at?: string | null
           created_at?: string
           deadline?: string | null
+          deal_probability?: number | null
+          decision_makers?: Json
           description?: string | null
           discovery_run_id?: string | null
+          email_confidence?: number | null
+          employee_count?: number | null
+          enriched_at?: string | null
+          enrichment_confidence?: number | null
+          enrichment_source?: string | null
+          estimated_value?: number | null
           evidence?: Json
           evidence_summary?: string | null
+          expected_value?: number | null
+          expected_value_confidence?: number | null
           fit_score?: number
+          funding_signals?: Json
+          hiring_signals?: Json
+          icp_fit_confidence?: number | null
+          icp_fit_evidence?: Json
+          icp_fit_reasoning?: string | null
           id?: string
           industry?: string | null
           last_contacted_at?: string | null
+          linkedin_url?: string | null
           location?: string | null
+          lost_at?: string | null
           match_reason?: string | null
           matched_icp_id?: string | null
           matched_persona_id?: string | null
           name?: string
           next_action_at?: string | null
           notes?: string | null
+          opportunity_confidence?: number | null
           opportunity_score?: number
+          outcome?: string | null
           owner_id?: string | null
           pipeline_stage?: string
           prospect_score?: number
+          qualified_at?: string | null
+          reachability_confidence?: number | null
+          reachability_evidence?: Json
+          reachability_reasoning?: string | null
           reachability_score?: number
+          recent_news?: Json
           responded_at?: string | null
           revenue_attributed?: number
+          revenue_band?: string | null
+          review_decided_at?: string | null
+          review_decided_by?: string | null
+          review_queued_at?: string | null
+          review_reason?: string | null
+          review_status?: string | null
           saved_at?: string | null
+          segment?: string | null
+          segment_reason?: string | null
           sent_at?: string | null
           signals?: Json
           source?: string
@@ -2110,10 +2294,18 @@ export type Database = {
           source_type?: string | null
           stage?: string
           status?: string
+          technology_stack?: Json
           updated_at?: string
+          urgency_confidence?: number | null
+          urgency_evidence?: Json
+          urgency_reasoning?: string | null
           urgency_score?: number
           url?: string | null
           user_id?: string
+          value_currency?: string
+          value_reasoning?: string | null
+          valued_at?: string | null
+          won_at?: string | null
         }
         Relationships: []
       }
