@@ -124,8 +124,21 @@ export default function Audience() {
                   </SelectContent>
                 </Select>
               )}
+              {hasData && !isGenerating && (
+                <Button
+                  variant="outline"
+                  onClick={() => setAddOpen(true)}
+                  disabled={!appId}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add Segment
+                </Button>
+              )}
               <Button
-                onClick={() => appId && generate.mutate(appId)}
+                onClick={() => {
+                  if (!appId) return;
+                  if (hasData) setConfirmReplaceOpen(true);
+                  else generate.mutate({ appId, mode: "replace" });
+                }}
                 disabled={!appId || isGenerating}
                 className="bg-gradient-to-r from-primary to-secondary text-primary-foreground"
               >
