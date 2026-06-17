@@ -328,7 +328,7 @@ function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onCl
             <Button
               size="sm"
               variant="outline"
-              onClick={enrollSequence}
+              onClick={openSequenceReview}
               disabled={enroll.isPending || !prospect.contact_email}
               className="gap-1"
             >
