@@ -1768,6 +1768,68 @@ export type Database = {
         }
         Relationships: []
       }
+      prospect_replies: {
+        Row: {
+          body: string | null
+          channel: string
+          created_at: string
+          direction: string
+          external_id: string | null
+          from_address: string | null
+          from_name: string | null
+          id: string
+          metadata: Json
+          prospect_id: string
+          received_at: string
+          source: string
+          subject: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          channel?: string
+          created_at?: string
+          direction?: string
+          external_id?: string | null
+          from_address?: string | null
+          from_name?: string | null
+          id?: string
+          metadata?: Json
+          prospect_id: string
+          received_at?: string
+          source?: string
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          channel?: string
+          created_at?: string
+          direction?: string
+          external_id?: string | null
+          from_address?: string | null
+          from_name?: string | null
+          id?: string
+          metadata?: Json
+          prospect_id?: string
+          received_at?: string
+          source?: string
+          subject?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_replies_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospects: {
         Row: {
           app_id: string | null

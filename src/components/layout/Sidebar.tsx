@@ -24,6 +24,7 @@ import {
   DollarSign,
   X,
   Zap,
+  Inbox,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
@@ -60,6 +61,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { icon: Users, label: "Audience", path: "/audience" },
       { icon: Target, label: "Prospects", path: "/prospects" },
+      { icon: Inbox, label: "Inbox", path: "/inbox" },
       { icon: Megaphone, label: "Distribution", path: "/distribution" },
     ],
   },
