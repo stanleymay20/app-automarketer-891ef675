@@ -1444,6 +1444,42 @@ export type Database = {
           },
         ]
       }
+      learning_events: {
+        Row: {
+          confidence_adjustment: number | null
+          created_at: string
+          evidence: Json
+          future_impact: string | null
+          id: string
+          lesson: string
+          source_id: string | null
+          source_type: string
+          user_id: string
+        }
+        Insert: {
+          confidence_adjustment?: number | null
+          created_at?: string
+          evidence?: Json
+          future_impact?: string | null
+          id?: string
+          lesson: string
+          source_id?: string | null
+          source_type: string
+          user_id: string
+        }
+        Update: {
+          confidence_adjustment?: number | null
+          created_at?: string
+          evidence?: Json
+          future_impact?: string | null
+          id?: string
+          lesson?: string
+          source_id?: string | null
+          source_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       learning_insights: {
         Row: {
           app_id: string
@@ -1530,6 +1566,144 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_outcomes: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          id: string
+          meeting_id: string
+          next_action: string | null
+          objections: string[]
+          opportunities: string[]
+          outcome_type: string
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          meeting_id: string
+          next_action?: string | null
+          objections?: string[]
+          opportunities?: string[]
+          outcome_type: string
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          next_action?: string | null
+          objections?: string[]
+          opportunities?: string[]
+          outcome_type?: string
+          summary?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_outcomes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meetings: {
+        Row: {
+          agenda: string | null
+          app_id: string | null
+          created_at: string
+          duration_minutes: number
+          external_id: string | null
+          external_metadata: Json
+          external_url: string | null
+          id: string
+          location: string | null
+          meeting_type: string
+          meeting_url: string | null
+          notes: string | null
+          proposal_id: string | null
+          prospect_id: string | null
+          scheduled_at: string
+          source: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agenda?: string | null
+          app_id?: string | null
+          created_at?: string
+          duration_minutes?: number
+          external_id?: string | null
+          external_metadata?: Json
+          external_url?: string | null
+          id?: string
+          location?: string | null
+          meeting_type?: string
+          meeting_url?: string | null
+          notes?: string | null
+          proposal_id?: string | null
+          prospect_id?: string | null
+          scheduled_at: string
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agenda?: string | null
+          app_id?: string | null
+          created_at?: string
+          duration_minutes?: number
+          external_id?: string | null
+          external_metadata?: Json
+          external_url?: string | null
+          id?: string
+          location?: string | null
+          meeting_type?: string
+          meeting_url?: string | null
+          notes?: string | null
+          proposal_id?: string | null
+          prospect_id?: string | null
+          scheduled_at?: string
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messaging_angles: {
         Row: {
           angle_name: string
@@ -1566,6 +1740,48 @@ export type Database = {
           updated_at?: string
           user_id?: string
           when_to_use?: string | null
+        }
+        Relationships: []
+      }
+      model_recommendations: {
+        Row: {
+          applied: boolean
+          applied_at: string | null
+          applied_by: string | null
+          confidence: number | null
+          created_at: string
+          evidence: Json
+          id: string
+          model_area: string
+          recommendation: string
+          rule_version: string
+          user_id: string
+        }
+        Insert: {
+          applied?: boolean
+          applied_at?: string | null
+          applied_by?: string | null
+          confidence?: number | null
+          created_at?: string
+          evidence?: Json
+          id?: string
+          model_area: string
+          recommendation: string
+          rule_version?: string
+          user_id: string
+        }
+        Update: {
+          applied?: boolean
+          applied_at?: string | null
+          applied_by?: string | null
+          confidence?: number | null
+          created_at?: string
+          evidence?: Json
+          id?: string
+          model_area?: string
+          recommendation?: string
+          rule_version?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1613,6 +1829,79 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      outcomes: {
+        Row: {
+          actual_value: number | null
+          confidence_after: number | null
+          confidence_before: number | null
+          created_at: string
+          currency: string | null
+          delta: number | null
+          expected_value: number | null
+          id: string
+          meeting_id: string | null
+          notes: string | null
+          outcome_type: string
+          proposal_id: string | null
+          prospect_id: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_value?: number | null
+          confidence_after?: number | null
+          confidence_before?: number | null
+          created_at?: string
+          currency?: string | null
+          delta?: number | null
+          expected_value?: number | null
+          id?: string
+          meeting_id?: string | null
+          notes?: string | null
+          outcome_type: string
+          proposal_id?: string | null
+          prospect_id?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_value?: number | null
+          confidence_after?: number | null
+          confidence_before?: number | null
+          created_at?: string
+          currency?: string | null
+          delta?: number | null
+          expected_value?: number | null
+          id?: string
+          meeting_id?: string | null
+          notes?: string | null
+          outcome_type?: string
+          proposal_id?: string | null
+          prospect_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outcomes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outcomes_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outcomes_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       performance_signals: {
         Row: {
@@ -1833,6 +2122,127 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      proposals: {
+        Row: {
+          accepted_at: string | null
+          ai_model: string | null
+          ai_prompt_version: string | null
+          app_id: string | null
+          confidence: number | null
+          created_at: string
+          currency: string
+          deliverables: Json
+          evidence: Json
+          expires_at: string | null
+          id: string
+          meeting_id: string | null
+          next_steps: string | null
+          pricing_model: string | null
+          pricing_options: Json
+          proposal_text: string | null
+          proposal_title: string
+          proposal_value: number | null
+          prospect_id: string | null
+          reasoning: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          roi_estimate: string | null
+          scope: string | null
+          sent_at: string | null
+          status: string
+          timeline: string | null
+          updated_at: string
+          user_id: string
+          viewed_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          ai_model?: string | null
+          ai_prompt_version?: string | null
+          app_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          currency?: string
+          deliverables?: Json
+          evidence?: Json
+          expires_at?: string | null
+          id?: string
+          meeting_id?: string | null
+          next_steps?: string | null
+          pricing_model?: string | null
+          pricing_options?: Json
+          proposal_text?: string | null
+          proposal_title: string
+          proposal_value?: number | null
+          prospect_id?: string | null
+          reasoning?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          roi_estimate?: string | null
+          scope?: string | null
+          sent_at?: string | null
+          status?: string
+          timeline?: string | null
+          updated_at?: string
+          user_id: string
+          viewed_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          ai_model?: string | null
+          ai_prompt_version?: string | null
+          app_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          currency?: string
+          deliverables?: Json
+          evidence?: Json
+          expires_at?: string | null
+          id?: string
+          meeting_id?: string | null
+          next_steps?: string | null
+          pricing_model?: string | null
+          pricing_options?: Json
+          proposal_text?: string | null
+          proposal_title?: string
+          proposal_value?: number | null
+          prospect_id?: string | null
+          reasoning?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          roi_estimate?: string | null
+          scope?: string | null
+          sent_at?: string | null
+          status?: string
+          timeline?: string | null
+          updated_at?: string
+          user_id?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       prospect_actions: {
         Row: {
@@ -2134,6 +2544,7 @@ export type Database = {
           linkedin_url: string | null
           location: string | null
           lost_at: string | null
+          lost_reason: string | null
           match_reason: string | null
           matched_icp_id: string | null
           matched_persona_id: string | null
@@ -2231,6 +2642,7 @@ export type Database = {
           linkedin_url?: string | null
           location?: string | null
           lost_at?: string | null
+          lost_reason?: string | null
           match_reason?: string | null
           matched_icp_id?: string | null
           matched_persona_id?: string | null
@@ -2328,6 +2740,7 @@ export type Database = {
           linkedin_url?: string | null
           location?: string | null
           lost_at?: string | null
+          lost_reason?: string | null
           match_reason?: string | null
           matched_icp_id?: string | null
           matched_persona_id?: string | null

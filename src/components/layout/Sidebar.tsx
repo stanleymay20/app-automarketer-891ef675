@@ -26,8 +26,12 @@ import {
   Zap,
   Inbox,
   ShieldCheck,
+  CalendarClock,
+  ScrollText,
 } from "lucide-react";
 import { useReviewPendingCount } from "@/hooks/useReviewQueue";
+import { usePendingProposalsCount } from "@/hooks/useProposals";
+import { useUpcomingMeetingsCount } from "@/hooks/useMeetings";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserSettings, useUpdateUserSettings } from "@/hooks/useUserSettings";
@@ -64,6 +68,8 @@ const SECTIONS: NavSection[] = [
       { icon: Users, label: "Audience", path: "/audience" },
       { icon: Target, label: "Prospects", path: "/prospects" },
       { icon: ShieldCheck, label: "Review", path: "/review" },
+      { icon: CalendarClock, label: "Meetings", path: "/meetings" },
+      { icon: ScrollText, label: "Proposals", path: "/proposals" },
       { icon: Inbox, label: "Inbox", path: "/inbox" },
       { icon: Megaphone, label: "Distribution", path: "/distribution" },
     ],
@@ -92,6 +98,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const { data: settings } = useUserSettings();
   const updateSettings = useUpdateUserSettings();
   const { data: reviewCount = 0 } = useReviewPendingCount();
+  const { data: meetingsToday = 0 } = useUpcomingMeetingsCount();
+  const { data: pendingProposals = 0 } = usePendingProposalsCount();
   const [advancedOpen, setAdvancedOpen] = useState(
     ADVANCED.some((i) => i.path === location.pathname)
   );
@@ -105,7 +113,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const renderItem = (item: NavItem) => {
     const isActive = location.pathname === item.path;
-    const showBadge = item.path === "/review" && reviewCount > 0;
+    const badgeCount =
+      item.path === "/review" ? reviewCount :
+      item.path === "/meetings" ? meetingsToday :
+      item.path === "/proposals" ? pendingProposals : 0;
+    const showBadge = badgeCount > 0;
     return (
       <Link
         key={item.path}
@@ -122,7 +134,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <span className="flex-1">{item.label}</span>
         {showBadge && (
           <span className="rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-semibold leading-none text-destructive-foreground">
-            {reviewCount > 99 ? "99+" : reviewCount}
+            {badgeCount > 99 ? "99+" : badgeCount}
           </span>
         )}
       </Link>

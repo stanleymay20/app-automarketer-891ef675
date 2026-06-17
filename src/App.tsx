@@ -33,6 +33,8 @@ import ContentIntelligence from "./pages/ContentIntelligence";
 import Today from "./pages/Today";
 import Inbox from "./pages/Inbox";
 import Review from "./pages/Review";
+import Meetings from "./pages/Meetings";
+import Proposals from "./pages/Proposals";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -82,6 +84,8 @@ function AppRoutes() {
        <Route path="/prospects" element={<ProtectedRoute><Prospects /></ProtectedRoute>} />
       <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
       <Route path="/review" element={<ProtectedRoute><Review /></ProtectedRoute>} />
+      <Route path="/meetings" element={<ProtectedRoute><Meetings /></ProtectedRoute>} />
+      <Route path="/proposals" element={<ProtectedRoute><Proposals /></ProtectedRoute>} />
        <Route path="/distribution" element={<ProtectedRoute><Distribution /></ProtectedRoute>} />
        <Route path="/orchestrator" element={<ProtectedRoute><Orchestrator /></ProtectedRoute>} />
        <Route path="/content-intelligence" element={<ProtectedRoute><ContentIntelligence /></ProtectedRoute>} />
