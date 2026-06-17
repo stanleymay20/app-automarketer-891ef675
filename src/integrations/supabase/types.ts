@@ -2100,6 +2100,8 @@ export type Database = {
           revenue_band: string | null
           review_decided_at: string | null
           review_decided_by: string | null
+          review_draft_body: string | null
+          review_draft_subject: string | null
           review_queued_at: string | null
           review_reason: string | null
           review_status: string | null
@@ -2195,6 +2197,8 @@ export type Database = {
           revenue_band?: string | null
           review_decided_at?: string | null
           review_decided_by?: string | null
+          review_draft_body?: string | null
+          review_draft_subject?: string | null
           review_queued_at?: string | null
           review_reason?: string | null
           review_status?: string | null
@@ -2290,6 +2294,8 @@ export type Database = {
           revenue_band?: string | null
           review_decided_at?: string | null
           review_decided_by?: string | null
+          review_draft_body?: string | null
+          review_draft_subject?: string | null
           review_queued_at?: string | null
           review_reason?: string | null
           review_status?: string | null

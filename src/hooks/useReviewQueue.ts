@@ -32,6 +32,8 @@ export interface ReviewProspect {
   buying_signal_reasoning: string | null;
   enriched_at: string | null;
   updated_at: string;
+  review_draft_subject: string | null;
+  review_draft_body: string | null;
 }
 
 /** All prospects that need a human eye: pending review OR routed to review_required. */
@@ -45,7 +47,7 @@ export function useReviewQueue(appId?: string) {
       let q = (supabase as any)
         .from("prospects")
         .select(
-          "id,user_id,app_id,name,company_name,contact_email,linkedin_url,segment,segment_reason,opportunity_score,opportunity_confidence,expected_value,expected_value_confidence,value_currency,value_reasoning,review_status,review_reason,autopilot_state,icp_fit_evidence,buying_signal_evidence,urgency_evidence,reachability_evidence,icp_fit_reasoning,buying_signal_reasoning,enriched_at,updated_at",
+          "id,user_id,app_id,name,company_name,contact_email,linkedin_url,segment,segment_reason,opportunity_score,opportunity_confidence,expected_value,expected_value_confidence,value_currency,value_reasoning,review_status,review_reason,autopilot_state,icp_fit_evidence,buying_signal_evidence,urgency_evidence,reachability_evidence,icp_fit_reasoning,buying_signal_reasoning,enriched_at,updated_at,review_draft_subject,review_draft_body",
         )
         .eq("user_id", user.id)
         .or("review_status.eq.pending,autopilot_state.eq.review_required")
@@ -254,6 +256,40 @@ export function useApproveAndSendProspect() {
     },
     onError: (e: Error) => {
       toast({ title: "Approve & send failed", description: e.message, variant: "destructive" });
+    },
+  });
+}
+
+/** Persist a hand-edited outreach draft on the prospect (no state change, no send). */
+export function useSaveReviewDraft() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async ({ prospect_id, subject, body }: { prospect_id: string; subject: string; body: string }) => {
+      if (!user) throw new Error("Not authenticated");
+      const { error } = await supabase
+        .from("prospects")
+        .update({
+          review_draft_subject: subject.slice(0, 200) || null,
+          review_draft_body: body.slice(0, 5000) || null,
+        })
+        .eq("id", prospect_id)
+        .eq("user_id", user.id);
+      if (error) throw error;
+      await writeAudit(prospect_id, user.id, "prospect_review_draft_saved", {
+        decision: "save_draft",
+        subject_len: subject.length,
+        body_len: body.length,
+      });
+      return { prospect_id };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["review-queue"] });
+      toast({ title: "Draft saved" });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Save draft failed", description: e.message, variant: "destructive" });
     },
   });
 }
