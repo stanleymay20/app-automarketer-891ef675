@@ -47,7 +47,7 @@ export function useReviewQueue(appId?: string) {
       let q = (supabase as any)
         .from("prospects")
         .select(
-          "id,user_id,app_id,name,company_name,contact_email,linkedin_url,segment,segment_reason,opportunity_score,opportunity_confidence,expected_value,expected_value_confidence,value_currency,value_reasoning,review_status,review_reason,autopilot_state,icp_fit_evidence,buying_signal_evidence,urgency_evidence,reachability_evidence,icp_fit_reasoning,buying_signal_reasoning,enriched_at,updated_at",
+          "id,user_id,app_id,name,company_name,contact_email,linkedin_url,segment,segment_reason,opportunity_score,opportunity_confidence,expected_value,expected_value_confidence,value_currency,value_reasoning,review_status,review_reason,autopilot_state,icp_fit_evidence,buying_signal_evidence,urgency_evidence,reachability_evidence,icp_fit_reasoning,buying_signal_reasoning,enriched_at,updated_at,review_draft_subject,review_draft_body",
         )
         .eq("user_id", user.id)
         .or("review_status.eq.pending,autopilot_state.eq.review_required")
