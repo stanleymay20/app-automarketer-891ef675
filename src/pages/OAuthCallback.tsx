@@ -10,6 +10,18 @@ const platformLabels: Record<string, string> = {
   linkedin: "LinkedIn",
 };
 
+const errorHints: Record<string, string> = {
+  missing_account_id:
+    "LinkedIn didn't return a profile id. Open developer.linkedin.com → your app → Products and enable 'Sign In with LinkedIn using OpenID Connect', then reconnect.",
+  token_exchange_failed: "The provider rejected our token request. This usually means the redirect URI or client secret is misconfigured.",
+  state_mismatch: "The OAuth state didn't match. This usually means the connection was started in a different browser/tab. Please try again here.",
+  no_refresh_token: "The provider didn't issue a refresh token. You'll need to reconnect when the access token expires.",
+  refresh_failed: "Refreshing the access token failed. Please reconnect.",
+  access_denied: "You declined access at the provider.",
+  missing_params: "The provider's callback was missing required parameters.",
+  server_error: "An unexpected error occurred while finishing the connection.",
+};
+
 export default function OAuthCallback() {
   const [searchParams] = useSearchParams();
   const { user, loading } = useAuth();
