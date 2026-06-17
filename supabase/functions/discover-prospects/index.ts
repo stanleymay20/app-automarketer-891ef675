@@ -111,31 +111,134 @@ Deno.serve(async (req) => {
       dropped_no_url: 0,
       dropped_no_evidence: 0,
       dropped_duplicate: 0,
+      dropped_wrong_size: 0,
       low_confidence: 0,
       confidence_sum: 0,
       confidence_count: 0,
     };
 
-    for (const category of requestedCats) {
-      const catBrief: Record<Category, string> = {
-        customer: "5 real companies/organizations that would buy this product (universities, SaaS, manufacturers, agencies, etc.) — match ICP and persona above.",
-        grant: "5 real, currently-open grants, accelerator programs, or innovation funding (EXIST, EU Horizon, AI grants, university programs, regional innovation funds).",
-        partner: "5 real strategic partners — distributors, implementation agencies, consultancies, complementary tools — that serve the same audience.",
-        investor: "5 real angel investors, accelerators, or VCs that invest in this domain/stage.",
-        community: "5 real communities — LinkedIn groups, Slack groups, subreddits, industry associations — where the target persona is active.",
-      };
+    // Known large/public enterprises — used to filter customer prospects when ICP targets SMB.
+    const LARGE_COMPANY_BLOCKLIST = new Set([
+      "siemens","sap","salesforce","oracle","microsoft","google","alphabet","amazon","aws","meta","facebook",
+      "apple","ibm","cisco","intel","nvidia","adobe","atlassian","servicenow","workday","hubspot","shopify",
+      "stripe","square","block","paypal","netflix","uber","lyft","airbnb","tesla","spacex","walmart","target",
+      "costco","fedex","ups","dhl","mckinsey","bcg","bain","deloitte","accenture","kpmg","ey","pwc","ernst & young",
+      "jpmorgan","goldman sachs","morgan stanley","citi","bank of america","wells fargo","hsbc","bnp paribas",
+      "santander","barclays","ubs","credit suisse","allianz","axa","aig","prudential","bosch","ge","general electric",
+      "honeywell","3m","caterpillar","john deere","boeing","airbus","lockheed","raytheon","exxon","shell","bp",
+      "chevron","total","totalenergies","saudi aramco","pfizer","novartis","roche","merck","johnson & johnson",
+      "abbvie","astrazeneca","gsk","bayer","unilever","nestle","procter & gamble","coca-cola","pepsi","pepsico",
+      "loreal","l'oreal","lvmh","kering","nike","adidas","puma","zara","inditex","h&m","disney","warner","comcast",
+      "att","verizon","t-mobile","vodafone","deutsche telekom","orange","telefonica","samsung","lg","sony",
+      "panasonic","toyota","honda","ford","gm","volkswagen","bmw","mercedes","daimler","stellantis","renault",
+      "byd","tencent","alibaba","baidu","jd.com","bytedance","tiktok","snapchat","pinterest","twitter","x corp",
+      "linkedin","zoom","slack","dropbox","box","okta","datadog","snowflake","databricks","mongodb","palantir",
+    ]);
 
-      const search = await perplexitySearch(
-        `For a product: ${context.product?.name ?? "an AI marketing platform"} (${context.product?.description ?? ""}). Audience: ${context.product?.audience ?? "founders, marketers"}. ${catBrief[category]} Return each with name, URL, one-line reason it's a fit.`
-      );
+    function isLikelyLargeCompany(name: string): boolean {
+      const lc = name.toLowerCase().trim();
+      if (LARGE_COMPANY_BLOCKLIST.has(lc)) return true;
+      for (const big of LARGE_COMPANY_BLOCKLIST) {
+        // word-boundary-ish match: "Siemens Energy" -> hits "siemens"
+        if (lc === big || lc.startsWith(big + " ") || lc.endsWith(" " + big) || lc.includes(" " + big + " ")) return true;
+      }
+      return false;
+    }
+
+    // Parse ICP company_size text into a numeric range (employees).
+    function parseSizeRange(size: string | null | undefined): { min: number; max: number } | null {
+      if (!size) return null;
+      const s = size.toLowerCase().replace(/,/g, "");
+      // e.g. "20-200", "20 to 200", "20–200", "<50", "under 100", "1000+"
+      const range = s.match(/(\d+)\s*(?:-|–|to)\s*(\d+)/);
+      if (range) return { min: parseInt(range[1]), max: parseInt(range[2]) };
+      const under = s.match(/(?:<|under|less than|up to)\s*(\d+)/);
+      if (under) return { min: 1, max: parseInt(under[1]) };
+      const plus = s.match(/(\d+)\s*\+/);
+      if (plus) return { min: parseInt(plus[1]), max: 1_000_000 };
+      const single = s.match(/(\d+)/);
+      if (single) { const n = parseInt(single[1]); return { min: Math.max(1, Math.floor(n / 2)), max: n * 2 }; }
+      return null;
+    }
+
+    // Build the list of discovery "tasks". For "customer", one task per ICP (size-aware).
+    type Task = {
+      category: Category;
+      brief: string;
+      searchQuery: string;
+      matched_icp_id: string | null;
+      icp_label: string | null;
+      sizeRange: { min: number; max: number } | null;
+    };
+
+    const productName = context.product?.name ?? "an AI marketing platform";
+    const productDesc = context.product?.description ?? "";
+    const audience = context.product?.audience ?? "founders, marketers";
+    const icpsRaw = (icpsRes.data ?? []) as any[];
+
+    const tasks: Task[] = [];
+
+    for (const category of requestedCats) {
+      if (category === "customer") {
+        // Per-ICP iteration with hard size constraint.
+        const icpList = icpsRaw.length > 0 ? icpsRaw : [null];
+        for (const icp of icpList) {
+          const size = icp?.company_size as string | null;
+          const industry = icp?.industry as string | null;
+          const segment = icp?.segment as string | null;
+          const range = parseSizeRange(size);
+          const sizeText = range
+            ? `approximately ${range.min}-${range.max} employees`
+            : size
+              ? `company size: ${size}`
+              : "any size";
+          const industryText = industry ? ` in the ${industry} industry` : "";
+          const segmentText = segment ? ` (segment: "${segment}")` : "";
+          const sizeHardRule = range && range.max < 500
+            ? `\n\nHARD CONSTRAINT: Return ONLY companies with ${sizeText}${industryText}. Do NOT return well-known enterprise companies, Fortune 500s, or companies with 1000+ employees, EVEN IF they are a strong thematic fit. Explicitly forbidden examples: Siemens, SAP, Salesforce, Microsoft, Google, Atlassian, McKinsey, Deloitte, Accenture, IBM, Oracle, Adobe, HubSpot, Shopify, Stripe, and similar large public companies. If you cannot find 5 verifiable real companies in this exact size range, RETURN FEWER rather than substituting a larger company.`
+            : "";
+
+          const brief = `5 real companies${industryText} of size ${sizeText} that would buy this product${segmentText}.${sizeHardRule}`;
+          const searchQuery = `Real, specific small/mid-market companies${industryText}, ${sizeText}${segmentText}, that would buy a product like: ${productName} (${productDesc}). Audience: ${audience}. Avoid Fortune 500 and well-known enterprises. Return each with name, URL, employee count if known, one-line fit reason.`;
+          tasks.push({
+            category,
+            brief,
+            searchQuery,
+            matched_icp_id: icp?.id ?? null,
+            icp_label: segment ?? null,
+            sizeRange: range,
+          });
+        }
+      } else {
+        const briefMap: Record<Exclude<Category, "customer">, string> = {
+          grant: "5 real, currently-open grants, accelerator programs, or innovation funding (EXIST, EU Horizon, AI grants, university programs, regional innovation funds).",
+          partner: "5 real strategic partners — distributors, implementation agencies, consultancies, complementary tools — that serve the same audience.",
+          investor: "5 real angel investors, accelerators, or VCs that invest in this domain/stage.",
+          community: "5 real communities — LinkedIn groups, Slack groups, subreddits, industry associations — where the target persona is active.",
+        };
+        const brief = briefMap[category as Exclude<Category, "customer">];
+        tasks.push({
+          category,
+          brief,
+          searchQuery: `For a product: ${productName} (${productDesc}). Audience: ${audience}. ${brief} Return each with name, URL, one-line reason it's a fit.`,
+          matched_icp_id: null,
+          icp_label: null,
+          sizeRange: null,
+        });
+      }
+    }
+
+    for (const task of tasks) {
+      const { category, brief, searchQuery, matched_icp_id, icp_label, sizeRange } = task;
+      const search = await perplexitySearch(searchQuery);
 
       const aiPrompt = `Given this intelligence context and live web research, generate prospects.
 
 CONTEXT:
 ${JSON.stringify(context, null, 2)}
 
-CATEGORY: ${category}
-${catBrief[category]}
+CATEGORY: ${category}${icp_label ? `\nTARGET ICP: ${icp_label}` : ""}${sizeRange ? `\nTARGET SIZE: ${sizeRange.min}-${sizeRange.max} employees (HARD)` : ""}
+${brief}
 
 WEB RESEARCH:
 ${search || "(no live research available; use general knowledge of real organizations)"}
@@ -150,6 +253,7 @@ Return JSON shape:
       "url": "https url (REQUIRED — only include items with a real URL)",
       "location": "string or empty",
       "deadline": "YYYY-MM-DD or null (grants/accelerators only)",
+      "estimated_employees": "integer or null (best-effort employee count; REQUIRED for customer category)",
       "fit_score": 0-100,
       "opportunity_score": 0-100,
       "urgency_score": 0-100,
@@ -167,31 +271,41 @@ Rules:
 - A prospect WITHOUT a real https URL must be omitted.
 - A prospect without at least one concrete signal must be omitted.
 - confidence_score reflects how verifiable the source is: <60 = guessed, 60-79 = plausible from research, 80+ = directly cited in research above.
-- Score honestly. Cap at 65 when context is thin. Prefer real, verifiable orgs. 5 items max.`;
+- Score honestly. Cap at 65 when context is thin. Prefer real, verifiable orgs. 5 items max.${sizeRange ? `\n- HARD: every prospect MUST be within ${sizeRange.min}-${sizeRange.max} employees. Returning a larger company is a hard failure — return fewer items instead.` : ""}`;
 
       const json = await aiJSON(aiPrompt);
-      const items: any[] = Array.isArray(json.prospects) ? json.prospects.slice(0, 5) : [];
+      let items: any[] = Array.isArray(json.prospects) ? json.prospects.slice(0, 5) : [];
+
+      // Post-generation size validation (customer + SMB ICP only).
+      if (category === "customer" && sizeRange && sizeRange.max < 500) {
+        items = items.filter((p) => {
+          const name = String(p?.name ?? "").trim();
+          if (!name) return false;
+          if (isLikelyLargeCompany(name)) { metrics.dropped_wrong_size++; return false; }
+          const emp = typeof p?.estimated_employees === "number" ? p.estimated_employees : null;
+          // If AI provided an employee estimate above the band ceiling (with 2x grace), drop it.
+          if (emp != null && emp > sizeRange.max * 2) { metrics.dropped_wrong_size++; return false; }
+          return true;
+        });
+      }
 
       const runId = crypto.randomUUID();
 
-      // Preload existing (user_id) rows once per category for dedup. Cheap: indexed.
+      // Preload existing (user_id) rows once per task for dedup. Cheap: indexed.
       const { data: existingRows } = await admin
         .from("prospects")
         .select("name, url, contact_email")
         .eq("user_id", user.id);
       const seenUrl = new Set<string>();
-      const seenNameEmail = new Set<string>();
       const seenName = new Set<string>();
       (existingRows ?? []).forEach((r: any) => {
         if (r.url) seenUrl.add(r.url.toLowerCase());
-        if (r.name && r.contact_email) seenNameEmail.add(`${r.name.toLowerCase()}|${r.contact_email.toLowerCase()}`);
         if (r.name) seenName.add(r.name.toLowerCase());
       });
 
       for (const p of items) {
         const url: string | null = typeof p.url === "string" && /^https?:\/\//i.test(p.url) ? p.url : null;
         const signals: any[] = Array.isArray(p.signals) ? p.signals.filter(Boolean) : [];
-        // Phase 8 quality gates
         if (!url) { metrics.dropped_no_url++; continue; }
         if (signals.length === 0) { metrics.dropped_no_evidence++; continue; }
 
@@ -220,6 +334,7 @@ Rules:
             user_id: user.id,
             app_id: appId ?? null,
             category,
+            matched_icp_id,
             name: String(p.name ?? "Unnamed").slice(0, 200),
             description: p.description ?? null,
             url,
@@ -234,7 +349,14 @@ Rules:
             match_reason: p.match_reason ?? null,
             evidence_summary: p.evidence_summary ?? null,
             signals,
-            evidence: { context_size: context.conversions, has_web: !!search, run_id: runId },
+            evidence: {
+              context_size: context.conversions,
+              has_web: !!search,
+              run_id: runId,
+              icp_label,
+              size_range: sizeRange,
+              estimated_employees: typeof p.estimated_employees === "number" ? p.estimated_employees : null,
+            },
             source: search ? "perplexity+ai" : "ai_only",
             source_type: sourceType,
             stage,
@@ -265,6 +387,7 @@ Rules:
         dropped_no_url: metrics.dropped_no_url,
         dropped_no_evidence: metrics.dropped_no_evidence,
         dropped_duplicate: metrics.dropped_duplicate,
+        dropped_wrong_size: metrics.dropped_wrong_size,
         low_confidence: metrics.low_confidence,
         average_confidence: avgConfidence,
       },

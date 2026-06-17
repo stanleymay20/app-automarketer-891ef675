@@ -24,6 +24,7 @@ import {
   type ProspectCategory, type Prospect, type ProspectStage,
 } from "@/hooks/useProspects";
 import { useApps } from "@/hooks/useApps";
+import { useICPs } from "@/hooks/useAudience";
 import { useSendOutreach, useEnrollSequence } from "@/hooks/useSequences";
 import { useToast } from "@/hooks/use-toast";
 
@@ -54,7 +55,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-function ProspectCard({ p, onOpen }: { p: Prospect; onOpen: (p: Prospect) => void }) {
+function ProspectCard({ p, onOpen, icpLabel }: { p: Prospect; onOpen: (p: Prospect) => void; icpLabel?: string | null }) {
   const action = useProspectAction();
   const stage = (p.stage ?? "new") as ProspectStage;
   return (
@@ -96,6 +97,9 @@ function ProspectCard({ p, onOpen }: { p: Prospect; onOpen: (p: Prospect) => voi
             <Badge variant="outline" className="text-[10px]">conf {p.source_confidence}</Badge>
           )}
           {p.source_type && <Badge variant="outline" className="text-[10px] capitalize">{p.source_type}</Badge>}
+          {p.category === "customer" && icpLabel && (
+            <Badge variant="secondary" className="text-[10px]" title="Matched ICP">ICP: {icpLabel}</Badge>
+          )}
           {p.industry && <Badge variant="outline">{p.industry}</Badge>}
           {p.deadline && <Badge variant="outline">Closes {new Date(p.deadline).toLocaleDateString()}</Badge>}
           {p.next_action_at && (
@@ -353,6 +357,12 @@ export default function Prospects() {
   const { data: apps } = useApps();
   const [appId, setAppId] = useState<string | undefined>(undefined);
   const { data: prospects = [], isLoading } = useProspects(appId);
+  const { data: icps = [] } = useICPs(appId);
+  const icpMap = useMemo(() => {
+    const m = new Map<string, string>();
+    icps.forEach((i) => m.set(i.id, i.segment));
+    return m;
+  }, [icps]);
   const discover = useDiscoverProspects();
   const importer = useImportProspects();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -511,7 +521,7 @@ export default function Prospects() {
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {filtered.map((p) => <ProspectCard key={p.id} p={p} onOpen={setOpen} />)}
+                {filtered.map((p) => <ProspectCard key={p.id} p={p} onOpen={setOpen} icpLabel={(p as any).matched_icp_id ? icpMap.get((p as any).matched_icp_id) : null} />)}
               </div>
             )}
           </TabsContent>
