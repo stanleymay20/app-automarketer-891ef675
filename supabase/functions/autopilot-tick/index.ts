@@ -164,7 +164,7 @@ async function callSendOutreach(
 
 async function processUser(s: AutopilotSettings) {
   const admin = adminClient();
-  const summary = { sent: 0, review_required: 0, blocked: 0, skipped: 0, failed: 0 };
+  const summary = { evaluated: 0, sent: 0, review_required: 0, blocked: 0, skipped: 0, failed: 0 };
 
   // Daily counter rollover
   let sentToday = s.sent_today ?? 0;
@@ -196,6 +196,7 @@ async function processUser(s: AutopilotSettings) {
   for (const p of (prospects ?? []) as Prospect[]) {
     if (seen.has(p.id)) continue;
     seen.add(p.id);
+    summary.evaluated++;
 
     // Stage safety net
     const stageKey = (p.pipeline_stage || p.stage || "").toLowerCase();
@@ -325,8 +326,14 @@ Deno.serve(async (req) => {
 
   await safeJson(req); // tolerate empty bodies
 
+  const admin = adminClient();
+  const startedAt = new Date();
+  const startedIso = startedAt.toISOString();
+  const totals = { users_processed: 0, evaluated: 0, sent: 0, review_required: 0, blocked: 0, skipped: 0, failed: 0 };
+  const perUser: Array<Record<string, unknown>> = [];
+  let fatal: string | null = null;
+
   try {
-    const admin = adminClient();
     const { data: users, error } = await admin
       .from("autopilot_settings")
       .select("user_id,enabled,min_opportunity_score,min_confidence,daily_send_cap,max_auto_value,allowed_segments,approval_required_segments,sent_today,sent_today_date")
@@ -334,33 +341,91 @@ Deno.serve(async (req) => {
       .limit(MAX_USERS_PER_TICK);
     if (error) throw error;
 
-    const totals = { users_processed: 0, sent: 0, review_required: 0, blocked: 0, skipped: 0, failed: 0 };
-    const perUser: Array<Record<string, unknown>> = [];
-
     for (const s of (users ?? []) as AutopilotSettings[]) {
+      const userStart = Date.now();
       try {
         const r = await processUser(s);
         totals.users_processed++;
+        totals.evaluated += r.evaluated;
         totals.sent += r.sent;
         totals.review_required += r.review_required;
         totals.blocked += r.blocked;
         totals.skipped += r.skipped;
         totals.failed += r.failed;
         perUser.push({ user_id: s.user_id, ...r });
+
+        // Per-user run row (visible to that user via RLS).
+        try {
+          const finishedAt = new Date();
+          await admin.from("autopilot_runs").insert({
+            user_id: s.user_id,
+            started_at: new Date(userStart).toISOString(),
+            finished_at: finishedAt.toISOString(),
+            duration_ms: finishedAt.getTime() - userStart,
+            users_processed: 1,
+            evaluated: r.evaluated,
+            sent: r.sent,
+            review_required: r.review_required,
+            blocked: r.blocked,
+            skipped: r.skipped,
+            failed: r.failed,
+            status: "ok",
+            details: { rule_version: RULE_VERSION },
+          });
+        } catch (logErr) {
+          console.warn("[autopilot-tick] per-user run log failed", logErr);
+        }
       } catch (e) {
         console.error("[autopilot-tick] user failed", s.user_id, e);
         perUser.push({ user_id: s.user_id, error: (e as Error).message });
+        try {
+          await admin.from("autopilot_runs").insert({
+            user_id: s.user_id,
+            started_at: new Date(userStart).toISOString(),
+            finished_at: new Date().toISOString(),
+            duration_ms: Date.now() - userStart,
+            users_processed: 0,
+            status: "error",
+            error_message: (e as Error).message.slice(0, 500),
+            details: { rule_version: RULE_VERSION },
+          });
+        } catch { /* swallow */ }
       }
     }
-
-    return jsonResponse({
-      ok: true,
-      rule_version: RULE_VERSION,
-      ...totals,
-      per_user: perUser,
-    });
   } catch (e) {
+    fatal = (e as Error).message;
     console.error("[autopilot-tick] fatal", e);
-    return errorResponse((e as Error).message, 500);
   }
+
+  // Global tick row (user_id = null -> admin/service visibility only).
+  const finishedAt = new Date();
+  try {
+    await admin.from("autopilot_runs").insert({
+      user_id: null,
+      started_at: startedIso,
+      finished_at: finishedAt.toISOString(),
+      duration_ms: finishedAt.getTime() - startedAt.getTime(),
+      users_processed: totals.users_processed,
+      evaluated: totals.evaluated,
+      sent: totals.sent,
+      review_required: totals.review_required,
+      blocked: totals.blocked,
+      skipped: totals.skipped,
+      failed: totals.failed,
+      status: fatal ? "error" : "ok",
+      error_message: fatal,
+      details: { rule_version: RULE_VERSION, per_user: perUser },
+    });
+  } catch (logErr) {
+    console.warn("[autopilot-tick] global run log failed", logErr);
+  }
+
+  if (fatal) return errorResponse(fatal, 500);
+  return jsonResponse({
+    ok: true,
+    rule_version: RULE_VERSION,
+    duration_ms: finishedAt.getTime() - startedAt.getTime(),
+    ...totals,
+    per_user: perUser,
+  });
 });

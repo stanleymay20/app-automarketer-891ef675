@@ -86,7 +86,7 @@ async function writeAudit(
   prospectId: string,
   userId: string,
   actionType: string,
-  metadata: Record<string, unknown>,
+  details: Record<string, unknown>,
 ) {
   try {
     await (supabase as any).from("automation_audit_log").insert({
@@ -94,7 +94,7 @@ async function writeAudit(
       action_type: actionType,
       entity_type: "prospect",
       entity_id: prospectId,
-      metadata: { rule_version: "review-v1", ...metadata },
+      details: { rule_version: "review-v1", ...details },
     });
   } catch (e) {
     console.warn("[review-queue] audit log failed", e);
