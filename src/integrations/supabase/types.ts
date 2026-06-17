@@ -2025,7 +2025,59 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      platform_connections_safe: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          app_id: string | null
+          connected: boolean | null
+          connected_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string | null
+          platform: string | null
+          scope: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          account_name?: string | null
+          app_id?: string | null
+          connected?: boolean | null
+          connected_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          platform?: string | null
+          scope?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          account_name?: string | null
+          app_id?: string | null
+          connected?: boolean | null
+          connected_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          platform?: string | null
+          scope?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_connections_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       decay_distribution_recommendations: { Args: never; Returns: undefined }
