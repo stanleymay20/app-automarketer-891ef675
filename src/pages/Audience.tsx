@@ -368,6 +368,67 @@ export default function Audience() {
           </section>
         )}
       </div>
+
+      {/* Confirm full replace */}
+      <Dialog open={confirmReplaceOpen} onOpenChange={setConfirmReplaceOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace all audience data?</DialogTitle>
+            <DialogDescription>
+              This will replace all {icps.length} existing ICPs and {personas.length} personas
+              {journey.length ? `, ${journey.length} journey stages` : ""}
+              {angles.length ? `, and ${angles.length} messaging angles` : ""} for this app.
+              This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmReplaceOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={runReplace}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Replace everything
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add segment (append mode) */}
+      <Dialog
+        open={addOpen}
+        onOpenChange={(o) => { setAddOpen(o); if (!o) setInstruction(""); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add a new segment</DialogTitle>
+            <DialogDescription>
+              Describe the new audience segment to add. Existing ICPs and personas will be kept —
+              the AI will only insert new ones based on your instruction.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={instruction}
+            onChange={(e) => setInstruction(e.target.value)}
+            placeholder="e.g. Add an enterprise IT buyer segment — CIOs at 1000+ employee financial services firms evaluating compliance tooling."
+            rows={5}
+            className="resize-none"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)} disabled={generate.isPending}>
+              Cancel
+            </Button>
+            <Button
+              onClick={runAppend}
+              disabled={!instruction.trim() || generate.isPending}
+              className="bg-gradient-to-r from-primary to-secondary text-primary-foreground"
+            >
+              {generate.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding…</>
+              ) : (
+                <><Plus className="mr-2 h-4 w-4" /> Add segment</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
+
