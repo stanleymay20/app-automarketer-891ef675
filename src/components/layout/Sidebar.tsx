@@ -98,6 +98,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const { data: settings } = useUserSettings();
   const updateSettings = useUpdateUserSettings();
   const { data: reviewCount = 0 } = useReviewPendingCount();
+  const { data: meetingsToday = 0 } = useUpcomingMeetingsCount();
+  const { data: pendingProposals = 0 } = usePendingProposalsCount();
   const [advancedOpen, setAdvancedOpen] = useState(
     ADVANCED.some((i) => i.path === location.pathname)
   );
@@ -111,7 +113,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const renderItem = (item: NavItem) => {
     const isActive = location.pathname === item.path;
-    const showBadge = item.path === "/review" && reviewCount > 0;
+    const badgeCount =
+      item.path === "/review" ? reviewCount :
+      item.path === "/meetings" ? meetingsToday :
+      item.path === "/proposals" ? pendingProposals : 0;
+    const showBadge = badgeCount > 0;
     return (
       <Link
         key={item.path}
