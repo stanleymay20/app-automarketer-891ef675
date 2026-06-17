@@ -357,6 +357,12 @@ export default function Prospects() {
   const { data: apps } = useApps();
   const [appId, setAppId] = useState<string | undefined>(undefined);
   const { data: prospects = [], isLoading } = useProspects(appId);
+  const { data: icps = [] } = useICPs(appId);
+  const icpMap = useMemo(() => {
+    const m = new Map<string, string>();
+    icps.forEach((i) => m.set(i.id, i.segment));
+    return m;
+  }, [icps]);
   const discover = useDiscoverProspects();
   const importer = useImportProspects();
   const fileRef = useRef<HTMLInputElement>(null);
