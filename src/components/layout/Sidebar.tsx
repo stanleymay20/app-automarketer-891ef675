@@ -63,6 +63,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { icon: Users, label: "Audience", path: "/audience" },
       { icon: Target, label: "Prospects", path: "/prospects" },
+      { icon: ShieldCheck, label: "Review", path: "/review" },
       { icon: Inbox, label: "Inbox", path: "/inbox" },
       { icon: Megaphone, label: "Distribution", path: "/distribution" },
     ],
