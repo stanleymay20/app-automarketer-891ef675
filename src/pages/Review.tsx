@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import {
   useReviewQueue, useApproveProspect, useRejectProspect,
-  useApproveAndSendProspect, type ReviewProspect,
+  useApproveAndSendProspect, useSaveReviewDraft, type ReviewProspect,
 } from "@/hooks/useReviewQueue";
 import { useRunProspectPipeline } from "@/hooks/useRunProspectPipeline";
 import { useApps } from "@/hooks/useApps";
