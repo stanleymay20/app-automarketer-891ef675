@@ -134,7 +134,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <span className="flex-1">{item.label}</span>
         {showBadge && (
           <span className="rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-semibold leading-none text-destructive-foreground">
-            {reviewCount > 99 ? "99+" : reviewCount}
+            {badgeCount > 99 ? "99+" : badgeCount}
           </span>
         )}
       </Link>
