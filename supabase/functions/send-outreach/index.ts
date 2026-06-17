@@ -46,6 +46,8 @@ Deno.serve(async (req) => {
     const to_override: string | undefined = body?.to_address;
     const sequence_id: string | undefined = body?.sequence_id;
     const sequence_step_id: string | undefined = body?.sequence_step_id;
+    // HARD APPROVAL GATE: every send must be explicitly approved per message.
+    const approved: boolean = body?.approved === true;
 
     if (!prospect_id) throw new Error("prospect_id is required");
     if (!subject) throw new Error("subject is required");
