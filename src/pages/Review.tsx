@@ -119,7 +119,7 @@ export default function Review() {
   const sortedItems = useMemo(() => items ?? [], [items]);
 
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Review queue">
       <div className="space-y-6 p-4 md:p-8">
         <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
