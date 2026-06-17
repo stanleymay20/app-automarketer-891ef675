@@ -105,6 +105,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const renderItem = (item: NavItem) => {
     const isActive = location.pathname === item.path;
+    const showBadge = item.path === "/review" && reviewCount > 0;
     return (
       <Link
         key={item.path}
@@ -118,7 +119,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         )}
       >
         <item.icon className={cn("h-4 w-4 shrink-0", isActive && "text-primary")} />
-        {item.label}
+        <span className="flex-1">{item.label}</span>
+        {showBadge && (
+          <span className="rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-semibold leading-none text-destructive-foreground">
+            {reviewCount > 99 ? "99+" : reviewCount}
+          </span>
+        )}
       </Link>
     );
   };
