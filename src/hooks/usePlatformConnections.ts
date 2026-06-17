@@ -30,13 +30,13 @@ export function usePlatformConnections(appId?: string) {
     queryFn: async () => {
       if (!user) return [];
 
-      let query = supabase
-        .from("platform_connections")
+      // Read from token-safe view (never exposes access_token / refresh_token to the client)
+      let query = (supabase as any)
+        .from("platform_connections_safe")
         .select("id, user_id, platform, connected, connected_at, account_name, account_id, created_at, updated_at, expires_at, scope, app_id")
         .eq("user_id", user.id);
 
       if (appId) {
-        // Get connections for this specific app OR user-level (null app_id)
         query = query.or(`app_id.eq.${appId},app_id.is.null`);
       }
 
