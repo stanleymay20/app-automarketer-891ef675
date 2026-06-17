@@ -136,6 +136,8 @@ export interface SendOutreachInput {
   subject: string;
   body: string;
   to_address?: string;
+  /** HARD APPROVAL GATE: must be true to actually send. Defaults to false. */
+  approved?: boolean;
 }
 
 export function useSendOutreach() {
@@ -143,16 +145,25 @@ export function useSendOutreach() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (input: SendOutreachInput) => {
-      const { data, error } = await supabase.functions.invoke("send-outreach", { body: input });
+      const { data, error } = await supabase.functions.invoke("send-outreach", {
+        body: { ...input, approved: input.approved === true },
+      });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      return data;
+      return data as { status?: string; message_id?: string };
     },
-    onSuccess: () => {
+    onSuccess: (d) => {
       qc.invalidateQueries({ queryKey: ["prospects"] });
       qc.invalidateQueries({ queryKey: ["prospect-actions"] });
       qc.invalidateQueries({ queryKey: ["today-activity"] });
-      toast({ title: "Email sent" });
+      if (d?.status === "pending_approval") {
+        toast({
+          title: "Saved for approval",
+          description: "Email was NOT sent. Approve it to send.",
+        });
+      } else {
+        toast({ title: "Email sent" });
+      }
     },
     onError: (e: any) => {
       toast({
