@@ -196,6 +196,7 @@ async function processUser(s: AutopilotSettings) {
   for (const p of (prospects ?? []) as Prospect[]) {
     if (seen.has(p.id)) continue;
     seen.add(p.id);
+    summary.evaluated++;
 
     // Stage safety net
     const stageKey = (p.pipeline_stage || p.stage || "").toLowerCase();
