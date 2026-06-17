@@ -55,7 +55,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-function ProspectCard({ p, onOpen }: { p: Prospect; onOpen: (p: Prospect) => void }) {
+function ProspectCard({ p, onOpen, icpLabel }: { p: Prospect; onOpen: (p: Prospect) => void; icpLabel?: string | null }) {
   const action = useProspectAction();
   const stage = (p.stage ?? "new") as ProspectStage;
   return (
