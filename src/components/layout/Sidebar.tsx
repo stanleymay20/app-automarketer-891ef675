@@ -68,6 +68,8 @@ const SECTIONS: NavSection[] = [
       { icon: Users, label: "Audience", path: "/audience" },
       { icon: Target, label: "Prospects", path: "/prospects" },
       { icon: ShieldCheck, label: "Review", path: "/review" },
+      { icon: CalendarClock, label: "Meetings", path: "/meetings" },
+      { icon: ScrollText, label: "Proposals", path: "/proposals" },
       { icon: Inbox, label: "Inbox", path: "/inbox" },
       { icon: Megaphone, label: "Distribution", path: "/distribution" },
     ],
