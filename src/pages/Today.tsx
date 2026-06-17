@@ -218,9 +218,20 @@ export default function Today() {
   return (
     <DashboardLayout title="Today">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Today</h1>
-          <p className="text-sm text-muted-foreground">Your growth command center — what to do next, who to talk to, what's converting.</p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Today</h1>
+            <p className="text-sm text-muted-foreground">Your growth command center — what to do next, who to talk to, what's converting.</p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => runSeq.mutate()}
+            disabled={runSeq.isPending}
+            className="gap-1"
+          >
+            {runSeq.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            Run due follow-ups
+          </Button>
         </div>
 
         {/* Stat tiles */}
@@ -231,6 +242,14 @@ export default function Today() {
           <StatTile label="Proposals" value={buckets.proposalsOpen.length} icon={Target} />
           <StatTile label="Meetings" value={buckets.meetings.length} icon={Users} />
           <StatTile label="Won (7d)" value={buckets.recentWins.length} icon={Trophy} tone="good" />
+        </div>
+
+        {/* Follow-up automation tiles */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile label="Follow-ups due" value={(seqStats?.dueToday ?? 0) + (seqStats?.overdue ?? 0)} icon={CalendarDays} tone={(seqStats?.overdue ?? 0) ? "warn" : "default"} />
+          <StatTile label="Sequences running" value={seqStats?.running ?? 0} icon={Send} />
+          <StatTile label="Sequences paused" value={seqStats?.paused ?? 0} icon={PauseCircle} tone={(seqStats?.paused ?? 0) ? "warn" : "default"} />
+          <StatTile label="Replies waiting" value={repliesWaiting} icon={Inbox} tone={repliesWaiting ? "warn" : "default"} />
         </div>
 
         {/* Next Best Action */}
