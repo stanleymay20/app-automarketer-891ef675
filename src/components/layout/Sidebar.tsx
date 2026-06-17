@@ -26,8 +26,12 @@ import {
   Zap,
   Inbox,
   ShieldCheck,
+  CalendarClock,
+  ScrollText,
 } from "lucide-react";
 import { useReviewPendingCount } from "@/hooks/useReviewQueue";
+import { usePendingProposalsCount } from "@/hooks/useProposals";
+import { useUpcomingMeetingsCount } from "@/hooks/useMeetings";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserSettings, useUpdateUserSettings } from "@/hooks/useUserSettings";
