@@ -24,6 +24,7 @@ import {
   DollarSign,
   X,
   Zap,
+  Inbox,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
