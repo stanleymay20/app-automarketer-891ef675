@@ -80,20 +80,39 @@ async function generateIntelligence(
 
 You must be specific, opinionated, and grounded. Avoid generic AI phrasing. Never use words like "revolutionize", "unlock", "leverage", "synergy", "cutting-edge", "in today's fast-paced world".`;
 
-  const userPrompt = `Build the complete audience intelligence pack for this product.
+  const existingContext = isAppend ? `
 
-PRODUCT
-Name: ${app.name}
-Description: ${app.description || "(none)"}
-Stated target audience: ${app.target_audience || "(none)"}
-Brand tone: ${app.brand_tone || "professional"}
-Website: ${app.website_url || "(none)"}
+EXISTING ICPs (do NOT duplicate or contradict these — generate only NEW segments that complement them):
+${JSON.stringify(opts.existingIcps || [], null, 2)}
 
-GROUNDED MARKET RESEARCH
-${researchMd || "(no external research available — rely on your training)"}
+EXISTING PERSONAS (do NOT duplicate — generate only NEW personas tied to the new segment):
+${JSON.stringify(opts.existingPersonas || [], null, 2)}
 
-Return a JSON object with this exact shape:
+USER INSTRUCTION FOR THE NEW SEGMENT:
+${opts.instruction || "(none)"}
+` : "";
 
+  const appendShape = `
+{
+  "icps": [
+    { "segment": "string", "company_size": "string", "industry": "string", "signals": ["string"], "notes": "string" }
+  ],  // 1 to 2 NEW entries, distinct from existing
+  "personas": [
+    {
+      "title": "string", "company_size": "string",
+      "responsibilities": ["string"], "pains": ["string"], "goals": ["string"],
+      "triggers": ["string"], "objections": ["string"], "channels": ["string"],
+      "content_style": "string"
+    }
+  ]  // 1 to 2 NEW entries, distinct from existing
+}
+
+Rules:
+- Do NOT regenerate the customer journey or messaging angles in append mode.
+- Do NOT duplicate or rename existing ICPs/personas — produce genuinely new segments.
+- Follow the user instruction above as the brief for what new segment(s) to add.`;
+
+  const fullShape = `
 {
   "icps": [
     { "segment": "string", "company_size": "string", "industry": "string", "signals": ["string"], "notes": "string" }
@@ -131,6 +150,21 @@ Rules:
 - Pains must be concrete frustrations, not vague problems.
 - Hook templates must be reusable patterns with [brackets] for variables.
 - Channels must be specific (e.g. "LinkedIn", "Indie Hackers", "r/SaaS"), not "social media".`;
+
+  const userPrompt = `${isAppend ? "Add a NEW audience segment to this product's existing audience intelligence." : "Build the complete audience intelligence pack for this product."}
+
+PRODUCT
+Name: ${app.name}
+Description: ${app.description || "(none)"}
+Stated target audience: ${app.target_audience || "(none)"}
+Brand tone: ${app.brand_tone || "professional"}
+Website: ${app.website_url || "(none)"}
+
+GROUNDED MARKET RESEARCH
+${researchMd || "(no external research available — rely on your training)"}
+${existingContext}
+Return a JSON object with this exact shape:
+${isAppend ? appendShape : fullShape}`;
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 110_000);
