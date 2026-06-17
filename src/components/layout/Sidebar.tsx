@@ -25,7 +25,9 @@ import {
   X,
   Zap,
   Inbox,
+  ShieldCheck,
 } from "lucide-react";
+import { useReviewPendingCount } from "@/hooks/useReviewQueue";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserSettings, useUpdateUserSettings } from "@/hooks/useUserSettings";
