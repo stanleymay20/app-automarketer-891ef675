@@ -278,7 +278,28 @@ function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onCl
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={copyLatest} className="gap-1"><Copy className="h-3.5 w-3.5" /> Copy message</Button>
             <Button size="sm" variant="outline" onClick={openLinkedIn} className="gap-1"><Linkedin className="h-3.5 w-3.5" /> Open LinkedIn</Button>
-            <Button size="sm" variant="outline" onClick={openEmail} className="gap-1"><Mail className="h-3.5 w-3.5" /> Open email</Button>
+            <Button
+              size="sm"
+              onClick={sendEmail}
+              disabled={send.isPending || !prospect.contact_email}
+              className="gap-1"
+            >
+              {send.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              Send Email
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={enrollSequence}
+              disabled={enroll.isPending || !prospect.contact_email}
+              className="gap-1"
+            >
+              {enroll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalIcon className="h-3.5 w-3.5" />}
+              Schedule 3-step follow-up
+            </Button>
+            <Button size="sm" variant="ghost" onClick={mailtoFallback} className="gap-1">
+              <Mail className="h-3.5 w-3.5" /> mailto fallback
+            </Button>
           </div>
 
           <div className="max-h-64 space-y-3 overflow-y-auto">
