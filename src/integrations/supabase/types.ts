@@ -1951,6 +1951,8 @@ export type Database = {
       }
       prospect_sequences: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           body: string | null
           created_at: string
           error_message: string | null
@@ -1966,9 +1968,12 @@ export type Database = {
           subject: string | null
           template_id: string | null
           updated_at: string
+          user_approved: boolean
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           body?: string | null
           created_at?: string
           error_message?: string | null
@@ -1984,9 +1989,12 @@ export type Database = {
           subject?: string | null
           template_id?: string | null
           updated_at?: string
+          user_approved?: boolean
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           body?: string | null
           created_at?: string
           error_message?: string | null
@@ -2002,6 +2010,7 @@ export type Database = {
           subject?: string | null
           template_id?: string | null
           updated_at?: string
+          user_approved?: boolean
           user_id?: string
         }
         Relationships: [
