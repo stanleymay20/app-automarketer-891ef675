@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Loader2, Users, Target, Map, Lightbulb, RefreshCw } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Sparkles, Loader2, Users, Target, Map, Lightbulb, RefreshCw, Plus } from "lucide-react";
 import { useApps } from "@/hooks/useApps";
 import {
   useAudienceProfile, useICPs, usePersonas, useJourneyStages,
@@ -55,11 +59,39 @@ export default function Audience() {
   const hasData = icps.length > 0 || personas.length > 0;
   // Only treat as "generating" if (a) mutation is currently in flight, OR
   // (b) status says generating AND it started within the last 3 minutes.
-  // This prevents permanently-stuck rows from blocking the rebuild button.
   const startedAt = profile?.last_generated_at ? new Date(profile.last_generated_at).getTime() : 0;
   const recentlyStarted = profile?.status === "generating" && Date.now() - startedAt < 3 * 60_000 && startedAt > 0;
   const isGenerating = generate.isPending || recentlyStarted;
   const previousFailed = profile?.status === "failed" && !generate.isPending;
+
+  // Original = rows in the earliest creation batch (within 30s of the min created_at
+  // across icps+personas). Anything later was added via "Add Segment".
+  const originalCutoff = useMemo(() => {
+    const times = [...icps, ...personas]
+      .map((r: any) => r.created_at ? new Date(r.created_at).getTime() : 0)
+      .filter((t) => t > 0);
+    if (!times.length) return 0;
+    return Math.min(...times) + 30_000;
+  }, [icps, personas]);
+  const isOriginal = (createdAt?: string | null) =>
+    !!createdAt && new Date(createdAt).getTime() <= originalCutoff;
+
+  const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [instruction, setInstruction] = useState("");
+
+  const runReplace = () => {
+    if (!appId) return;
+    setConfirmReplaceOpen(false);
+    generate.mutate({ appId, mode: "replace" });
+  };
+  const runAppend = () => {
+    if (!appId || !instruction.trim()) return;
+    generate.mutate(
+      { appId, mode: "append", instruction: instruction.trim() },
+      { onSuccess: () => { setAddOpen(false); setInstruction(""); } },
+    );
+  };
 
   return (
     <DashboardLayout title="Audience">
@@ -67,6 +99,7 @@ export default function Audience() {
         {/* Header */}
         <Card className="shadow-card border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
           <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
+
             <div>
               <h2 className="font-display text-xl font-bold">Audience Intelligence</h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -91,8 +124,21 @@ export default function Audience() {
                   </SelectContent>
                 </Select>
               )}
+              {hasData && !isGenerating && (
+                <Button
+                  variant="outline"
+                  onClick={() => setAddOpen(true)}
+                  disabled={!appId}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add Segment
+                </Button>
+              )}
               <Button
-                onClick={() => appId && generate.mutate(appId)}
+                onClick={() => {
+                  if (!appId) return;
+                  if (hasData) setConfirmReplaceOpen(true);
+                  else generate.mutate({ appId, mode: "replace" });
+                }}
                 disabled={!appId || isGenerating}
                 className="bg-gradient-to-r from-primary to-secondary text-primary-foreground"
               >
@@ -141,11 +187,21 @@ export default function Audience() {
               {icps.map((icp) => (
                 <Card key={icp.id} className="shadow-card">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">{icp.segment}</CardTitle>
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-base">{icp.segment}</CardTitle>
+                      <Badge variant={isOriginal(icp.created_at) ? "secondary" : "default"} className="shrink-0 text-[10px]">
+                        {isOriginal(icp.created_at) ? "Original" : "Added"}
+                      </Badge>
+                    </div>
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {icp.company_size && <Chip>{icp.company_size}</Chip>}
                       {icp.industry && <Chip>{icp.industry}</Chip>}
                     </div>
+                    {icp.created_at && (
+                      <p className="pt-1 text-[10px] text-muted-foreground">
+                        Added {format(new Date(icp.created_at), "MMM d, yyyy")}
+                      </p>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     {icp.signals?.length > 0 && (
@@ -175,9 +231,19 @@ export default function Audience() {
               {personas.map((p) => (
                 <Card key={p.id} className="shadow-card">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">{p.title}</CardTitle>
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-base">{p.title}</CardTitle>
+                      <Badge variant={isOriginal(p.created_at) ? "secondary" : "default"} className="shrink-0 text-[10px]">
+                        {isOriginal(p.created_at) ? "Original" : "Added"}
+                      </Badge>
+                    </div>
                     {p.company_size && (
                       <CardDescription>{p.company_size}</CardDescription>
+                    )}
+                    {p.created_at && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Added {format(new Date(p.created_at), "MMM d, yyyy")}
+                      </p>
                     )}
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
@@ -302,6 +368,67 @@ export default function Audience() {
           </section>
         )}
       </div>
+
+      {/* Confirm full replace */}
+      <Dialog open={confirmReplaceOpen} onOpenChange={setConfirmReplaceOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace all audience data?</DialogTitle>
+            <DialogDescription>
+              This will replace all {icps.length} existing ICPs and {personas.length} personas
+              {journey.length ? `, ${journey.length} journey stages` : ""}
+              {angles.length ? `, and ${angles.length} messaging angles` : ""} for this app.
+              This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmReplaceOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={runReplace}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Replace everything
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add segment (append mode) */}
+      <Dialog
+        open={addOpen}
+        onOpenChange={(o) => { setAddOpen(o); if (!o) setInstruction(""); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add a new segment</DialogTitle>
+            <DialogDescription>
+              Describe the new audience segment to add. Existing ICPs and personas will be kept —
+              the AI will only insert new ones based on your instruction.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={instruction}
+            onChange={(e) => setInstruction(e.target.value)}
+            placeholder="e.g. Add an enterprise IT buyer segment — CIOs at 1000+ employee financial services firms evaluating compliance tooling."
+            rows={5}
+            className="resize-none"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)} disabled={generate.isPending}>
+              Cancel
+            </Button>
+            <Button
+              onClick={runAppend}
+              disabled={!instruction.trim() || generate.isPending}
+              className="bg-gradient-to-r from-primary to-secondary text-primary-foreground"
+            >
+              {generate.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding…</>
+              ) : (
+                <><Plus className="mr-2 h-4 w-4" /> Add segment</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
+

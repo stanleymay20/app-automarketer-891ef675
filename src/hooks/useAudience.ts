@@ -19,6 +19,7 @@ export interface ICP {
   signals: string[];
   notes: string | null;
   sort_order: number;
+  created_at: string;
 }
 
 export interface Persona {
@@ -35,6 +36,7 @@ export interface Persona {
   channels: string[];
   content_style: string | null;
   sort_order: number;
+  created_at: string;
 }
 
 export interface JourneyStage {
@@ -144,28 +146,38 @@ export function useMessagingAngles(appId?: string) {
   });
 }
 
+export interface GenerateAudienceVars {
+  appId: string;
+  mode?: "replace" | "append";
+  instruction?: string;
+}
+
 export function useGenerateAudience() {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async (appId: string) => {
+    mutationFn: async (vars: GenerateAudienceVars | string) => {
+      const v: GenerateAudienceVars = typeof vars === "string" ? { appId: vars } : vars;
+      const mode = v.mode || "replace";
       const { data, error } = await supabase.functions.invoke(
         "generate-audience-intelligence",
-        { body: { app_id: appId } },
+        { body: { app_id: v.appId, mode, instruction: v.instruction } },
       );
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return { appId, ...data };
+      return { appId: v.appId, mode, ...data };
     },
-    onSuccess: ({ appId }) => {
+    onSuccess: ({ appId, mode }) => {
       qc.invalidateQueries({ queryKey: ["audience-profile", appId] });
       qc.invalidateQueries({ queryKey: ["icps", appId] });
       qc.invalidateQueries({ queryKey: ["personas", appId] });
       qc.invalidateQueries({ queryKey: ["journey-stages", appId] });
       qc.invalidateQueries({ queryKey: ["messaging-angles", appId] });
       toast({
-        title: "Audience built",
-        description: "Your ICPs, personas, journey, and angles are ready.",
+        title: mode === "append" ? "Segment added" : "Audience built",
+        description: mode === "append"
+          ? "Your new segment was added to the existing audience."
+          : "Your ICPs, personas, journey, and angles are ready.",
       });
     },
     onError: (e: any) => {
@@ -177,3 +189,4 @@ export function useGenerateAudience() {
     },
   });
 }
+

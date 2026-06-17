@@ -70,25 +70,49 @@ Be specific. No fluff.`;
   }
 }
 
-async function generateIntelligence(app: any, researchMd: string) {
+async function generateIntelligence(
+  app: any,
+  researchMd: string,
+  opts: { mode: "replace" | "append"; instruction?: string; existingIcps?: any[]; existingPersonas?: any[] } = { mode: "replace" },
+) {
+  const isAppend = opts.mode === "append";
   const systemPrompt = `You are a senior B2B growth strategist. Output ONLY a JSON object matching the requested schema. No prose. No markdown fences.
 
 You must be specific, opinionated, and grounded. Avoid generic AI phrasing. Never use words like "revolutionize", "unlock", "leverage", "synergy", "cutting-edge", "in today's fast-paced world".`;
 
-  const userPrompt = `Build the complete audience intelligence pack for this product.
+  const existingContext = isAppend ? `
 
-PRODUCT
-Name: ${app.name}
-Description: ${app.description || "(none)"}
-Stated target audience: ${app.target_audience || "(none)"}
-Brand tone: ${app.brand_tone || "professional"}
-Website: ${app.website_url || "(none)"}
+EXISTING ICPs (do NOT duplicate or contradict these — generate only NEW segments that complement them):
+${JSON.stringify(opts.existingIcps || [], null, 2)}
 
-GROUNDED MARKET RESEARCH
-${researchMd || "(no external research available — rely on your training)"}
+EXISTING PERSONAS (do NOT duplicate — generate only NEW personas tied to the new segment):
+${JSON.stringify(opts.existingPersonas || [], null, 2)}
 
-Return a JSON object with this exact shape:
+USER INSTRUCTION FOR THE NEW SEGMENT:
+${opts.instruction || "(none)"}
+` : "";
 
+  const appendShape = `
+{
+  "icps": [
+    { "segment": "string", "company_size": "string", "industry": "string", "signals": ["string"], "notes": "string" }
+  ],  // 1 to 2 NEW entries, distinct from existing
+  "personas": [
+    {
+      "title": "string", "company_size": "string",
+      "responsibilities": ["string"], "pains": ["string"], "goals": ["string"],
+      "triggers": ["string"], "objections": ["string"], "channels": ["string"],
+      "content_style": "string"
+    }
+  ]  // 1 to 2 NEW entries, distinct from existing
+}
+
+Rules:
+- Do NOT regenerate the customer journey or messaging angles in append mode.
+- Do NOT duplicate or rename existing ICPs/personas — produce genuinely new segments.
+- Follow the user instruction above as the brief for what new segment(s) to add.`;
+
+  const fullShape = `
 {
   "icps": [
     { "segment": "string", "company_size": "string", "industry": "string", "signals": ["string"], "notes": "string" }
@@ -126,6 +150,21 @@ Rules:
 - Pains must be concrete frustrations, not vague problems.
 - Hook templates must be reusable patterns with [brackets] for variables.
 - Channels must be specific (e.g. "LinkedIn", "Indie Hackers", "r/SaaS"), not "social media".`;
+
+  const userPrompt = `${isAppend ? "Add a NEW audience segment to this product's existing audience intelligence." : "Build the complete audience intelligence pack for this product."}
+
+PRODUCT
+Name: ${app.name}
+Description: ${app.description || "(none)"}
+Stated target audience: ${app.target_audience || "(none)"}
+Brand tone: ${app.brand_tone || "professional"}
+Website: ${app.website_url || "(none)"}
+
+GROUNDED MARKET RESEARCH
+${researchMd || "(no external research available — rely on your training)"}
+${existingContext}
+Return a JSON object with this exact shape:
+${isAppend ? appendShape : fullShape}`;
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 110_000);
@@ -196,7 +235,10 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     appId = body?.app_id ?? null;
+    const mode: "replace" | "append" = body?.mode === "append" ? "append" : "replace";
+    const instruction: string = typeof body?.instruction === "string" ? body.instruction.trim() : "";
     if (!appId) throw new Error("app_id is required");
+    if (mode === "append" && !instruction) throw new Error("instruction is required in append mode");
 
     admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -208,7 +250,7 @@ Deno.serve(async (req) => {
       .single();
     if (appErr || !app) throw new Error("App not found");
 
-    console.log(`[audience] start app=${appId} name="${app.name}"`);
+    console.log(`[audience] start app=${appId} mode=${mode} name="${app.name}"`);
 
     await admin.from("audience_profiles").upsert({
       user_id: userId,
@@ -216,30 +258,55 @@ Deno.serve(async (req) => {
       status: "generating",
     }, { onConflict: "app_id" });
 
-    const researchMd = await research(app);
+    // For append mode, load existing ICPs/personas as context.
+    let existingIcps: any[] = [];
+    let existingPersonas: any[] = [];
+    if (mode === "append") {
+      const [{ data: ei }, { data: ep }] = await Promise.all([
+        admin.from("icps").select("segment,company_size,industry,signals,notes").eq("app_id", appId),
+        admin.from("personas").select("title,company_size,pains,goals,channels").eq("app_id", appId),
+      ]);
+      existingIcps = ei || [];
+      existingPersonas = ep || [];
+    }
+
+    const researchMd = mode === "append" ? "" : await research(app);
     console.log(`[audience] research len=${researchMd.length}`);
-    const pack = await generateIntelligence(app, researchMd);
+    const pack = await generateIntelligence(app, researchMd, {
+      mode, instruction, existingIcps, existingPersonas,
+    });
     console.log(`[audience] AI returned icps=${pack?.icps?.length ?? 0} personas=${pack?.personas?.length ?? 0} journey=${pack?.journey?.length ?? 0} angles=${pack?.angles?.length ?? 0}`);
 
-    await Promise.all([
-      admin.from("icps").delete().eq("app_id", appId),
-      admin.from("personas").delete().eq("app_id", appId),
-      admin.from("journey_stages").delete().eq("app_id", appId),
-      admin.from("messaging_angles").delete().eq("app_id", appId),
-    ]);
+    // Existing counts to compute sort_order offset in append mode.
+    let icpOffset = 0, personaOffset = 0;
+    if (mode === "replace") {
+      await Promise.all([
+        admin.from("icps").delete().eq("app_id", appId),
+        admin.from("personas").delete().eq("app_id", appId),
+        admin.from("journey_stages").delete().eq("app_id", appId),
+        admin.from("messaging_angles").delete().eq("app_id", appId),
+      ]);
+    } else {
+      const [{ count: ic }, { count: pc }] = await Promise.all([
+        admin.from("icps").select("id", { count: "exact", head: true }).eq("app_id", appId),
+        admin.from("personas").select("id", { count: "exact", head: true }).eq("app_id", appId),
+      ]);
+      icpOffset = ic || 0;
+      personaOffset = pc || 0;
+    }
 
-    const icpRows = (pack.icps || []).slice(0, 3).map((i: any, idx: number) => ({
+    const icpRows = (pack.icps || []).slice(0, mode === "append" ? 2 : 3).map((i: any, idx: number) => ({
       user_id: userId, app_id: appId,
       segment: i.segment || "Unnamed segment",
       company_size: i.company_size || null,
       industry: i.industry || null,
       signals: Array.isArray(i.signals) ? i.signals : [],
       notes: i.notes || null,
-      sort_order: idx,
+      sort_order: icpOffset + idx,
     }));
     if (icpRows.length) await admin.from("icps").insert(icpRows);
 
-    const personaRows = (pack.personas || []).slice(0, 4).map((p: any, idx: number) => ({
+    const personaRows = (pack.personas || []).slice(0, mode === "append" ? 2 : 4).map((p: any, idx: number) => ({
       user_id: userId, app_id: appId,
       title: p.title || "Persona",
       company_size: p.company_size || null,
@@ -248,36 +315,42 @@ Deno.serve(async (req) => {
       triggers: p.triggers || [], objections: p.objections || [],
       channels: p.channels || [],
       content_style: p.content_style || null,
-      sort_order: idx,
+      sort_order: personaOffset + idx,
     }));
     if (personaRows.length) await admin.from("personas").insert(personaRows);
 
-    const journeyByStage = new Map<string, any>();
-    for (const j of pack.journey || []) {
-      if (j?.stage) journeyByStage.set(String(j.stage).toLowerCase(), j);
-    }
-    const journeyRows = JOURNEY_STAGES.map((stage, idx) => {
-      const j = journeyByStage.get(stage) || {};
-      return {
-        user_id: userId, app_id: appId, stage, stage_order: idx,
-        customer_thinking: j.customer_thinking || null,
-        pains: j.pains || [],
-        best_content: j.best_content || null,
-        best_cta: j.best_cta || null,
-        channels: j.channels || [],
-      };
-    });
-    await admin.from("journey_stages").insert(journeyRows);
+    let journeyRowsLen = 0;
+    let angleRowsLen = 0;
+    if (mode === "replace") {
+      const journeyByStage = new Map<string, any>();
+      for (const j of pack.journey || []) {
+        if (j?.stage) journeyByStage.set(String(j.stage).toLowerCase(), j);
+      }
+      const journeyRows = JOURNEY_STAGES.map((stage, idx) => {
+        const j = journeyByStage.get(stage) || {};
+        return {
+          user_id: userId, app_id: appId, stage, stage_order: idx,
+          customer_thinking: j.customer_thinking || null,
+          pains: j.pains || [],
+          best_content: j.best_content || null,
+          best_cta: j.best_cta || null,
+          channels: j.channels || [],
+        };
+      });
+      await admin.from("journey_stages").insert(journeyRows);
+      journeyRowsLen = journeyRows.length;
 
-    const angleRows = (pack.angles || []).slice(0, 6).map((a: any, idx: number) => ({
-      user_id: userId, app_id: appId,
-      angle_name: a.angle_name || "Angle",
-      hook_template: a.hook_template || null,
-      when_to_use: a.when_to_use || null,
-      example: a.example || null,
-      sort_order: idx,
-    }));
-    if (angleRows.length) await admin.from("messaging_angles").insert(angleRows);
+      const angleRows = (pack.angles || []).slice(0, 6).map((a: any, idx: number) => ({
+        user_id: userId, app_id: appId,
+        angle_name: a.angle_name || "Angle",
+        hook_template: a.hook_template || null,
+        when_to_use: a.when_to_use || null,
+        example: a.example || null,
+        sort_order: idx,
+      }));
+      if (angleRows.length) await admin.from("messaging_angles").insert(angleRows);
+      angleRowsLen = angleRows.length;
+    }
 
     await admin.from("audience_profiles").upsert({
       user_id: userId, app_id: appId,
@@ -286,19 +359,21 @@ Deno.serve(async (req) => {
       raw_research: researchMd || null,
     }, { onConflict: "app_id" });
 
-    console.log(`[audience] ✓ done app=${appId}`);
+    console.log(`[audience] ✓ done app=${appId} mode=${mode}`);
     return new Response(
       JSON.stringify({
         success: true,
+        mode,
         counts: {
           icps: icpRows.length,
           personas: personaRows.length,
-          journey: journeyRows.length,
-          angles: angleRows.length,
+          journey: journeyRowsLen,
+          angles: angleRowsLen,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (e) {
     const msg = (e as Error).message || "Unknown error";
     console.error("[audience] error:", msg);
