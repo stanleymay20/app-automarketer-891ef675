@@ -259,3 +259,37 @@ export function useApproveAndSendProspect() {
     },
   });
 }
+
+/** Persist a hand-edited outreach draft on the prospect (no state change, no send). */
+export function useSaveReviewDraft() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async ({ prospect_id, subject, body }: { prospect_id: string; subject: string; body: string }) => {
+      if (!user) throw new Error("Not authenticated");
+      const { error } = await supabase
+        .from("prospects")
+        .update({
+          review_draft_subject: subject.slice(0, 200) || null,
+          review_draft_body: body.slice(0, 5000) || null,
+        })
+        .eq("id", prospect_id)
+        .eq("user_id", user.id);
+      if (error) throw error;
+      await writeAudit(prospect_id, user.id, "prospect_review_draft_saved", {
+        decision: "save_draft",
+        subject_len: subject.length,
+        body_len: body.length,
+      });
+      return { prospect_id };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["review-queue"] });
+      toast({ title: "Draft saved" });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Save draft failed", description: e.message, variant: "destructive" });
+    },
+  });
+}
