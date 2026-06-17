@@ -187,11 +187,21 @@ export default function Audience() {
               {icps.map((icp) => (
                 <Card key={icp.id} className="shadow-card">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">{icp.segment}</CardTitle>
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-base">{icp.segment}</CardTitle>
+                      <Badge variant={isOriginal(icp.created_at) ? "secondary" : "default"} className="shrink-0 text-[10px]">
+                        {isOriginal(icp.created_at) ? "Original" : "Added"}
+                      </Badge>
+                    </div>
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {icp.company_size && <Chip>{icp.company_size}</Chip>}
                       {icp.industry && <Chip>{icp.industry}</Chip>}
                     </div>
+                    {icp.created_at && (
+                      <p className="pt-1 text-[10px] text-muted-foreground">
+                        Added {format(new Date(icp.created_at), "MMM d, yyyy")}
+                      </p>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     {icp.signals?.length > 0 && (
