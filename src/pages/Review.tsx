@@ -334,23 +334,49 @@ export default function Review() {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Nothing is sent until you click <strong>Approve & Send</strong>. Editing only saves
-                the draft locally for this approval.
+                Nothing is sent until you click <strong>Approve & Send</strong>. <strong>Save draft</strong> stores
+                your edits on the prospect so they're used next time (including by autopilot).
               </p>
             </div>
           )}
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setEdit(null)}>Cancel</Button>
             {edit?.mode === "edit" ? (
-              <Button
-                onClick={() => {
-                  if (!edit) return;
-                  approve.mutate(edit.prospect.id, { onSuccess: () => setEdit(null) });
-                }}
-                disabled={approve.isPending}
-              >
-                <Check className="mr-2 h-4 w-4" /> Approve with this draft
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (!edit) return;
+                    saveDraft.mutate(
+                      { prospect_id: edit.prospect.id, subject: edit.subject, body: edit.body },
+                      { onSuccess: () => setEdit(null) },
+                    );
+                  }}
+                  disabled={saveDraft.isPending}
+                >
+                  {saveDraft.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Pencil className="mr-2 h-4 w-4" />
+                  )}
+                  Save draft
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!edit) return;
+                    saveDraft.mutate(
+                      { prospect_id: edit.prospect.id, subject: edit.subject, body: edit.body },
+                      {
+                        onSuccess: () =>
+                          approve.mutate(edit.prospect.id, { onSuccess: () => setEdit(null) }),
+                      },
+                    );
+                  }}
+                  disabled={approve.isPending || saveDraft.isPending}
+                >
+                  <Check className="mr-2 h-4 w-4" /> Approve with this draft
+                </Button>
+              </>
             ) : (
               <Button
                 onClick={() => {
