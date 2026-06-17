@@ -70,7 +70,12 @@ Be specific. No fluff.`;
   }
 }
 
-async function generateIntelligence(app: any, researchMd: string) {
+async function generateIntelligence(
+  app: any,
+  researchMd: string,
+  opts: { mode: "replace" | "append"; instruction?: string; existingIcps?: any[]; existingPersonas?: any[] } = { mode: "replace" },
+) {
+  const isAppend = opts.mode === "append";
   const systemPrompt = `You are a senior B2B growth strategist. Output ONLY a JSON object matching the requested schema. No prose. No markdown fences.
 
 You must be specific, opinionated, and grounded. Avoid generic AI phrasing. Never use words like "revolutionize", "unlock", "leverage", "synergy", "cutting-edge", "in today's fast-paced world".`;
