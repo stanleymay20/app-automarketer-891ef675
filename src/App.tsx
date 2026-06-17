@@ -16,6 +16,7 @@ import Calendar from "./pages/Calendar";
 import Analytics from "./pages/Analytics";
 import WeeklyReports from "./pages/WeeklyReports";
 import Settings from "./pages/Settings";
+import AutopilotSettings from "./pages/AutopilotSettings";
 import Auth from "./pages/Auth";
 import OAuthCallback from "./pages/OAuthCallback";
 import Revenue from "./pages/Revenue";
