@@ -33,6 +33,8 @@ import ContentIntelligence from "./pages/ContentIntelligence";
 import Today from "./pages/Today";
 import Inbox from "./pages/Inbox";
 import Review from "./pages/Review";
+import Meetings from "./pages/Meetings";
+import Proposals from "./pages/Proposals";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
