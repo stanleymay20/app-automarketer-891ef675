@@ -185,6 +185,8 @@ function ContactPanel({ prospect }: { prospect: Prospect }) {
 
 function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onClose: () => void }) {
   const action = useProspectAction();
+  const send = useSendOutreach();
+  const enroll = useEnrollSequence();
   const { data: history } = useProspectActions(prospect?.id);
   const [channel, setChannel] = useState<string>("linkedin_message");
   const { toast } = useToast();
@@ -212,11 +214,35 @@ function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onCl
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const openEmail = () => {
+  const mailtoFallback = () => {
     if (!prospect.contact_email) return toast({ title: "No contact email on file" });
     const subject = latest?.subject ?? `Quick note about ${prospect.name}`;
     const body = latest?.body ?? "";
     window.location.href = `mailto:${prospect.contact_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const sendEmail = () => {
+    if (!prospect.contact_email) return toast({ title: "No contact email on file" });
+    if (!latest?.body) return toast({ title: "Generate a draft first" });
+    send.mutate({
+      prospect_id: prospect.id,
+      subject: latest.subject || `Quick note about ${prospect.name}`,
+      body: latest.body,
+    });
+  };
+
+  const enrollSequence = () => {
+    if (!prospect.contact_email) return toast({ title: "No contact email on file" });
+    enroll.mutate({
+      prospect_id: prospect.id,
+      sequence_name: "default-3-step",
+      step_days: [0, 3, 7],
+      steps: [
+        { subject: latest?.subject || `Quick note about ${prospect.name}`, body: latest?.body || "" },
+        { subject: `Re: ${latest?.subject || prospect.name}`, body: "Following up in case my last note got buried." },
+        { subject: `Last note re: ${prospect.name}`, body: "Closing the loop — happy to reconnect when timing is better." },
+      ],
+    });
   };
 
   return (
