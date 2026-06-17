@@ -84,6 +84,8 @@ function AppRoutes() {
        <Route path="/prospects" element={<ProtectedRoute><Prospects /></ProtectedRoute>} />
       <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
       <Route path="/review" element={<ProtectedRoute><Review /></ProtectedRoute>} />
+      <Route path="/meetings" element={<ProtectedRoute><Meetings /></ProtectedRoute>} />
+      <Route path="/proposals" element={<ProtectedRoute><Proposals /></ProtectedRoute>} />
        <Route path="/distribution" element={<ProtectedRoute><Distribution /></ProtectedRoute>} />
        <Route path="/orchestrator" element={<ProtectedRoute><Orchestrator /></ProtectedRoute>} />
        <Route path="/content-intelligence" element={<ProtectedRoute><ContentIntelligence /></ProtectedRoute>} />
