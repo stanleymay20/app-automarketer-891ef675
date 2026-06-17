@@ -521,7 +521,7 @@ export default function Prospects() {
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {filtered.map((p) => <ProspectCard key={p.id} p={p} onOpen={setOpen} />)}
+                {filtered.map((p) => <ProspectCard key={p.id} p={p} onOpen={setOpen} icpLabel={(p as any).matched_icp_id ? icpMap.get((p as any).matched_icp_id) : null} />)}
               </div>
             )}
           </TabsContent>
