@@ -32,6 +32,8 @@ export interface ReviewProspect {
   buying_signal_reasoning: string | null;
   enriched_at: string | null;
   updated_at: string;
+  review_draft_subject: string | null;
+  review_draft_body: string | null;
 }
 
 /** All prospects that need a human eye: pending review OR routed to review_required. */
