@@ -89,6 +89,22 @@ function ProspectRow({ p, hint }: { p: Prospect; hint?: string }) {
 export default function Today() {
   const { data: prospects = [], isLoading } = useProspects();
   const { data: activity = [] } = useRecentActivity();
+  const { data: seqStats } = useSequenceStats();
+  const { data: replies = [] } = useReplies({ limit: 50 });
+  const runSeq = useRunSequences();
+
+  // Replies waiting = inbound replies received in the last 7 days from prospects
+  // that have not yet been advanced past 'responded'.
+  const repliesWaiting = useMemo(() => {
+    const cutoff = Date.now() - 7 * 86_400_000;
+    const ids = new Set(
+      prospects.filter((p) => ["responded"].includes(p.stage ?? "")).map((p) => p.id),
+    );
+    return replies.filter((r) =>
+      new Date(r.received_at).getTime() >= cutoff && ids.has(r.prospect_id),
+    ).length;
+  }, [prospects, replies]);
+
 
   const buckets = useMemo(() => {
     const start = START_OF_TODAY().getTime();
