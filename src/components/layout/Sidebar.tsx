@@ -91,6 +91,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const { signOut } = useAuth();
   const { data: settings } = useUserSettings();
   const updateSettings = useUpdateUserSettings();
+  const { data: reviewCount = 0 } = useReviewPendingCount();
   const [advancedOpen, setAdvancedOpen] = useState(
     ADVANCED.some((i) => i.path === location.pathname)
   );
