@@ -19,6 +19,7 @@ export interface ICP {
   signals: string[];
   notes: string | null;
   sort_order: number;
+  created_at: string;
 }
 
 export interface Persona {
@@ -35,6 +36,7 @@ export interface Persona {
   channels: string[];
   content_style: string | null;
   sort_order: number;
+  created_at: string;
 }
 
 export interface JourneyStage {
