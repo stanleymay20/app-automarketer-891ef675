@@ -7,11 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import {
   AlertCircle, ArrowRight, CalendarDays, CheckCircle2, Flame,
   Loader2, MessageSquare, Sparkles, Target, Trophy, Users, Zap,
+  PauseCircle, Send, Inbox,
 } from "lucide-react";
 import {
   useProspects, useProspectAction, PROSPECT_STAGES,
   type Prospect, type ProspectStage,
 } from "@/hooks/useProspects";
+import { useSequenceStats, useRunSequences } from "@/hooks/useSequences";
+import { useReplies } from "@/hooks/useReplies";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
