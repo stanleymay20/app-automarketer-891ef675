@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
         prospect_id: step.prospect_id,
         subject, body: text,
         sequence_id: step.id, sequence_step_id: step.id,
+        approved: true, // sequence already approved per row (user_approved=true gate above)
       });
 
       if (ok) {
@@ -126,7 +127,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, considered: items.length, sent, failed, skipped }),
+      JSON.stringify({ success: true, considered: items.length, sent, failed, skipped, awaiting_approval: awaitingApproval }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
