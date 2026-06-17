@@ -292,6 +292,63 @@ export type Database = {
         }
         Relationships: []
       }
+      autopilot_runs: {
+        Row: {
+          blocked: number
+          created_at: string
+          details: Json
+          duration_ms: number | null
+          error_message: string | null
+          evaluated: number
+          failed: number
+          finished_at: string | null
+          id: string
+          review_required: number
+          sent: number
+          skipped: number
+          started_at: string
+          status: string
+          user_id: string | null
+          users_processed: number
+        }
+        Insert: {
+          blocked?: number
+          created_at?: string
+          details?: Json
+          duration_ms?: number | null
+          error_message?: string | null
+          evaluated?: number
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          review_required?: number
+          sent?: number
+          skipped?: number
+          started_at?: string
+          status?: string
+          user_id?: string | null
+          users_processed?: number
+        }
+        Update: {
+          blocked?: number
+          created_at?: string
+          details?: Json
+          duration_ms?: number | null
+          error_message?: string | null
+          evaluated?: number
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          review_required?: number
+          sent?: number
+          skipped?: number
+          started_at?: string
+          status?: string
+          user_id?: string | null
+          users_processed?: number
+        }
+        Relationships: []
+      }
       autopilot_settings: {
         Row: {
           allowed_segments: string[]
