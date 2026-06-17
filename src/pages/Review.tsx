@@ -102,6 +102,7 @@ export default function Review() {
   const approve = useApproveProspect();
   const reject = useRejectProspect();
   const approveSend = useApproveAndSendProspect();
+  const saveDraft = useSaveReviewDraft();
   const rerun = useRunProspectPipeline();
 
   const [edit, setEdit] = useState<EditState | null>(null);
@@ -110,8 +111,8 @@ export default function Review() {
   const openEditor = (p: ReviewProspect, mode: "edit" | "send") =>
     setEdit({
       prospect: p,
-      subject: draftSubject(p),
-      body: draftBody(p),
+      subject: p.review_draft_subject?.trim() || draftSubject(p),
+      body: p.review_draft_body?.trim() || draftBody(p),
       to_address: p.contact_email || "",
       mode,
     });
