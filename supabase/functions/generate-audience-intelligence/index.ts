@@ -235,7 +235,10 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     appId = body?.app_id ?? null;
+    const mode: "replace" | "append" = body?.mode === "append" ? "append" : "replace";
+    const instruction: string = typeof body?.instruction === "string" ? body.instruction.trim() : "";
     if (!appId) throw new Error("app_id is required");
+    if (mode === "append" && !instruction) throw new Error("instruction is required in append mode");
 
     admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -247,7 +250,7 @@ Deno.serve(async (req) => {
       .single();
     if (appErr || !app) throw new Error("App not found");
 
-    console.log(`[audience] start app=${appId} name="${app.name}"`);
+    console.log(`[audience] start app=${appId} mode=${mode} name="${app.name}"`);
 
     await admin.from("audience_profiles").upsert({
       user_id: userId,
@@ -255,30 +258,55 @@ Deno.serve(async (req) => {
       status: "generating",
     }, { onConflict: "app_id" });
 
-    const researchMd = await research(app);
+    // For append mode, load existing ICPs/personas as context.
+    let existingIcps: any[] = [];
+    let existingPersonas: any[] = [];
+    if (mode === "append") {
+      const [{ data: ei }, { data: ep }] = await Promise.all([
+        admin.from("icps").select("segment,company_size,industry,signals,notes").eq("app_id", appId),
+        admin.from("personas").select("title,company_size,pains,goals,channels").eq("app_id", appId),
+      ]);
+      existingIcps = ei || [];
+      existingPersonas = ep || [];
+    }
+
+    const researchMd = mode === "append" ? "" : await research(app);
     console.log(`[audience] research len=${researchMd.length}`);
-    const pack = await generateIntelligence(app, researchMd);
+    const pack = await generateIntelligence(app, researchMd, {
+      mode, instruction, existingIcps, existingPersonas,
+    });
     console.log(`[audience] AI returned icps=${pack?.icps?.length ?? 0} personas=${pack?.personas?.length ?? 0} journey=${pack?.journey?.length ?? 0} angles=${pack?.angles?.length ?? 0}`);
 
-    await Promise.all([
-      admin.from("icps").delete().eq("app_id", appId),
-      admin.from("personas").delete().eq("app_id", appId),
-      admin.from("journey_stages").delete().eq("app_id", appId),
-      admin.from("messaging_angles").delete().eq("app_id", appId),
-    ]);
+    // Existing counts to compute sort_order offset in append mode.
+    let icpOffset = 0, personaOffset = 0;
+    if (mode === "replace") {
+      await Promise.all([
+        admin.from("icps").delete().eq("app_id", appId),
+        admin.from("personas").delete().eq("app_id", appId),
+        admin.from("journey_stages").delete().eq("app_id", appId),
+        admin.from("messaging_angles").delete().eq("app_id", appId),
+      ]);
+    } else {
+      const [{ count: ic }, { count: pc }] = await Promise.all([
+        admin.from("icps").select("id", { count: "exact", head: true }).eq("app_id", appId),
+        admin.from("personas").select("id", { count: "exact", head: true }).eq("app_id", appId),
+      ]);
+      icpOffset = ic || 0;
+      personaOffset = pc || 0;
+    }
 
-    const icpRows = (pack.icps || []).slice(0, 3).map((i: any, idx: number) => ({
+    const icpRows = (pack.icps || []).slice(0, mode === "append" ? 2 : 3).map((i: any, idx: number) => ({
       user_id: userId, app_id: appId,
       segment: i.segment || "Unnamed segment",
       company_size: i.company_size || null,
       industry: i.industry || null,
       signals: Array.isArray(i.signals) ? i.signals : [],
       notes: i.notes || null,
-      sort_order: idx,
+      sort_order: icpOffset + idx,
     }));
     if (icpRows.length) await admin.from("icps").insert(icpRows);
 
-    const personaRows = (pack.personas || []).slice(0, 4).map((p: any, idx: number) => ({
+    const personaRows = (pack.personas || []).slice(0, mode === "append" ? 2 : 4).map((p: any, idx: number) => ({
       user_id: userId, app_id: appId,
       title: p.title || "Persona",
       company_size: p.company_size || null,
@@ -287,36 +315,42 @@ Deno.serve(async (req) => {
       triggers: p.triggers || [], objections: p.objections || [],
       channels: p.channels || [],
       content_style: p.content_style || null,
-      sort_order: idx,
+      sort_order: personaOffset + idx,
     }));
     if (personaRows.length) await admin.from("personas").insert(personaRows);
 
-    const journeyByStage = new Map<string, any>();
-    for (const j of pack.journey || []) {
-      if (j?.stage) journeyByStage.set(String(j.stage).toLowerCase(), j);
-    }
-    const journeyRows = JOURNEY_STAGES.map((stage, idx) => {
-      const j = journeyByStage.get(stage) || {};
-      return {
-        user_id: userId, app_id: appId, stage, stage_order: idx,
-        customer_thinking: j.customer_thinking || null,
-        pains: j.pains || [],
-        best_content: j.best_content || null,
-        best_cta: j.best_cta || null,
-        channels: j.channels || [],
-      };
-    });
-    await admin.from("journey_stages").insert(journeyRows);
+    let journeyRowsLen = 0;
+    let angleRowsLen = 0;
+    if (mode === "replace") {
+      const journeyByStage = new Map<string, any>();
+      for (const j of pack.journey || []) {
+        if (j?.stage) journeyByStage.set(String(j.stage).toLowerCase(), j);
+      }
+      const journeyRows = JOURNEY_STAGES.map((stage, idx) => {
+        const j = journeyByStage.get(stage) || {};
+        return {
+          user_id: userId, app_id: appId, stage, stage_order: idx,
+          customer_thinking: j.customer_thinking || null,
+          pains: j.pains || [],
+          best_content: j.best_content || null,
+          best_cta: j.best_cta || null,
+          channels: j.channels || [],
+        };
+      });
+      await admin.from("journey_stages").insert(journeyRows);
+      journeyRowsLen = journeyRows.length;
 
-    const angleRows = (pack.angles || []).slice(0, 6).map((a: any, idx: number) => ({
-      user_id: userId, app_id: appId,
-      angle_name: a.angle_name || "Angle",
-      hook_template: a.hook_template || null,
-      when_to_use: a.when_to_use || null,
-      example: a.example || null,
-      sort_order: idx,
-    }));
-    if (angleRows.length) await admin.from("messaging_angles").insert(angleRows);
+      const angleRows = (pack.angles || []).slice(0, 6).map((a: any, idx: number) => ({
+        user_id: userId, app_id: appId,
+        angle_name: a.angle_name || "Angle",
+        hook_template: a.hook_template || null,
+        when_to_use: a.when_to_use || null,
+        example: a.example || null,
+        sort_order: idx,
+      }));
+      if (angleRows.length) await admin.from("messaging_angles").insert(angleRows);
+      angleRowsLen = angleRows.length;
+    }
 
     await admin.from("audience_profiles").upsert({
       user_id: userId, app_id: appId,
@@ -325,19 +359,21 @@ Deno.serve(async (req) => {
       raw_research: researchMd || null,
     }, { onConflict: "app_id" });
 
-    console.log(`[audience] ✓ done app=${appId}`);
+    console.log(`[audience] ✓ done app=${appId} mode=${mode}`);
     return new Response(
       JSON.stringify({
         success: true,
+        mode,
         counts: {
           icps: icpRows.length,
           personas: personaRows.length,
-          journey: journeyRows.length,
-          angles: angleRows.length,
+          journey: journeyRowsLen,
+          angles: angleRowsLen,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (e) {
     const msg = (e as Error).message || "Unknown error";
     console.error("[audience] error:", msg);
