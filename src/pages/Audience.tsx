@@ -59,11 +59,39 @@ export default function Audience() {
   const hasData = icps.length > 0 || personas.length > 0;
   // Only treat as "generating" if (a) mutation is currently in flight, OR
   // (b) status says generating AND it started within the last 3 minutes.
-  // This prevents permanently-stuck rows from blocking the rebuild button.
   const startedAt = profile?.last_generated_at ? new Date(profile.last_generated_at).getTime() : 0;
   const recentlyStarted = profile?.status === "generating" && Date.now() - startedAt < 3 * 60_000 && startedAt > 0;
   const isGenerating = generate.isPending || recentlyStarted;
   const previousFailed = profile?.status === "failed" && !generate.isPending;
+
+  // Original = rows in the earliest creation batch (within 30s of the min created_at
+  // across icps+personas). Anything later was added via "Add Segment".
+  const originalCutoff = useMemo(() => {
+    const times = [...icps, ...personas]
+      .map((r: any) => r.created_at ? new Date(r.created_at).getTime() : 0)
+      .filter((t) => t > 0);
+    if (!times.length) return 0;
+    return Math.min(...times) + 30_000;
+  }, [icps, personas]);
+  const isOriginal = (createdAt?: string | null) =>
+    !!createdAt && new Date(createdAt).getTime() <= originalCutoff;
+
+  const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [instruction, setInstruction] = useState("");
+
+  const runReplace = () => {
+    if (!appId) return;
+    setConfirmReplaceOpen(false);
+    generate.mutate({ appId, mode: "replace" });
+  };
+  const runAppend = () => {
+    if (!appId || !instruction.trim()) return;
+    generate.mutate(
+      { appId, mode: "append", instruction: instruction.trim() },
+      { onSuccess: () => { setAddOpen(false); setInstruction(""); } },
+    );
+  };
 
   return (
     <DashboardLayout title="Audience">
@@ -71,6 +99,7 @@ export default function Audience() {
         {/* Header */}
         <Card className="shadow-card border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
           <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
+
             <div>
               <h2 className="font-display text-xl font-bold">Audience Intelligence</h2>
               <p className="mt-1 text-sm text-muted-foreground">
