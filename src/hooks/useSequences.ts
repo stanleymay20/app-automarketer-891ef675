@@ -71,6 +71,8 @@ export interface EnrollSequenceInput {
   step_days?: number[];
   /** Per-step subject/body templates (length should match step_days). */
   steps?: { subject?: string; body?: string }[];
+  /** HARD APPROVAL GATE: only true after the user reviews + clicks Approve. */
+  user_approved?: boolean;
 }
 
 export function useEnrollSequence() {
@@ -83,6 +85,8 @@ export function useEnrollSequence() {
       if (!uid) throw new Error("Not signed in");
       const days = input.step_days?.length ? input.step_days : [0, 3, 7];
       const now = Date.now();
+      const approved = input.user_approved === true;
+      const nowIso = new Date().toISOString();
       const rows = days.map((d, i) => ({
         user_id: uid,
         prospect_id: input.prospect_id,
@@ -92,6 +96,9 @@ export function useEnrollSequence() {
         status: "scheduled" as SequenceStatus,
         subject: input.steps?.[i]?.subject ?? null,
         body: input.steps?.[i]?.body ?? null,
+        user_approved: approved,
+        approved_at: approved ? nowIso : null,
+        approved_by: approved ? uid : null,
       }));
       const { data, error } = await (supabase as any)
         .from("prospect_sequences")
@@ -100,10 +107,17 @@ export function useEnrollSequence() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["sequences"] });
       qc.invalidateQueries({ queryKey: ["sequence-stats"] });
-      toast({ title: "Sequence scheduled", description: "Follow-ups will go out automatically." });
+      toast({
+        title: vars.user_approved
+          ? "Sequence approved & scheduled"
+          : "Sequence saved (awaiting approval)",
+        description: vars.user_approved
+          ? "Approved follow-ups will go out automatically on schedule."
+          : "Nothing will send until you approve.",
+      });
     },
     onError: (e: any) => {
       toast({ title: "Couldn't schedule sequence", description: e?.message, variant: "destructive" });
@@ -136,6 +150,8 @@ export interface SendOutreachInput {
   subject: string;
   body: string;
   to_address?: string;
+  /** HARD APPROVAL GATE: must be true to actually send. Defaults to false. */
+  approved?: boolean;
 }
 
 export function useSendOutreach() {
@@ -143,16 +159,25 @@ export function useSendOutreach() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (input: SendOutreachInput) => {
-      const { data, error } = await supabase.functions.invoke("send-outreach", { body: input });
+      const { data, error } = await supabase.functions.invoke("send-outreach", {
+        body: { ...input, approved: input.approved === true },
+      });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      return data;
+      return data as { status?: string; message_id?: string };
     },
-    onSuccess: () => {
+    onSuccess: (d) => {
       qc.invalidateQueries({ queryKey: ["prospects"] });
       qc.invalidateQueries({ queryKey: ["prospect-actions"] });
       qc.invalidateQueries({ queryKey: ["today-activity"] });
-      toast({ title: "Email sent" });
+      if (d?.status === "pending_approval") {
+        toast({
+          title: "Saved for approval",
+          description: "Email was NOT sent. Approve it to send.",
+        });
+      } else {
+        toast({ title: "Email sent" });
+      }
     },
     onError: (e: any) => {
       toast({

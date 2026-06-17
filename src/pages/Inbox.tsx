@@ -67,6 +67,10 @@ export default function Inbox() {
   return (
     <DashboardLayout title="Inbox">
       <div className="space-y-6">
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+          <strong>Per-message approval is ON</strong> — no email sends without your confirmation.
+          Sequences require explicit approval per step.
+        </div>
         <Card className="shadow-card border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
           <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
             <div>

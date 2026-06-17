@@ -187,6 +187,15 @@ function ContactPanel({ prospect }: { prospect: Prospect }) {
   );
 }
 
+function ApprovalBanner() {
+  return (
+    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+      <strong>Per-message approval is ON</strong> — no email sends without your confirmation.
+      Sequences require explicit approval per step.
+    </div>
+  );
+}
+
 function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onClose: () => void }) {
   const action = useProspectAction();
   const send = useSendOutreach();
@@ -228,25 +237,59 @@ function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onCl
   const sendEmail = () => {
     if (!prospect.contact_email) return toast({ title: "No contact email on file" });
     if (!latest?.body) return toast({ title: "Generate a draft first" });
+    // Per-message approval: a manual click on "Send Email" IS the explicit approval.
     send.mutate({
       prospect_id: prospect.id,
       subject: latest.subject || `Quick note about ${prospect.name}`,
       body: latest.body,
+      approved: true,
     });
   };
 
-  const enrollSequence = () => {
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewDrafts, setReviewDrafts] = useState<
+    { subject: string; body: string; day: number; editing: boolean }[]
+  >([]);
+
+  const openSequenceReview = () => {
     if (!prospect.contact_email) return toast({ title: "No contact email on file" });
-    enroll.mutate({
-      prospect_id: prospect.id,
-      sequence_name: "default-3-step",
-      step_days: [0, 3, 7],
-      steps: [
-        { subject: latest?.subject || `Quick note about ${prospect.name}`, body: latest?.body || "" },
-        { subject: `Re: ${latest?.subject || prospect.name}`, body: "Following up in case my last note got buried." },
-        { subject: `Last note re: ${prospect.name}`, body: "Closing the loop — happy to reconnect when timing is better." },
-      ],
-    });
+    setReviewDrafts([
+      {
+        subject: latest?.subject || `Quick note about ${prospect.name}`,
+        body: latest?.body || "",
+        day: 0,
+        editing: false,
+      },
+      {
+        subject: `Re: ${latest?.subject || prospect.name}`,
+        body: "Following up in case my last note got buried.",
+        day: 3,
+        editing: false,
+      },
+      {
+        subject: `Last note re: ${prospect.name}`,
+        body: "Closing the loop — happy to reconnect when timing is better.",
+        day: 7,
+        editing: false,
+      },
+    ]);
+    setReviewOpen(true);
+  };
+
+  const approveAndSchedule = () => {
+    if (reviewDrafts.some((d) => !d.subject.trim() || d.body.trim().length < 5)) {
+      return toast({ title: "Each step needs a subject and body (5+ chars)", variant: "destructive" });
+    }
+    enroll.mutate(
+      {
+        prospect_id: prospect.id,
+        sequence_name: "default-3-step",
+        step_days: reviewDrafts.map((d) => d.day),
+        steps: reviewDrafts.map((d) => ({ subject: d.subject, body: d.body })),
+        user_approved: true,
+      },
+      { onSuccess: () => setReviewOpen(false) },
+    );
   };
 
   return (
@@ -294,7 +337,7 @@ function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onCl
             <Button
               size="sm"
               variant="outline"
-              onClick={enrollSequence}
+              onClick={openSequenceReview}
               disabled={enroll.isPending || !prospect.contact_email}
               className="gap-1"
             >
@@ -349,6 +392,79 @@ function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onCl
           <Button variant="ghost" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Sequence review + approval gate */}
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Review 3-step follow-up before scheduling</DialogTitle>
+          </DialogHeader>
+          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+            Nothing will send until you click <b>Approve and schedule</b>. Each step requires
+            explicit approval — there is no silent autopilot here.
+          </p>
+          <div className="space-y-4">
+            {reviewDrafts.map((d, i) => {
+              const sendDate = new Date(Date.now() + d.day * 86_400_000);
+              return (
+                <div key={i} className="rounded-md border p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold">
+                      Step {i + 1} · sends {sendDate.toLocaleDateString()} (day {d.day})
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setReviewDrafts((prev) =>
+                          prev.map((x, idx) => (idx === i ? { ...x, editing: !x.editing } : x)),
+                        )
+                      }
+                    >
+                      {d.editing ? "Done editing" : "Edit before approving"}
+                    </Button>
+                  </div>
+                  {d.editing ? (
+                    <div className="space-y-2">
+                      <Input
+                        value={d.subject}
+                        onChange={(e) =>
+                          setReviewDrafts((prev) =>
+                            prev.map((x, idx) => (idx === i ? { ...x, subject: e.target.value } : x)),
+                          )
+                        }
+                        placeholder="Subject"
+                      />
+                      <Textarea
+                        value={d.body}
+                        rows={5}
+                        onChange={(e) =>
+                          setReviewDrafts((prev) =>
+                            prev.map((x, idx) => (idx === i ? { ...x, body: e.target.value } : x)),
+                          )
+                        }
+                        placeholder="Body"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mb-1 text-sm font-medium">Subject: {d.subject}</p>
+                      <p className="whitespace-pre-wrap text-xs text-muted-foreground">{d.body}</p>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button variant="ghost" onClick={() => setReviewOpen(false)}>Cancel</Button>
+            <Button onClick={approveAndSchedule} disabled={enroll.isPending} className="gap-1">
+              {enroll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+              Approve and schedule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
@@ -416,6 +532,7 @@ export default function Prospects() {
   return (
     <DashboardLayout title="Prospects">
       <div className="space-y-6">
+        <ApprovalBanner />
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Prospects</h1>
