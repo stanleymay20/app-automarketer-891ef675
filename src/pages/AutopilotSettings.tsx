@@ -106,7 +106,7 @@ export default function AutopilotSettings() {
   const reset = () => setDraft(toDraft(settings));
 
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Autopilot">
       <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
         <header className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight">Autopilot</h1>
