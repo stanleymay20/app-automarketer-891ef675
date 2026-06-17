@@ -231,9 +231,19 @@ export default function Audience() {
               {personas.map((p) => (
                 <Card key={p.id} className="shadow-card">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">{p.title}</CardTitle>
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-base">{p.title}</CardTitle>
+                      <Badge variant={isOriginal(p.created_at) ? "secondary" : "default"} className="shrink-0 text-[10px]">
+                        {isOriginal(p.created_at) ? "Original" : "Added"}
+                      </Badge>
+                    </div>
                     {p.company_size && (
                       <CardDescription>{p.company_size}</CardDescription>
+                    )}
+                    {p.created_at && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Added {format(new Date(p.created_at), "MMM d, yyyy")}
+                      </p>
                     )}
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
