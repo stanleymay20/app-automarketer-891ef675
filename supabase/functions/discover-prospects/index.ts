@@ -387,6 +387,7 @@ Rules:
         dropped_no_url: metrics.dropped_no_url,
         dropped_no_evidence: metrics.dropped_no_evidence,
         dropped_duplicate: metrics.dropped_duplicate,
+        dropped_wrong_size: metrics.dropped_wrong_size,
         low_confidence: metrics.low_confidence,
         average_confidence: avgConfidence,
       },
