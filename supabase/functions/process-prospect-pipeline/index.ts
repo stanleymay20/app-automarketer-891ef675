@@ -68,7 +68,7 @@ interface PerProspect {
   prospect_id: string;
   ok: boolean;
   steps: StepResult[];
-  routing: "queued" | "review_required" | "idle" | null;
+  routing: "queued" | "review_required" | null;
   summary: {
     enrichment_confidence?: number | null;
     opportunity_score?: number | null;
