@@ -137,6 +137,9 @@ export default function OAuthCallback() {
             <AlertDescription>
               <div className="space-y-2">
                 {error && <p><strong>Error:</strong> {error}</p>}
+                {error && errorHints[error] && (
+                  <p><strong>What to do:</strong> {errorHints[error]}</p>
+                )}
                 {errorDescription && <p><strong>Provider detail:</strong> {errorDescription}</p>}
                 {needsSignIn && (
                   <p>
