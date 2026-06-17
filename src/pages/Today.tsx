@@ -7,11 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import {
   AlertCircle, ArrowRight, CalendarDays, CheckCircle2, Flame,
   Loader2, MessageSquare, Sparkles, Target, Trophy, Users, Zap,
+  PauseCircle, Send, Inbox,
 } from "lucide-react";
 import {
   useProspects, useProspectAction, PROSPECT_STAGES,
   type Prospect, type ProspectStage,
 } from "@/hooks/useProspects";
+import { useSequenceStats, useRunSequences } from "@/hooks/useSequences";
+import { useReplies } from "@/hooks/useReplies";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -86,6 +89,22 @@ function ProspectRow({ p, hint }: { p: Prospect; hint?: string }) {
 export default function Today() {
   const { data: prospects = [], isLoading } = useProspects();
   const { data: activity = [] } = useRecentActivity();
+  const { data: seqStats } = useSequenceStats();
+  const { data: replies = [] } = useReplies({ limit: 50 });
+  const runSeq = useRunSequences();
+
+  // Replies waiting = inbound replies received in the last 7 days from prospects
+  // that have not yet been advanced past 'responded'.
+  const repliesWaiting = useMemo(() => {
+    const cutoff = Date.now() - 7 * 86_400_000;
+    const ids = new Set(
+      prospects.filter((p) => ["responded"].includes(p.stage ?? "")).map((p) => p.id),
+    );
+    return replies.filter((r) =>
+      new Date(r.received_at).getTime() >= cutoff && ids.has(r.prospect_id),
+    ).length;
+  }, [prospects, replies]);
+
 
   const buckets = useMemo(() => {
     const start = START_OF_TODAY().getTime();
@@ -128,8 +147,34 @@ export default function Today() {
   }, [prospects]);
 
   // Next Best Action engine: simple, transparent rule layer.
+  // Priority: overdue follow-ups > paused sequences > replies waiting > hot opportunities.
   const nextBest = useMemo(() => {
     const recs: { title: string; reason: string; impact: string; href: string }[] = [];
+
+    if ((seqStats?.overdue ?? 0) > 0) {
+      recs.push({
+        title: `${seqStats!.overdue} follow-up${seqStats!.overdue === 1 ? "" : "s"} overdue`,
+        reason: "Scheduled sequence steps haven't been sent yet.",
+        impact: "Running the sequence now keeps multi-touch outreach on schedule.",
+        href: "/prospects",
+      });
+    }
+    if ((seqStats?.paused ?? 0) > 0) {
+      recs.push({
+        title: `Review ${seqStats!.paused} paused sequence${seqStats!.paused === 1 ? "" : "s"}`,
+        reason: "Auto-paused after a reply. Decide whether to resume or close.",
+        impact: "Paused prospects are warm — most respond again within a week.",
+        href: "/inbox",
+      });
+    }
+    if (repliesWaiting > 0) {
+      recs.push({
+        title: `Reply to ${repliesWaiting} waiting prospect${repliesWaiting === 1 ? "" : "s"}`,
+        reason: "They replied — the ball is in your court.",
+        impact: "Replying within 24h roughly doubles reply-to-meeting conversion.",
+        href: "/inbox",
+      });
+    }
     if (buckets.overdue.length) {
       const p = buckets.overdue[0];
       recs.push({
@@ -167,15 +212,26 @@ export default function Today() {
         href: "/prospects",
       });
     }
-    return recs.slice(0, 3);
-  }, [buckets, prospects.length]);
+    return recs.slice(0, 4);
+  }, [buckets, prospects.length, seqStats, repliesWaiting]);
 
   return (
     <DashboardLayout title="Today">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Today</h1>
-          <p className="text-sm text-muted-foreground">Your growth command center — what to do next, who to talk to, what's converting.</p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Today</h1>
+            <p className="text-sm text-muted-foreground">Your growth command center — what to do next, who to talk to, what's converting.</p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => runSeq.mutate()}
+            disabled={runSeq.isPending}
+            className="gap-1"
+          >
+            {runSeq.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            Run due follow-ups
+          </Button>
         </div>
 
         {/* Stat tiles */}
@@ -186,6 +242,14 @@ export default function Today() {
           <StatTile label="Proposals" value={buckets.proposalsOpen.length} icon={Target} />
           <StatTile label="Meetings" value={buckets.meetings.length} icon={Users} />
           <StatTile label="Won (7d)" value={buckets.recentWins.length} icon={Trophy} tone="good" />
+        </div>
+
+        {/* Follow-up automation tiles */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile label="Follow-ups due" value={(seqStats?.dueToday ?? 0) + (seqStats?.overdue ?? 0)} icon={CalendarDays} tone={(seqStats?.overdue ?? 0) ? "warn" : "default"} />
+          <StatTile label="Sequences running" value={seqStats?.running ?? 0} icon={Send} />
+          <StatTile label="Sequences paused" value={seqStats?.paused ?? 0} icon={PauseCircle} tone={(seqStats?.paused ?? 0) ? "warn" : "default"} />
+          <StatTile label="Replies waiting" value={repliesWaiting} icon={Inbox} tone={repliesWaiting ? "warn" : "default"} />
         </div>
 
         {/* Next Best Action */}

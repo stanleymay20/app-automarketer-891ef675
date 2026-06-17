@@ -1768,6 +1768,77 @@ export type Database = {
         }
         Relationships: []
       }
+      prospect_messages: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string
+          error_message: string | null
+          from_address: string | null
+          id: string
+          metadata: Json
+          prospect_id: string
+          provider: string
+          provider_message_id: string | null
+          sent_at: string | null
+          sequence_id: string | null
+          sequence_step_id: string | null
+          status: string
+          subject: string | null
+          to_address: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          channel?: string
+          created_at?: string
+          error_message?: string | null
+          from_address?: string | null
+          id?: string
+          metadata?: Json
+          prospect_id: string
+          provider?: string
+          provider_message_id?: string | null
+          sent_at?: string | null
+          sequence_id?: string | null
+          sequence_step_id?: string | null
+          status?: string
+          subject?: string | null
+          to_address: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string
+          error_message?: string | null
+          from_address?: string | null
+          id?: string
+          metadata?: Json
+          prospect_id?: string
+          provider?: string
+          provider_message_id?: string | null
+          sent_at?: string | null
+          sequence_id?: string | null
+          sequence_step_id?: string | null
+          status?: string
+          subject?: string | null
+          to_address?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_messages_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospect_replies: {
         Row: {
           body: string | null
@@ -1823,6 +1894,78 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "prospect_replies_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_sequences: {
+        Row: {
+          body: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          metadata: Json
+          prospect_id: string
+          scheduled_at: string
+          sent_at: string | null
+          sequence_name: string
+          status: string
+          step_number: number
+          subject: string | null
+          template_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json
+          prospect_id: string
+          scheduled_at: string
+          sent_at?: string | null
+          sequence_name?: string
+          status?: string
+          step_number: number
+          subject?: string | null
+          template_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json
+          prospect_id?: string
+          scheduled_at?: string
+          sent_at?: string | null
+          sequence_name?: string
+          status?: string
+          step_number?: number
+          subject?: string | null
+          template_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_sequences_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_sequences_prospect_id_fkey"
             columns: ["prospect_id"]
             isOneToOne: false
             referencedRelation: "prospects"
