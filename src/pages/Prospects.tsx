@@ -24,6 +24,7 @@ import {
   type ProspectCategory, type Prospect, type ProspectStage,
 } from "@/hooks/useProspects";
 import { useApps } from "@/hooks/useApps";
+import { useSendOutreach, useEnrollSequence } from "@/hooks/useSequences";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORY_META: Record<ProspectCategory, { label: string; icon: any; blurb: string }> = {
