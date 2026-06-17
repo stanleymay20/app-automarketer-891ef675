@@ -147,8 +147,34 @@ export default function Today() {
   }, [prospects]);
 
   // Next Best Action engine: simple, transparent rule layer.
+  // Priority: overdue follow-ups > paused sequences > replies waiting > hot opportunities.
   const nextBest = useMemo(() => {
     const recs: { title: string; reason: string; impact: string; href: string }[] = [];
+
+    if ((seqStats?.overdue ?? 0) > 0) {
+      recs.push({
+        title: `${seqStats!.overdue} follow-up${seqStats!.overdue === 1 ? "" : "s"} overdue`,
+        reason: "Scheduled sequence steps haven't been sent yet.",
+        impact: "Running the sequence now keeps multi-touch outreach on schedule.",
+        href: "/prospects",
+      });
+    }
+    if ((seqStats?.paused ?? 0) > 0) {
+      recs.push({
+        title: `Review ${seqStats!.paused} paused sequence${seqStats!.paused === 1 ? "" : "s"}`,
+        reason: "Auto-paused after a reply. Decide whether to resume or close.",
+        impact: "Paused prospects are warm — most respond again within a week.",
+        href: "/inbox",
+      });
+    }
+    if (repliesWaiting > 0) {
+      recs.push({
+        title: `Reply to ${repliesWaiting} waiting prospect${repliesWaiting === 1 ? "" : "s"}`,
+        reason: "They replied — the ball is in your court.",
+        impact: "Replying within 24h roughly doubles reply-to-meeting conversion.",
+        href: "/inbox",
+      });
+    }
     if (buckets.overdue.length) {
       const p = buckets.overdue[0];
       recs.push({
@@ -186,8 +212,8 @@ export default function Today() {
         href: "/prospects",
       });
     }
-    return recs.slice(0, 3);
-  }, [buckets, prospects.length]);
+    return recs.slice(0, 4);
+  }, [buckets, prospects.length, seqStats, repliesWaiting]);
 
   return (
     <DashboardLayout title="Today">
