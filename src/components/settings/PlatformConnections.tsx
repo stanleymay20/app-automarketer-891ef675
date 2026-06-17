@@ -126,37 +126,33 @@ export function PlatformConnections() {
     });
   };
 
+  // For each platform, prefer: app-scoped connection > global (null app_id) connection > empty placeholder.
   const deduplicatedConnections = (() => {
-    const allConnections = connections || [];
-    const byPlatform = new Map<string, typeof allConnections[number]>();
-    
-    // First add temp entries for all platforms as defaults
+    const all = connections || [];
+    const byPlatform = new Map<string, typeof all[number]>();
+
     for (const platform of ALL_PLATFORMS) {
-      byPlatform.set(platform, {
-        id: `temp-${platform}`,
-        user_id: "",
-        platform: platform as Platform,
-        connected: false,
-        connected_at: null,
-        account_name: null,
-        account_id: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        expires_at: null,
-        scope: null,
-        app_id: selectedAppId || null,
-      });
-    }
-    
-    // Then override with real connections
-    for (const conn of allConnections) {
-      const existing = byPlatform.get(conn.platform);
-      if (!existing || existing.id.startsWith("temp-")) {
-        byPlatform.set(conn.platform, conn);
-      }
-      if (conn.app_id === selectedAppId && existing && !existing.id.startsWith("temp-") && existing.app_id !== selectedAppId) {
-        byPlatform.set(conn.platform, conn);
-      }
+      const appScoped = all.find((c) => c.platform === platform && c.app_id === selectedAppId);
+      const global = all.find((c) => c.platform === platform && c.app_id === null);
+      const chosen = appScoped ?? global;
+
+      byPlatform.set(
+        platform,
+        chosen ?? {
+          id: `temp-${platform}`,
+          user_id: "",
+          platform,
+          connected: false,
+          connected_at: null,
+          account_name: null,
+          account_id: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          expires_at: null,
+          scope: null,
+          app_id: selectedAppId || null,
+        },
+      );
     }
     return Array.from(byPlatform.values());
   })();
