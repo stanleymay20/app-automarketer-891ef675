@@ -252,6 +252,9 @@ export default function Today() {
           <StatTile label="Replies waiting" value={repliesWaiting} icon={Inbox} tone={repliesWaiting ? "warn" : "default"} />
         </div>
 
+        {/* Decision intelligence summary */}
+        <DecisionMetricsCard />
+
         {/* Next Best Action */}
         <Card>
           <CardHeader className="pb-3">
