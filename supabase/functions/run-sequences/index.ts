@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     // Pick due steps for this user.
     const { data: due, error: dueErr } = await admin
       .from("prospect_sequences")
-      .select("id, prospect_id, sequence_name, step_number, subject, body, scheduled_at, status, prospects!inner(contact_email,name,user_id)")
+      .select("id, prospect_id, sequence_name, step_number, subject, body, scheduled_at, status, user_approved, prospects!inner(contact_email,name,user_id)")
       .eq("user_id", userId)
       .eq("status", "scheduled")
       .lte("scheduled_at", new Date().toISOString())
@@ -57,13 +57,32 @@ Deno.serve(async (req) => {
     const items = (due || []).filter((s: any) => s.prospects?.user_id === userId);
 
     if (dryRun) {
-      return new Response(JSON.stringify({ dry_run: true, due: items.length }), {
+      const approvedCount = items.filter((s: any) => s.user_approved === true).length;
+      return new Response(JSON.stringify({
+        dry_run: true,
+        due: items.length,
+        approved: approvedCount,
+        awaiting_approval: items.length - approvedCount,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    let sent = 0, failed = 0, skipped = 0;
+    let sent = 0, failed = 0, skipped = 0, awaitingApproval = 0;
     for (const step of items) {
+      // HARD APPROVAL GATE: skip any step that hasn't been explicitly approved.
+      // Do NOT advance it — leave it 'scheduled' so the user can still approve later,
+      // but stamp a marker via error_message and log via a sibling row in status field would
+      // mutate state; instead we record awaiting_approval as a transient status that the
+      // UI can surface, then revert to 'scheduled' if approved.
+      if (step.user_approved !== true) {
+        await admin.from("prospect_sequences").update({
+          error_message: "awaiting_approval",
+        }).eq("id", step.id).eq("status", "scheduled");
+        awaitingApproval++;
+        continue;
+      }
+
       // Lease the row: only proceed if status is still 'scheduled' (avoids dup sends).
       const { data: leased, error: leaseErr } = await admin
         .from("prospect_sequences")
