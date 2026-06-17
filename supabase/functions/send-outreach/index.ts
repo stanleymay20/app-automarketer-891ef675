@@ -64,7 +64,8 @@ Deno.serve(async (req) => {
     const toAddress = (to_override || prospect.contact_email || "").trim();
     if (!toAddress) throw new Error("Prospect has no contact email on file");
 
-    // Pre-insert as queued (so we always have a record even if send fails).
+    // Pre-insert: if not approved -> pending_approval (NO send). Otherwise queued.
+    const initialStatus = approved ? "queued" : "pending_approval";
     const { data: queued, error: qErr } = await admin.from("prospect_messages").insert({
       user_id: userId,
       prospect_id,
@@ -74,11 +75,24 @@ Deno.serve(async (req) => {
       from_address: APP_FROM_EMAIL,
       to_address: toAddress,
       provider: "resend",
-      status: "queued",
+      status: initialStatus,
       sequence_id: sequence_id || null,
       sequence_step_id: sequence_step_id || null,
     }).select().single();
     if (qErr) throw qErr;
+
+    if (!approved) {
+      // Hard gate — return without contacting Resend.
+      return new Response(
+        JSON.stringify({
+          success: true,
+          status: "pending_approval",
+          message_id: queued.id,
+          note: "Email was NOT sent. Per-message approval is required (approved: true).",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
       await admin.from("prospect_messages").update({
