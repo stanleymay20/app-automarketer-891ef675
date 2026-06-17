@@ -17,6 +17,7 @@ import { useSequenceStats, useRunSequences } from "@/hooks/useSequences";
 import { useReplies } from "@/hooks/useReplies";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import DecisionMetricsCard from "@/components/dashboard/DecisionMetricsCard";
 
 const STAGE_LABEL: Record<ProspectStage, string> = {
   new: "New", saved: "Saved", qualified: "Qualified",
