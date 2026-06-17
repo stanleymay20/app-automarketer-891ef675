@@ -187,6 +187,15 @@ function ContactPanel({ prospect }: { prospect: Prospect }) {
   );
 }
 
+function ApprovalBanner() {
+  return (
+    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+      <strong>Per-message approval is ON</strong> — no email sends without your confirmation.
+      Sequences require explicit approval per step.
+    </div>
+  );
+}
+
 function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onClose: () => void }) {
   const action = useProspectAction();
   const send = useSendOutreach();
