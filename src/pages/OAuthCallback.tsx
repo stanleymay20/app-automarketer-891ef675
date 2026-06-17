@@ -20,6 +20,7 @@ const errorHints: Record<string, string> = {
   access_denied: "You declined access at the provider.",
   missing_params: "The provider's callback was missing required parameters.",
   server_error: "An unexpected error occurred while finishing the connection.",
+  persist_failed: "We received the token from the provider but couldn't save the connection. Please try again — if it keeps failing, contact support.",
 };
 
 export default function OAuthCallback() {

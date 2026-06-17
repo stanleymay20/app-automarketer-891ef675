@@ -236,23 +236,36 @@ Deno.serve(async (req) => {
     const expiresIn = tokenData.expires_in || 5184000;
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-    await serviceClient.from("platform_connections").upsert(
-      {
-        user_id: userId,
+    const { error: upsertError } = await serviceClient
+      .from("platform_connections")
+      .upsert(
+        {
+          user_id: userId,
+          platform: "linkedin",
+          app_id: appId,
+          connected: true,
+          connected_at: new Date().toISOString(),
+          account_name: accountName || "LinkedIn User",
+          account_id: accountId,
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token || null,
+          expires_at: expiresAt,
+          token_type: tokenData.token_type || "Bearer",
+          scope: tokenData.scope || "w_member_social",
+        },
+        { onConflict: "user_id,platform,app_id" },
+      );
+
+    if (upsertError) {
+      console.error("[LinkedInCallback] DB upsert FAILED", JSON.stringify(upsertError));
+      return Response.redirect(buildRedirectUrl(appUrl, {
         platform: "linkedin",
+        status: "error",
+        error: "persist_failed",
+        error_description: upsertError.message,
         app_id: appId,
-        connected: true,
-        connected_at: new Date().toISOString(),
-        account_name: accountName || "LinkedIn User",
-        account_id: accountId,
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token || null,
-        expires_at: expiresAt,
-        token_type: tokenData.token_type || "Bearer",
-        scope: tokenData.scope || "w_member_social",
-      },
-      { onConflict: "user_id,platform,app_id" },
-    );
+      }), 302);
+    }
 
     console.log("[LinkedInCallback] Success", JSON.stringify({ accountId, accountName, appUrl }));
 

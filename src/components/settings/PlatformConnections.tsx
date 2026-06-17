@@ -74,6 +74,7 @@ export function PlatformConnections() {
           "LinkedIn didn't return a profile id. In developer.linkedin.com → your app → Products, enable 'Sign In with LinkedIn using OpenID Connect', then reconnect.",
         no_refresh_token: "Provider didn't issue a refresh token. Please reconnect to continue.",
         refresh_failed: "Token refresh failed. Please reconnect your account.",
+        persist_failed: "Provider authorized us, but saving the connection failed. Please try again.",
       };
       toast.error(messages[error] || `Connection error: ${error}`);
       setSearchParams({ tab: "platforms" }, { replace: true });
