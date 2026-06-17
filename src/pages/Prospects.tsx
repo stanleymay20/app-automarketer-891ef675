@@ -383,6 +383,79 @@ function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onCl
           <Button variant="ghost" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Sequence review + approval gate */}
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Review 3-step follow-up before scheduling</DialogTitle>
+          </DialogHeader>
+          <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+            Nothing will send until you click <b>Approve and schedule</b>. Each step requires
+            explicit approval — there is no silent autopilot here.
+          </p>
+          <div className="space-y-4">
+            {reviewDrafts.map((d, i) => {
+              const sendDate = new Date(Date.now() + d.day * 86_400_000);
+              return (
+                <div key={i} className="rounded-md border p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold">
+                      Step {i + 1} · sends {sendDate.toLocaleDateString()} (day {d.day})
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setReviewDrafts((prev) =>
+                          prev.map((x, idx) => (idx === i ? { ...x, editing: !x.editing } : x)),
+                        )
+                      }
+                    >
+                      {d.editing ? "Done editing" : "Edit before approving"}
+                    </Button>
+                  </div>
+                  {d.editing ? (
+                    <div className="space-y-2">
+                      <Input
+                        value={d.subject}
+                        onChange={(e) =>
+                          setReviewDrafts((prev) =>
+                            prev.map((x, idx) => (idx === i ? { ...x, subject: e.target.value } : x)),
+                          )
+                        }
+                        placeholder="Subject"
+                      />
+                      <Textarea
+                        value={d.body}
+                        rows={5}
+                        onChange={(e) =>
+                          setReviewDrafts((prev) =>
+                            prev.map((x, idx) => (idx === i ? { ...x, body: e.target.value } : x)),
+                          )
+                        }
+                        placeholder="Body"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mb-1 text-sm font-medium">Subject: {d.subject}</p>
+                      <p className="whitespace-pre-wrap text-xs text-muted-foreground">{d.body}</p>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button variant="ghost" onClick={() => setReviewOpen(false)}>Cancel</Button>
+            <Button onClick={approveAndSchedule} disabled={enroll.isPending} className="gap-1">
+              {enroll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+              Approve and schedule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
