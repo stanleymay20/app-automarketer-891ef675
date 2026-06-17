@@ -62,13 +62,18 @@ export function PlatformConnections() {
       setSearchParams({ tab: "platforms" }, { replace: true });
     } else if (error) {
       const messages: Record<string, string> = {
-        access_denied: "You denied access to X. Try again when ready.",
-        token_exchange_failed: "Failed to exchange token with X. Please try again.",
+        access_denied: "You denied access. Try again when ready.",
+        token_exchange_failed: "Failed to exchange token with the provider. Please try again.",
         state_mismatch: "Security check failed. Please try connecting again.",
         profile_fetch_failed: "Connected but couldn't fetch your profile. Try again.",
         server_error: "Something went wrong. Please try again.",
         missing_params: "OAuth response was incomplete. Please try again.",
+        missing_code: "OAuth response was missing the authorization code. Please try again.",
         invalid_state: "Invalid OAuth state. Please try connecting again.",
+        missing_account_id:
+          "LinkedIn didn't return a profile id. In developer.linkedin.com → your app → Products, enable 'Sign In with LinkedIn using OpenID Connect', then reconnect.",
+        no_refresh_token: "Provider didn't issue a refresh token. Please reconnect to continue.",
+        refresh_failed: "Token refresh failed. Please reconnect your account.",
       };
       toast.error(messages[error] || `Connection error: ${error}`);
       setSearchParams({ tab: "platforms" }, { replace: true });
@@ -121,37 +126,33 @@ export function PlatformConnections() {
     });
   };
 
+  // For each platform, prefer: app-scoped connection > global (null app_id) connection > empty placeholder.
   const deduplicatedConnections = (() => {
-    const allConnections = connections || [];
-    const byPlatform = new Map<string, typeof allConnections[number]>();
-    
-    // First add temp entries for all platforms as defaults
+    const all = connections || [];
+    const byPlatform = new Map<string, typeof all[number]>();
+
     for (const platform of ALL_PLATFORMS) {
-      byPlatform.set(platform, {
-        id: `temp-${platform}`,
-        user_id: "",
-        platform: platform as Platform,
-        connected: false,
-        connected_at: null,
-        account_name: null,
-        account_id: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        expires_at: null,
-        scope: null,
-        app_id: selectedAppId || null,
-      });
-    }
-    
-    // Then override with real connections
-    for (const conn of allConnections) {
-      const existing = byPlatform.get(conn.platform);
-      if (!existing || existing.id.startsWith("temp-")) {
-        byPlatform.set(conn.platform, conn);
-      }
-      if (conn.app_id === selectedAppId && existing && !existing.id.startsWith("temp-") && existing.app_id !== selectedAppId) {
-        byPlatform.set(conn.platform, conn);
-      }
+      const appScoped = all.find((c) => c.platform === platform && c.app_id === selectedAppId);
+      const global = all.find((c) => c.platform === platform && c.app_id === null);
+      const chosen = appScoped ?? global;
+
+      byPlatform.set(
+        platform,
+        chosen ?? {
+          id: `temp-${platform}`,
+          user_id: "",
+          platform,
+          connected: false,
+          connected_at: null,
+          account_name: null,
+          account_id: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          expires_at: null,
+          scope: null,
+          app_id: selectedAppId || null,
+        },
+      );
     }
     return Array.from(byPlatform.values());
   })();
