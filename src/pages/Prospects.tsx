@@ -228,25 +228,59 @@ function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onCl
   const sendEmail = () => {
     if (!prospect.contact_email) return toast({ title: "No contact email on file" });
     if (!latest?.body) return toast({ title: "Generate a draft first" });
+    // Per-message approval: a manual click on "Send Email" IS the explicit approval.
     send.mutate({
       prospect_id: prospect.id,
       subject: latest.subject || `Quick note about ${prospect.name}`,
       body: latest.body,
+      approved: true,
     });
   };
 
-  const enrollSequence = () => {
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewDrafts, setReviewDrafts] = useState<
+    { subject: string; body: string; day: number; editing: boolean }[]
+  >([]);
+
+  const openSequenceReview = () => {
     if (!prospect.contact_email) return toast({ title: "No contact email on file" });
-    enroll.mutate({
-      prospect_id: prospect.id,
-      sequence_name: "default-3-step",
-      step_days: [0, 3, 7],
-      steps: [
-        { subject: latest?.subject || `Quick note about ${prospect.name}`, body: latest?.body || "" },
-        { subject: `Re: ${latest?.subject || prospect.name}`, body: "Following up in case my last note got buried." },
-        { subject: `Last note re: ${prospect.name}`, body: "Closing the loop — happy to reconnect when timing is better." },
-      ],
-    });
+    setReviewDrafts([
+      {
+        subject: latest?.subject || `Quick note about ${prospect.name}`,
+        body: latest?.body || "",
+        day: 0,
+        editing: false,
+      },
+      {
+        subject: `Re: ${latest?.subject || prospect.name}`,
+        body: "Following up in case my last note got buried.",
+        day: 3,
+        editing: false,
+      },
+      {
+        subject: `Last note re: ${prospect.name}`,
+        body: "Closing the loop — happy to reconnect when timing is better.",
+        day: 7,
+        editing: false,
+      },
+    ]);
+    setReviewOpen(true);
+  };
+
+  const approveAndSchedule = () => {
+    if (reviewDrafts.some((d) => !d.subject.trim() || d.body.trim().length < 5)) {
+      return toast({ title: "Each step needs a subject and body (5+ chars)", variant: "destructive" });
+    }
+    enroll.mutate(
+      {
+        prospect_id: prospect.id,
+        sequence_name: "default-3-step",
+        step_days: reviewDrafts.map((d) => d.day),
+        steps: reviewDrafts.map((d) => ({ subject: d.subject, body: d.body })),
+        user_approved: true,
+      },
+      { onSuccess: () => setReviewOpen(false) },
+    );
   };
 
   return (
