@@ -84,7 +84,8 @@ function AppRoutes() {
        <Route path="/orchestrator" element={<ProtectedRoute><Orchestrator /></ProtectedRoute>} />
        <Route path="/content-intelligence" element={<ProtectedRoute><ContentIntelligence /></ProtectedRoute>} />
        <Route path="/funding" element={<ProtectedRoute><Funding /></ProtectedRoute>} />
-       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/settings/autopilot" element={<ProtectedRoute><AutopilotSettings /></ProtectedRoute>} />
       <Route path="/lp/:slug" element={<LandingPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
