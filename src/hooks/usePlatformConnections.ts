@@ -171,8 +171,8 @@ export function useDisconnectPlatform() {
     mutationFn: async ({ platform, appId }: { platform: Platform; appId?: string }) => {
       if (!user) throw new Error("Not authenticated");
 
-      let query = supabase
-        .from("platform_connections")
+      let query = (supabase as any)
+        .from("platform_connections_safe")
         .select("id")
         .eq("user_id", user.id)
         .eq("platform", platform);
