@@ -239,39 +239,84 @@ export function prospectsToCsv(rows: Prospect[]): string {
   return `${header}\n${body}`;
 }
 
+export interface ImportSkip {
+  row: number;
+  name?: string;
+  reason: string;
+}
+
+export interface ImportResult {
+  inserted: number;
+  skipped: number;
+  skips: ImportSkip[];
+}
+
 export function useImportProspects() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  return useMutation({
-    mutationFn: async ({ appId, rows }: { appId?: string; rows: ProspectCsvRow[] }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not signed in");
+  return useMutation<ImportResult, Error, { appId?: string; rows: ProspectCsvRow[] }>({
+    mutationFn: async ({ appId, rows }) => {
+      console.info("[import-prospects] start", { appId, rawRows: rows.length });
 
-      // De-dup against existing rows for this user
-      const { data: existing } = await supabase
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr) {
+        console.error("[import-prospects] auth.getUser error", userErr);
+        throw new Error(`Auth error: ${userErr.message}`);
+      }
+      const user = userData?.user;
+      if (!user) throw new Error("Not signed in");
+      console.info("[import-prospects] user", { id: user.id });
+
+      const { data: existing, error: existingErr } = await supabase
         .from("prospects")
         .select("name, url, contact_email")
         .eq("user_id", user.id);
+      if (existingErr) console.error("[import-prospects] existing query error", existingErr);
+      console.info("[import-prospects] existing rows", { count: existing?.length ?? 0 });
+
       const seen = new Set<string>();
       (existing ?? []).forEach((e: any) => {
-        if (e.url) seen.add(`u:${e.url.toLowerCase()}`);
-        if (e.name && e.contact_email) seen.add(`ne:${e.name.toLowerCase()}|${e.contact_email.toLowerCase()}`);
+        if (e.url) seen.add(`u:${String(e.url).toLowerCase()}`);
+        if (e.name && e.contact_email) {
+          seen.add(`ne:${String(e.name).toLowerCase()}|${String(e.contact_email).toLowerCase()}`);
+        }
       });
 
       const ALLOWED_STAGES = PROSPECT_STAGES as readonly string[];
-      const toInsert = rows
-        .filter((r) => r.name)
-        .filter((r) => {
-          if (r.url && seen.has(`u:${r.url.toLowerCase()}`)) return false;
-          if (r.name && r.contact_email && seen.has(`ne:${r.name.toLowerCase()}|${r.contact_email.toLowerCase()}`)) return false;
-          if (r.url) seen.add(`u:${r.url.toLowerCase()}`);
-          if (r.name && r.contact_email) seen.add(`ne:${r.name.toLowerCase()}|${r.contact_email.toLowerCase()}`);
-          return true;
-        })
-        .map((r) => ({
+      const ALLOWED_CATEGORIES: ProspectCategory[] = ["customer", "grant", "partner", "investor", "community"];
+
+      const skips: ImportSkip[] = [];
+      const toInsert: any[] = [];
+
+      rows.forEach((r, idx) => {
+        const rowNum = idx + 2;
+        if (!r.name || !r.name.trim()) {
+          skips.push({ row: rowNum, name: r.name, reason: "missing name" });
+          return;
+        }
+        if (r.url && seen.has(`u:${r.url.toLowerCase()}`)) {
+          skips.push({ row: rowNum, name: r.name, reason: `duplicate url (${r.url})` });
+          return;
+        }
+        if (r.name && r.contact_email && seen.has(`ne:${r.name.toLowerCase()}|${r.contact_email.toLowerCase()}`)) {
+          skips.push({ row: rowNum, name: r.name, reason: "duplicate name + email" });
+          return;
+        }
+        if (r.url) seen.add(`u:${r.url.toLowerCase()}`);
+        if (r.name && r.contact_email) {
+          seen.add(`ne:${r.name.toLowerCase()}|${r.contact_email.toLowerCase()}`);
+        }
+
+        const rawCat = (r as any).category as string | undefined;
+        const category: ProspectCategory =
+          rawCat && ALLOWED_CATEGORIES.includes(rawCat as ProspectCategory)
+            ? (rawCat as ProspectCategory)
+            : "customer";
+
+        toInsert.push({
           user_id: user.id,
           app_id: appId ?? null,
-          category: "customer" as ProspectCategory,
+          category,
           source: "csv_import",
           source_confidence: 60,
           stage: r.stage && ALLOWED_STAGES.includes(r.stage) ? r.stage : "saved",
@@ -286,19 +331,61 @@ export function useImportProspects() {
           industry: r.industry ?? null,
           company_size: r.company_size ?? null,
           notes: r.notes ?? null,
-          fit_score: 60, opportunity_score: 60, urgency_score: 50,
+          fit_score: 60,
+          opportunity_score: 60,
+          urgency_score: 50,
           reachability_score: r.contact_email ? 80 : 50,
           prospect_score: 60,
-        }));
+        });
+      });
 
-      if (toInsert.length === 0) return { inserted: 0, skipped: rows.length };
-      const { error } = await supabase.from("prospects").insert(toInsert);
-      if (error) throw error;
-      return { inserted: toInsert.length, skipped: rows.length - toInsert.length };
+      console.info("[import-prospects] prepared", {
+        toInsert: toInsert.length,
+        skipped: skips.length,
+        sampleRow: toInsert[0],
+      });
+
+      if (toInsert.length === 0) {
+        return { inserted: 0, skipped: skips.length, skips };
+      }
+
+      const { data: insertedRows, error } = await supabase
+        .from("prospects")
+        .insert(toInsert)
+        .select("id");
+
+      if (error) {
+        console.error("[import-prospects] insert error", error);
+        throw new Error(
+          `${error.message}${(error as any).details ? ` — ${(error as any).details}` : ""}${(error as any).hint ? ` (${(error as any).hint})` : ""}`
+        );
+      }
+
+      const insertedCount = insertedRows?.length ?? 0;
+      console.info("[import-prospects] inserted", { count: insertedCount });
+
+      if (insertedCount < toInsert.length) {
+        for (let i = insertedCount; i < toInsert.length; i++) {
+          skips.push({
+            row: i + 2,
+            name: toInsert[i].name,
+            reason: "silently rejected by database (likely RLS or constraint)",
+          });
+        }
+      }
+
+      return { inserted: insertedCount, skipped: skips.length, skips };
     },
-    onSuccess: ({ inserted, skipped }) => {
+    onSuccess: ({ inserted, skipped, skips }) => {
       qc.invalidateQueries({ queryKey: ["prospects"] });
-      toast({ title: `Imported ${inserted}`, description: skipped > 0 ? `Skipped ${skipped} duplicates/invalid rows.` : undefined });
+      const reasons = skips.slice(0, 5).map((s) => `Row ${s.row} (${s.name ?? "?"}): ${s.reason}`).join(" · ");
+      const more = skips.length > 5 ? ` (+${skips.length - 5} more)` : "";
+      toast({
+        title: `Imported ${inserted}${skipped > 0 ? ` · Skipped ${skipped}` : ""}`,
+        description: skipped > 0 ? `${reasons}${more}` : undefined,
+        variant: inserted === 0 && skipped > 0 ? "destructive" : "default",
+      });
+      if (skips.length > 0) console.warn("[import-prospects] skip details", skips);
     },
     onError: (e: any) => toast({ title: "Import failed", description: e.message, variant: "destructive" }),
   });
