@@ -17,6 +17,7 @@ import Analytics from "./pages/Analytics";
 import WeeklyReports from "./pages/WeeklyReports";
 import Settings from "./pages/Settings";
 import AutopilotSettings from "./pages/AutopilotSettings";
+import DawnAutopilotSettings from "./pages/DawnAutopilotSettings";
 import Auth from "./pages/Auth";
 import OAuthCallback from "./pages/OAuthCallback";
 import Revenue from "./pages/Revenue";
@@ -92,6 +93,7 @@ function AppRoutes() {
        <Route path="/funding" element={<ProtectedRoute><Funding /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/settings/autopilot" element={<ProtectedRoute><AutopilotSettings /></ProtectedRoute>} />
+      <Route path="/settings/dawn-autopilot" element={<ProtectedRoute><DawnAutopilotSettings /></ProtectedRoute>} />
       <Route path="/lp/:slug" element={<LandingPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
