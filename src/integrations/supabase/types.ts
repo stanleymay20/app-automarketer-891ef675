@@ -356,6 +356,8 @@ export type Database = {
           created_at: string
           daily_send_cap: number
           enabled: boolean
+          gmail_last_synced_at: string | null
+          gmail_reply_sync_enabled: boolean
           id: string
           max_auto_value: number
           min_confidence: number
@@ -371,6 +373,8 @@ export type Database = {
           created_at?: string
           daily_send_cap?: number
           enabled?: boolean
+          gmail_last_synced_at?: string | null
+          gmail_reply_sync_enabled?: boolean
           id?: string
           max_auto_value?: number
           min_confidence?: number
@@ -386,6 +390,8 @@ export type Database = {
           created_at?: string
           daily_send_cap?: number
           enabled?: boolean
+          gmail_last_synced_at?: string | null
+          gmail_reply_sync_enabled?: boolean
           id?: string
           max_auto_value?: number
           min_confidence?: number
