@@ -20,6 +20,7 @@ import {
   type AutopilotSettings,
 } from "@/hooks/useAutopilotSettings";
 import { useProspects } from "@/hooks/useProspects";
+import GmailReplySyncCard from "@/components/settings/GmailReplySyncCard";
 
 const ALL_SEGMENTS: Segment[] = ["hot", "warm", "nurture", "disqualify"];
 const SEGMENT_LABEL: Record<Segment, string> = {
@@ -144,6 +145,8 @@ export default function AutopilotSettings() {
             />
           </CardHeader>
         </Card>
+
+        <GmailReplySyncCard />
 
         <Card>
           <CardHeader>
