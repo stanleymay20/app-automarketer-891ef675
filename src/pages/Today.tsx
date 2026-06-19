@@ -18,6 +18,7 @@ import { useReplies } from "@/hooks/useReplies";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import DecisionMetricsCard from "@/components/dashboard/DecisionMetricsCard";
+import DawnAutopilotCard from "@/components/dashboard/DawnAutopilotCard";
 
 const STAGE_LABEL: Record<ProspectStage, string> = {
   new: "New", saved: "Saved", qualified: "Qualified",
@@ -252,6 +253,9 @@ export default function Today() {
           <StatTile label="Sequences paused" value={seqStats?.paused ?? 0} icon={PauseCircle} tone={(seqStats?.paused ?? 0) ? "warn" : "default"} />
           <StatTile label="Replies waiting" value={repliesWaiting} icon={Inbox} tone={repliesWaiting ? "warn" : "default"} />
         </div>
+
+        {/* Dawn Marketing Autopilot */}
+        <DawnAutopilotCard />
 
         {/* Decision intelligence summary */}
         <DecisionMetricsCard />

@@ -861,6 +861,81 @@ export type Database = {
         }
         Relationships: []
       }
+      dawn_autopilot_runs: {
+        Row: {
+          app_id: string | null
+          brief: Json | null
+          completed_at: string | null
+          content_generated: number
+          content_scheduled: number
+          created_at: string
+          details: Json
+          errors: Json
+          followups_created: number
+          id: string
+          proposals_created: number
+          prospects_auto_sent: number
+          prospects_discovered: number
+          prospects_enriched: number
+          prospects_qualified: number
+          prospects_sent_to_review: number
+          revenue_expected: number
+          started_at: string
+          status: string
+          summary: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_id?: string | null
+          brief?: Json | null
+          completed_at?: string | null
+          content_generated?: number
+          content_scheduled?: number
+          created_at?: string
+          details?: Json
+          errors?: Json
+          followups_created?: number
+          id?: string
+          proposals_created?: number
+          prospects_auto_sent?: number
+          prospects_discovered?: number
+          prospects_enriched?: number
+          prospects_qualified?: number
+          prospects_sent_to_review?: number
+          revenue_expected?: number
+          started_at?: string
+          status?: string
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string | null
+          brief?: Json | null
+          completed_at?: string | null
+          content_generated?: number
+          content_scheduled?: number
+          created_at?: string
+          details?: Json
+          errors?: Json
+          followups_created?: number
+          id?: string
+          proposals_created?: number
+          prospects_auto_sent?: number
+          prospects_discovered?: number
+          prospects_enriched?: number
+          prospects_qualified?: number
+          prospects_sent_to_review?: number
+          revenue_expected?: number
+          started_at?: string
+          status?: string
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       distribution_actions: {
         Row: {
           action_type: string
@@ -2800,6 +2875,16 @@ export type Database = {
           autopilot_mode: boolean | null
           billing_period_start: string | null
           created_at: string
+          dawn_autopilot_enabled: boolean
+          dawn_autopilot_time: string
+          dawn_high_value_threshold: number
+          dawn_last_run_at: string | null
+          dawn_max_daily_content: number
+          dawn_max_daily_outreach: number
+          dawn_max_daily_prospects: number
+          dawn_require_review_for_content: boolean
+          dawn_require_review_for_high_value: boolean
+          dawn_timezone: string
           default_brand_tone: string | null
           id: string
           notification_content_ready: boolean | null
@@ -2817,6 +2902,16 @@ export type Database = {
           autopilot_mode?: boolean | null
           billing_period_start?: string | null
           created_at?: string
+          dawn_autopilot_enabled?: boolean
+          dawn_autopilot_time?: string
+          dawn_high_value_threshold?: number
+          dawn_last_run_at?: string | null
+          dawn_max_daily_content?: number
+          dawn_max_daily_outreach?: number
+          dawn_max_daily_prospects?: number
+          dawn_require_review_for_content?: boolean
+          dawn_require_review_for_high_value?: boolean
+          dawn_timezone?: string
           default_brand_tone?: string | null
           id?: string
           notification_content_ready?: boolean | null
@@ -2834,6 +2929,16 @@ export type Database = {
           autopilot_mode?: boolean | null
           billing_period_start?: string | null
           created_at?: string
+          dawn_autopilot_enabled?: boolean
+          dawn_autopilot_time?: string
+          dawn_high_value_threshold?: number
+          dawn_last_run_at?: string | null
+          dawn_max_daily_content?: number
+          dawn_max_daily_outreach?: number
+          dawn_max_daily_prospects?: number
+          dawn_require_review_for_content?: boolean
+          dawn_require_review_for_high_value?: boolean
+          dawn_timezone?: string
           default_brand_tone?: string | null
           id?: string
           notification_content_ready?: boolean | null
