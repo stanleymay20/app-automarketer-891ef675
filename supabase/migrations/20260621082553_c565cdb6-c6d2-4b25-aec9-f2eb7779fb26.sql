@@ -1,0 +1,2 @@
+REVOKE SELECT (access_token, refresh_token, token_type, scope) ON public.platform_connections FROM authenticated;
+REVOKE SELECT (access_token, refresh_token, token_type, scope) ON public.platform_connections FROM anon;
