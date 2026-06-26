@@ -60,6 +60,7 @@ const SECTIONS: NavSection[] = [
       { icon: AppWindow, label: "Campaigns", path: "/content" },
       { icon: Calendar, label: "Calendar", path: "/calendar" },
       { icon: Rocket, label: "Orchestrator", path: "/orchestrator" },
+      { icon: ScrollText, label: "Quantivis LOI", path: "/campaigns/quantivis-loi" },
     ],
   },
   {

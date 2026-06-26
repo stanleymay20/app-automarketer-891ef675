@@ -36,6 +36,70 @@ App runs on `http://localhost:8080`. Environment is auto-populated from Lovable 
 npx vitest run
 ```
 
+## Quantivis EXIST LOI Outreach campaign
+
+AutoMarketer includes a draft-only campaign template for Quantivis:
+
+- Campaign: `Quantivis EXIST LOI Outreach`
+- App route: `/campaigns/quantivis-loi`
+- Purpose: prepare reviewable LinkedIn/email/LOI drafts for EXIST letter-of-intent outreach.
+
+This campaign is intentionally manual. It must not auto-send LinkedIn or email messages.
+
+### Target audience
+
+Use the campaign for:
+
+- German manufacturing companies
+- logistics companies
+- retail/distribution companies
+- AI governance/compliance consultancies
+
+### Manual workflow for Stanley
+
+1. Open AutoMarketer and go to `Quantivis LOI` in the Campaigns section.
+2. Build a target-company sheet with the CSV columns below.
+3. Draft or copy outreach from the page.
+4. Review every message manually before sending.
+5. Send only between `09:00` and `17:00` Germany time.
+6. Keep daily draft volume under:
+   - 20 LinkedIn drafts/day
+   - 10 email drafts/day
+7. Update `outreach_status` after each manual contact.
+8. Update `loi_status` only after explicit prospect feedback.
+
+### CSV import/export format
+
+Use this exact header order:
+
+```csv
+company_name,sector,decision_maker_role,linkedin_url,email,reason_they_fit_quantivis,outreach_status,loi_status
+```
+
+Example:
+
+```csv
+company_name,sector,decision_maker_role,linkedin_url,email,reason_they_fit_quantivis,outreach_status,loi_status
+Muster Maschinenbau GmbH,German manufacturing,COO / Head of Operations / AI Transformation Lead,https://www.linkedin.com/company/example,first.last@example.de,"Manufacturing operator likely evaluating AI governance, operational risk, and evidence-backed transformation decisions.",drafted,not_requested
+```
+
+Recommended status values:
+
+- `outreach_status`: `not_started`, `drafted`, `reviewed`, `sent_manually`, `replied`, `declined`
+- `loi_status`: `not_requested`, `requested`, `draft_sent`, `signed`, `declined`
+
+### Campaign goals
+
+- 30 companies contacted
+- 10 replies
+- 5 discovery calls
+- 2 pilot discussions
+- 1 signed LOI
+
+### Safety rule
+
+No automatic sending is approved for this campaign. The page is a preparation and review surface only.
+
 ## Project layout
 
 - `src/pages/` — route components (Dashboard, Prospects, Distribution, Content, Settings, …)
