@@ -31,6 +31,7 @@ import Prospects from "./pages/Prospects";
 import Distribution from "./pages/Distribution";
 import Orchestrator from "./pages/Orchestrator";
 import QuantivisLoiCampaign from "./pages/QuantivisLoiCampaign";
+import BulkLoiOutreach from "./pages/BulkLoiOutreach";
 import ContentIntelligence from "./pages/ContentIntelligence";
 import Today from "./pages/Today";
 import Inbox from "./pages/Inbox";
@@ -91,6 +92,7 @@ function AppRoutes() {
        <Route path="/distribution" element={<ProtectedRoute><Distribution /></ProtectedRoute>} />
        <Route path="/orchestrator" element={<ProtectedRoute><Orchestrator /></ProtectedRoute>} />
        <Route path="/campaigns/quantivis-loi" element={<ProtectedRoute><QuantivisLoiCampaign /></ProtectedRoute>} />
+       <Route path="/campaigns/bulk-loi" element={<ProtectedRoute><BulkLoiOutreach /></ProtectedRoute>} />
        <Route path="/content-intelligence" element={<ProtectedRoute><ContentIntelligence /></ProtectedRoute>} />
        <Route path="/funding" element={<ProtectedRoute><Funding /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

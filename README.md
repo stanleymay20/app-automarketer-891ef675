@@ -100,6 +100,39 @@ Recommended status values:
 
 No automatic sending is approved for this campaign. The page is a preparation and review surface only.
 
+## Bulk LOI Outreach (up to 200)
+
+For broader outreach beyond the manual Quantivis flow, AutoMarketer ships a draft-only bulk
+generator that scales personalization to up to 200 prospects per run.
+
+- App route: `/campaigns/bulk-loi`
+- Edge function: `supabase/functions/bulk-loi-outreach`
+- Channel: email (Resend), customer-category prospects only by default.
+
+### What it does
+
+1. Step 1 (in the UI) — runs `discover-prospects` against your offering to grow the customer
+   prospect pool. You may run this several times until the eligible count reaches your target.
+2. Step 2 — calls `bulk-loi-outreach`, which pulls eligible prospects (have `contact_email`,
+   no prior `prospect_messages` row, not dismissed) and, for each, asks the Lovable AI gateway
+   to draft a personalized cold email + non-binding LOI ask.
+3. Drafts are inserted into `prospect_messages` with `status = 'pending_approval'`. **Nothing is
+   sent.** The existing `send-outreach` function still enforces a hard per-message approval gate
+   (`approved: true` required); the UI exposes an *Approve & send* button per draft.
+
+### Safety rules (do not bypass)
+
+- No bulk auto-send. Every email requires a per-row click. The `send-outreach` hard gate refuses
+  to call Resend without `approved: true`.
+- The bulk function is rate-limited to 2 runs / 10 minutes per user to stop accidental loops.
+- LinkedIn auto-messaging is not exposed by this campaign — it violates LinkedIn ToS.
+- Outbound email volume should still respect your sending domain warm-up and Resend daily limits.
+  Spacing approvals over several days reduces spam-folder risk and stays inside CAN-SPAM / GDPR
+  expectations for cold B2B email (include sender identity and an unsubscribe path in the draft
+  body when sending to EU recipients).
+- The campaign is for prospects whose pain your offering plausibly solves. Do not generate drafts
+  for unrelated companies just to hit the 200 number.
+
 ## Project layout
 
 - `src/pages/` — route components (Dashboard, Prospects, Distribution, Content, Settings, …)
