@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import {
   useProspects, useDiscoverProspects, useProspectAction, useProspectActions,
-  useImportProspects, parseProspectCsv, prospectsToCsv, PROSPECT_STAGES,
+  useImportProspects, parseProspectCsvDetailed, prospectsToCsv, PROSPECT_STAGES,
   type ProspectCategory, type Prospect, type ProspectStage,
 } from "@/hooks/useProspects";
 import { useApps } from "@/hooks/useApps";
@@ -513,8 +513,17 @@ export default function Prospects() {
 
   const handleImport = async (file: File) => {
     const text = await file.text();
-    const rows = parseProspectCsv(text);
-    if (rows.length === 0) return toast({ title: "No valid rows found", variant: "destructive" });
+    const { rows, headersFound, headersRecognized } = parseProspectCsvDetailed(text);
+    if (rows.length === 0) {
+      const hasNameColumn = headersRecognized.includes("name");
+      return toast({
+        title: "No valid rows found",
+        description: !hasNameColumn
+          ? `No "name" (or "company_name") column found. Columns in file: ${headersFound.join(", ") || "(none — is the file empty?)"}`
+          : `Found a name column but every row's name was empty. Columns in file: ${headersFound.join(", ")}`,
+        variant: "destructive",
+      });
+    }
     importer.mutate({ appId, rows });
   };
 

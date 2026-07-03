@@ -1,13 +1,18 @@
+import { useMemo, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
   quantivisLoiCampaignTemplate,
   quantivisLoiCsvExample,
 } from "@/lib/quantivis-loi-campaign";
-import { CheckCircle2, Clock, FileText, ShieldCheck, Target, Users } from "lucide-react";
+import { useImportProspects, parseProspectCsvDetailed } from "@/hooks/useProspects";
+import { useApps } from "@/hooks/useApps";
+import { useToast } from "@/hooks/use-toast";
+import { CheckCircle2, Clock, FileText, ShieldCheck, Target, Upload, Users } from "lucide-react";
 
 const template = quantivisLoiCampaignTemplate;
 
@@ -17,6 +22,42 @@ const statusOptions = {
 };
 
 export default function QuantivisLoiCampaign() {
+  const { data: apps } = useApps();
+  const importer = useImportProspects();
+  const { toast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Resolve the Quantivis app id by name so imports from this page always
+  // land scoped to the right offering, without the user having to remember
+  // to pick it from a dropdown elsewhere.
+  const quantivisAppId = useMemo(() => {
+    const match = (apps ?? []).find((a: any) => /quantivis/i.test(a.name ?? ""));
+    return match?.id;
+  }, [apps]);
+
+  const handleImport = async (file: File) => {
+    const text = await file.text();
+    const { rows, headersFound, headersRecognized } = parseProspectCsvDetailed(text);
+    if (rows.length === 0) {
+      const hasNameColumn = headersRecognized.includes("name");
+      toast({
+        title: "No valid rows found",
+        description: !hasNameColumn
+          ? `No "company_name" (or "name") column found. Columns in file: ${headersFound.join(", ") || "(none — is the file empty?)"}`
+          : `Found a name column but every row was empty. Columns in file: ${headersFound.join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!quantivisAppId) {
+      toast({
+        title: "Importing without an app scope",
+        description: "No app named \"Quantivis\" was found, so these prospects will import under All offerings. Create/rename the app to scope them automatically next time.",
+      });
+    }
+    importer.mutate({ appId: quantivisAppId, rows });
+  };
+
   return (
     <DashboardLayout title="Quantivis LOI Outreach">
       <div className="space-y-6">
@@ -103,13 +144,34 @@ export default function QuantivisLoiCampaign() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="h-5 w-5 text-primary" /> CSV import/export format
-            </CardTitle>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <FileText className="h-5 w-5 text-primary" /> CSV import/export format
+              </CardTitle>
+              <div>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleImport(f);
+                    e.currentTarget.value = "";
+                  }}
+                />
+                <Button size="sm" className="gap-1" onClick={() => fileRef.current?.click()}>
+                  <Upload className="h-4 w-4" /> Import CSV
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Use this exact header order for Quantivis LOI target-company sheets.
+              Use this exact header order for Quantivis LOI target-company sheets. The Import CSV
+              button above accepts this format directly — company_name, sector, decision_maker_role,
+              reason_they_fit_quantivis, linkedin_url, email, and outreach_status all map onto the
+              Prospects pipeline automatically, and loi_status is preserved in the prospect's notes.
             </p>
             <Textarea readOnly value={quantivisLoiCsvExample()} className="min-h-40 font-mono text-xs" />
             <div className="grid gap-2 md:grid-cols-2">

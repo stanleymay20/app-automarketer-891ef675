@@ -183,9 +183,46 @@ export interface ProspectCsvRow {
   stage?: string;
 }
 
+// Campaign templates elsewhere in the app (e.g. the Quantivis LOI campaign page)
+// document their own CSV column names for readability. Rather than requiring
+// every campaign to match this table's internal schema exactly, accept the
+// documented aliases here so a CSV built from ANY in-app template imports
+// cleanly through this one importer.
+const HEADER_ALIASES: Record<string, string> = {
+  company_name: "name",
+  sector: "industry",
+  decision_maker_role: "contact_role",
+  reason_they_fit_quantivis: "description",
+  linkedin_url: "contact_linkedin",
+  email: "contact_email",
+  outreach_status: "stage",
+};
+
+// outreach_status vocabularies used by campaign templates don't match this
+// table's pipeline stages 1:1 — map them onto the closest equivalent instead
+// of silently discarding the value.
+const STAGE_VALUE_ALIASES: Record<string, string> = {
+  not_started: "new",
+  drafted: "new",
+  reviewed: "qualified",
+  sent_manually: "contacted",
+  replied: "responded",
+  declined: "lost",
+};
+
+export interface ParsedProspectCsv {
+  rows: ProspectCsvRow[];
+  headersFound: string[];
+  headersRecognized: string[];
+}
+
 export function parseProspectCsv(text: string): ProspectCsvRow[] {
+  return parseProspectCsvDetailed(text).rows;
+}
+
+export function parseProspectCsvDetailed(text: string): ParsedProspectCsv {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length === 0) return [];
+  if (lines.length === 0) return { rows: [], headersFound: [], headersRecognized: [] };
   const split = (line: string): string[] => {
     const out: string[] = [];
     let cur = "";
@@ -205,15 +242,29 @@ export function parseProspectCsv(text: string): ProspectCsvRow[] {
     out.push(cur);
     return out.map((s) => s.trim());
   };
-  const headers = split(lines[0]).map((h) => h.toLowerCase());
+  const rawHeaders = split(lines[0]).map((h) => h.toLowerCase());
+  const headers = rawHeaders.map((h) => HEADER_ALIASES[h] ?? h);
+  const loiStatusIdx = rawHeaders.indexOf("loi_status");
   const rows: ProspectCsvRow[] = [];
   for (let i = 1; i < lines.length; i++) {
     const cells = split(lines[i]);
     const row: any = {};
     headers.forEach((h, idx) => {
       const v = (cells[idx] ?? "").trim();
-      if (v) row[h] = v;
+      // First non-empty column wins if two source columns alias to the same
+      // field (e.g. a sheet that somehow has both "name" and "company_name").
+      if (v && row[h] === undefined) row[h] = v;
     });
+    if (loiStatusIdx !== -1) {
+      const loiVal = (cells[loiStatusIdx] ?? "").trim();
+      if (loiVal) {
+        row.notes = row.notes ? `${row.notes} | LOI status: ${loiVal}` : `LOI status: ${loiVal}`;
+      }
+    }
+    if (row.stage) {
+      const normalized = String(row.stage).toLowerCase();
+      row.stage = STAGE_VALUE_ALIASES[normalized] ?? normalized;
+    }
     if (row.contact_email && !EMAIL_RE.test(row.contact_email)) delete row.contact_email;
     if (row.url && !URL_RE.test(row.url)) row.url = `https://${row.url}`;
     if (row.contact_linkedin && !URL_RE.test(row.contact_linkedin)) {
@@ -221,7 +272,13 @@ export function parseProspectCsv(text: string): ProspectCsvRow[] {
     }
     if (row.name) rows.push(row);
   }
-  return rows;
+  const recognizedTargets = new Set([
+    "name", "url", "description", "contact_email", "contact_name",
+    "contact_linkedin", "contact_role", "industry", "company_size",
+    "notes", "stage", "category",
+  ]);
+  const headersRecognized = headers.filter((h) => recognizedTargets.has(h));
+  return { rows, headersFound: rawHeaders, headersRecognized };
 }
 
 export function prospectsToCsv(rows: Prospect[]): string {
@@ -308,10 +365,15 @@ export function useImportProspects() {
         }
 
         const rawCat = (r as any).category as string | undefined;
-        const category: ProspectCategory =
-          rawCat && ALLOWED_CATEGORIES.includes(rawCat as ProspectCategory)
-            ? (rawCat as ProspectCategory)
-            : "customer";
+        let category: ProspectCategory;
+        if (rawCat && ALLOWED_CATEGORIES.includes(rawCat as ProspectCategory)) {
+          category = rawCat as ProspectCategory;
+        } else {
+          // No explicit category column — infer partner-type rows (consultancies,
+          // agencies, law firms) from the industry/sector text; default to customer.
+          const industryText = (r.industry ?? "").toLowerCase();
+          category = /consult|advisory|agency|law firm|legal/.test(industryText) ? "partner" : "customer";
+        }
 
         toInsert.push({
           user_id: user.id,
