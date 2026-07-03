@@ -181,6 +181,7 @@ export interface ProspectCsvRow {
   company_size?: string;
   notes?: string;
   stage?: string;
+  category?: string;
 }
 
 // Campaign templates elsewhere in the app (e.g. the Quantivis LOI campaign page)
