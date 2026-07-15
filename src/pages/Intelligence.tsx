@@ -146,6 +146,13 @@ export default function Intelligence() {
           )}
         </div>
 
+        {/* Marketing Intelligence Foundation (Phase 5.0) */}
+        <div className="pt-4 border-t">
+          <MarketingIntelligenceSection appId={scoped} />
+        </div>
+
+
+
         {/* Footer actions */}
         <div className="text-xs text-muted-foreground">
           Tune your audience in <Link className="text-primary underline" to="/audience">Audience</Link> or your landing pages in <Link className="text-primary underline" to="/apps">Apps</Link>.
