@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Sparkles, MousePointerClick, UserPlus, Target, TrendingUp, Lightbulb, Users, MessageSquare, Map, Zap, Globe } from "lucide-react";
 import { Link } from "react-router-dom";
+import MarketingIntelligenceSection from "@/components/intelligence/MarketingIntelligenceSection";
 
 const ICONS: Record<string, any> = {
   top_persona: Users,
@@ -144,6 +145,13 @@ export default function Intelligence() {
             </div>
           )}
         </div>
+
+        {/* Marketing Intelligence Foundation (Phase 5.0) */}
+        <div className="pt-4 border-t">
+          <MarketingIntelligenceSection appId={scoped} />
+        </div>
+
+
 
         {/* Footer actions */}
         <div className="text-xs text-muted-foreground">

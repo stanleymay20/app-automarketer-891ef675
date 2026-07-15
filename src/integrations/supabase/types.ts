@@ -520,6 +520,75 @@ export type Database = {
           },
         ]
       }
+      channel_spend: {
+        Row: {
+          app_id: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          channel: string
+          created_at: string
+          currency: string
+          date: string
+          exchange_rate: number
+          id: string
+          normalized_spend: number
+          notes: string | null
+          source: string
+          spend_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_id?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          channel: string
+          created_at?: string
+          currency?: string
+          date: string
+          exchange_rate?: number
+          id?: string
+          normalized_spend?: number
+          notes?: string | null
+          source?: string
+          spend_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          channel?: string
+          created_at?: string
+          currency?: string
+          date?: string
+          exchange_rate?: number
+          id?: string
+          normalized_spend?: number
+          notes?: string | null
+          source?: string
+          spend_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_spend_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "channel_spend_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       click_events: {
         Row: {
           app_id: string | null
@@ -618,19 +687,27 @@ export type Database = {
       }
       content: {
         Row: {
+          agency_cost: number | null
+          ai_generation_cost: number | null
           app_id: string
           campaign_id: string | null
           clicks: number | null
           content_text: string
+          cost_estimated: number | null
           created_at: string
+          design_cost: number | null
           distribution_action_id: string | null
           distribution_source_type: string | null
           distribution_target_id: string | null
+          editing_cost: number | null
           engagements: number | null
+          estimated_hours: number | null
           external_post_id: string | null
           external_url: string | null
           failure_category: string | null
           failure_reason: string | null
+          freelancer_cost: number | null
+          hourly_rate: number | null
           id: string
           image_url: string | null
           impressions: number | null
@@ -648,19 +725,27 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agency_cost?: number | null
+          ai_generation_cost?: number | null
           app_id: string
           campaign_id?: string | null
           clicks?: number | null
           content_text: string
+          cost_estimated?: number | null
           created_at?: string
+          design_cost?: number | null
           distribution_action_id?: string | null
           distribution_source_type?: string | null
           distribution_target_id?: string | null
+          editing_cost?: number | null
           engagements?: number | null
+          estimated_hours?: number | null
           external_post_id?: string | null
           external_url?: string | null
           failure_category?: string | null
           failure_reason?: string | null
+          freelancer_cost?: number | null
+          hourly_rate?: number | null
           id?: string
           image_url?: string | null
           impressions?: number | null
@@ -678,19 +763,27 @@ export type Database = {
           user_id: string
         }
         Update: {
+          agency_cost?: number | null
+          ai_generation_cost?: number | null
           app_id?: string
           campaign_id?: string | null
           clicks?: number | null
           content_text?: string
+          cost_estimated?: number | null
           created_at?: string
+          design_cost?: number | null
           distribution_action_id?: string | null
           distribution_source_type?: string | null
           distribution_target_id?: string | null
+          editing_cost?: number | null
           engagements?: number | null
+          estimated_hours?: number | null
           external_post_id?: string | null
           external_url?: string | null
           failure_category?: string | null
           failure_reason?: string | null
+          freelancer_cost?: number | null
+          hourly_rate?: number | null
           id?: string
           image_url?: string | null
           impressions?: number | null
@@ -1823,6 +1916,89 @@ export type Database = {
           when_to_use?: string | null
         }
         Relationships: []
+      }
+      mmm_runs: {
+        Row: {
+          adstock_lambda: number | null
+          app_id: string | null
+          channel: string
+          created_at: string
+          fit_quality: number | null
+          generated_at: string
+          hill_alpha: number | null
+          hill_gamma: number | null
+          id: string
+          marginal_roi: number | null
+          metadata: Json
+          model_version: string
+          optimal_spend: number | null
+          probability_roi_gt_1: number | null
+          roi_mean: number | null
+          roi_p10: number | null
+          roi_p90: number | null
+          sample_size: number
+          saturation_point: number | null
+          user_id: string
+          window_end: string | null
+          window_start: string | null
+        }
+        Insert: {
+          adstock_lambda?: number | null
+          app_id?: string | null
+          channel: string
+          created_at?: string
+          fit_quality?: number | null
+          generated_at?: string
+          hill_alpha?: number | null
+          hill_gamma?: number | null
+          id?: string
+          marginal_roi?: number | null
+          metadata?: Json
+          model_version?: string
+          optimal_spend?: number | null
+          probability_roi_gt_1?: number | null
+          roi_mean?: number | null
+          roi_p10?: number | null
+          roi_p90?: number | null
+          sample_size?: number
+          saturation_point?: number | null
+          user_id: string
+          window_end?: string | null
+          window_start?: string | null
+        }
+        Update: {
+          adstock_lambda?: number | null
+          app_id?: string | null
+          channel?: string
+          created_at?: string
+          fit_quality?: number | null
+          generated_at?: string
+          hill_alpha?: number | null
+          hill_gamma?: number | null
+          id?: string
+          marginal_roi?: number | null
+          metadata?: Json
+          model_version?: string
+          optimal_spend?: number | null
+          probability_roi_gt_1?: number | null
+          roi_mean?: number | null
+          roi_p10?: number | null
+          roi_p90?: number | null
+          sample_size?: number
+          saturation_point?: number | null
+          user_id?: string
+          window_end?: string | null
+          window_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mmm_runs_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       model_recommendations: {
         Row: {
