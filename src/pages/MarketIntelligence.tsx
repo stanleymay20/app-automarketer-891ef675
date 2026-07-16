@@ -172,10 +172,20 @@ export default function MarketIntelligence() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   {visibleRecs.map((r: any) => {
                     const ev = data!.evidence;
-                    const basisLabel =
-                      ev && (ev.posts_analyzed > 0 || ev.clicks > 0 || ev.leads > 0)
+                    const meta = Array.isArray(r.supporting_signal_ids) ? r.supporting_signal_ids[0] : null;
+                    const basis = meta?.basis ?? "hypothesis";
+                    const mmm = meta?.mmm ?? null;
+                    const basisLabel = r.evidence_summary
+                      ? r.evidence_summary
+                      : ev && (ev.posts_analyzed > 0 || ev.clicks > 0 || ev.leads > 0)
                         ? `${ev.posts_analyzed} campaigns · ${ev.clicks} clicks · ${ev.leads} leads · ${ev.conversions} conv.`
                         : "Initial hypothesis — no attribution yet";
+                    const basisTone: Record<string, string> = {
+                      mmm: "bg-primary/15 text-primary",
+                      attribution: "bg-success/15 text-success",
+                      signal: "bg-info/15 text-info",
+                      hypothesis: "bg-muted text-muted-foreground",
+                    };
                     const accepted = !!r.accepted_at;
                     const hasCampaign = !!r.campaign_id;
                     const hasLanding = !!r.landing_app_id;
@@ -192,12 +202,26 @@ export default function MarketIntelligence() {
                         <div className="flex flex-wrap items-center gap-2">
                           <ScorePill label="Confidence" value={r.confidence_score} />
                           <Badge variant="secondary" className="text-[10px] capitalize">{r.expected_impact ?? "medium"} impact</Badge>
+                          <Badge className={`text-[10px] uppercase ${basisTone[basis] ?? basisTone.hypothesis}`}>{basis}</Badge>
                           {r.status === "saved" && <Badge variant="outline" className="text-[10px]">Saved</Badge>}
                         </div>
 
-                        <p className="text-[10px] text-muted-foreground border-t border-dashed pt-2">
-                          Evidence: {basisLabel}
-                        </p>
+                        <div className="text-[10px] text-muted-foreground border-t border-dashed pt-2 space-y-1">
+                          <div>Evidence: {basisLabel}</div>
+                          {mmm && (
+                            <div className="text-[10px] text-primary/80">
+                              MMM · {mmm.channel} · ROI {Number(mmm.roi_mean).toFixed(2)}x [CI {Number(mmm.roi_ci?.[0] ?? 0).toFixed(2)}–{Number(mmm.roi_ci?.[1] ?? 0).toFixed(2)}] · P(ROI&gt;1)={Math.round((mmm.p_roi_gt_1 ?? 0) * 100)}% · n={mmm.sample_size} · fit={Number(mmm.fit_quality).toFixed(2)}
+                            </div>
+                          )}
+                          {meta?.assumptions?.length > 0 && (
+                            <details className="text-[10px]"><summary className="cursor-pointer">Assumptions &amp; alternatives</summary>
+                              <ul className="pl-3 pt-1 list-disc space-y-0.5">
+                                {meta.assumptions.map((a: string, i: number) => <li key={`a${i}`}>{a}</li>)}
+                                {meta.alternatives?.map((a: string, i: number) => <li key={`x${i}`} className="text-muted-foreground">Alt: {a}</li>)}
+                              </ul>
+                            </details>
+                          )}
+                        </div>
 
                         {(accepted || hasCampaign || hasLanding || hasCreatives) && (
                           <div className="flex flex-wrap gap-1.5">
