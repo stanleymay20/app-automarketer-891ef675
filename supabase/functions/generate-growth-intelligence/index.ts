@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
       { count: clicksCount },
       { count: leadsCount },
       { data: convs },
+      { data: mmmRows },
     ] = await Promise.all([
       supabase.from("icps").select("segment,industry").eq("app_id", app.id).limit(5),
       supabase.from("personas").select("title,pains,triggers").eq("app_id", app.id).limit(5),
@@ -87,6 +88,8 @@ Deno.serve(async (req) => {
       supabase.from("click_events").select("id", { count: "exact", head: true }).eq("app_id", app.id),
       supabase.from("leads").select("id", { count: "exact", head: true }).eq("app_id", app.id),
       supabase.from("conversions").select("amount").eq("app_id", app.id),
+      supabase.from("mmm_runs").select("channel, roi_mean, roi_p10, roi_p90, probability_roi_gt_1, marginal_roi, saturation_point, optimal_spend, fit_quality, sample_size, model_version, generated_at, metadata")
+        .eq("user_id", user.id).order("generated_at", { ascending: false }).limit(50),
     ]);
 
     const conversionsCount = convs?.length ?? 0;
@@ -100,6 +103,23 @@ Deno.serve(async (req) => {
       if (c.messaging_angle) angleCounts[c.messaging_angle] = (angleCounts[c.messaging_angle] ?? 0) + 1;
     });
 
+    // Latest MMM run per channel (rows are DESC by generated_at)
+    const mmmByChannel = new Map<string, any>();
+    for (const r of mmmRows ?? []) if (!mmmByChannel.has(r.channel)) mmmByChannel.set(r.channel, r);
+    const mmmSummary = [...mmmByChannel.values()].map((r: any) => ({
+      channel: r.channel,
+      roi_mean: Number(r.roi_mean ?? 0),
+      roi_ci: [Number(r.roi_p10 ?? 0), Number(r.roi_p90 ?? 0)],
+      p_roi_gt_1: Number(r.probability_roi_gt_1 ?? 0),
+      marginal_roi: Number(r.marginal_roi ?? 0),
+      optimal_spend: Number(r.optimal_spend ?? 0),
+      saturation_point: Number(r.saturation_point ?? 0),
+      fit_quality: Number(r.fit_quality ?? 0),
+      sample_size: Number(r.sample_size ?? 0),
+      model_version: r.model_version,
+    }));
+    const hasMmm = mmmSummary.some((s) => s.sample_size >= 5 && s.fit_quality > 0);
+
     const evidence = {
       posts_analyzed: postsAnalyzed ?? 0,
       clicks: clicksCount ?? 0,
@@ -108,9 +128,15 @@ Deno.serve(async (req) => {
       revenue: revenueTotal,
       platform_mix: platformCounts,
       angle_mix: angleCounts,
+      mmm: mmmSummary,
+      mmm_available: hasMmm,
     };
 
     const hasAttribution = evidence.posts_analyzed >= 1 || evidence.clicks > 0 || evidence.leads > 0;
+
+    const mmmBlock = hasMmm
+      ? `\nMARKETING MIX MODEL (bootstrap v0 — NOT a full Bayesian posterior; treat CIs as directional):\n${JSON.stringify(mmmSummary, null, 2)}\nUse this to prefer channels with high P(ROI>1) and non-saturated marginal ROI. Cite the number verbatim in evidence_summary (e.g. "LinkedIn ROI 2.1x [CI 1.4–3.0], P(ROI>1)=87%, marginal 1.6x — below saturation").`
+      : `\nMARKETING MIX MODEL: not yet reliable (insufficient spend/conversion history). Do NOT invent ROI numbers.`;
 
     const prompt = `Analyze the GTM intelligence landscape for this product and produce specific, evidence-backed signals.
 
@@ -125,8 +151,9 @@ Personas: ${JSON.stringify(personas ?? [])}
 Prior learning insights: ${JSON.stringify(insights ?? [])}
 
 REAL ATTRIBUTION EVIDENCE (use this when justifying recommendations):
-${JSON.stringify(evidence, null, 2)}
-${hasAttribution ? "" : "NOTE: No attribution data yet. Recommendations must be labeled as initial hypotheses, not learned insights."}
+${JSON.stringify({ ...evidence, mmm: undefined, mmm_available: undefined }, null, 2)}
+${hasAttribution ? "" : "NOTE: No click/lead attribution yet. Recommendations must be labeled as initial hypotheses, not learned insights."}
+${mmmBlock}
 
 Generate a JSON object with this exact shape:
 {
@@ -134,15 +161,29 @@ Generate a JSON object with this exact shape:
   "competitor_signals": [{"competitor_name":"...","signal_type":"funding|launch|pricing|hiring|partnership|acquisition","description":"...","impact_score":0-100,"recommended_response":"specific campaign action","source_basis":"verified|estimated"}],
   "opportunities": [{"title":"...","category":"grant|accelerator|partnership|procurement|investor|university","description":"...","deadline":"YYYY-MM-DD or null","relevance_score":0-100,"recommendation":"specific next action","url":"https://... or null"}],
   "customer_signals": [{"audience":"e.g. Operations Leaders","topic":"...","sentiment":"positive|neutral|negative|mixed","trend_score":0-100,"recommendation":"specific campaign angle"}],
-  "growth_recommendations": [{"recommendation_type":"campaign|positioning|channel|offer","title":"...","explanation":"why, tied to a specific signal or attribution number above","confidence_score":0-100,"expected_impact":"high|medium|low","evidence_basis":"attribution|signal|hypothesis","evidence_summary":"e.g. '12 posts analyzed, 214 clicks, 31 leads' OR 'Initial hypothesis — no attribution data yet'"}]
+  "growth_recommendations": [{
+    "recommendation_type":"campaign|positioning|channel|offer",
+    "title":"...",
+    "explanation":"why, tied to a specific signal or attribution/MMM number above",
+    "confidence_score":0-100,
+    "expected_impact":"high|medium|low",
+    "evidence_basis":"mmm|attribution|signal|hypothesis",
+    "evidence_summary":"human-readable citation with numbers",
+    "suggested_channel":"lowercase channel name if MMM-driven, else null",
+    "assumptions":["assumption 1","assumption 2"],
+    "alternatives":["counter-option 1","counter-option 2"]
+  }]
 }
 
 Rules:
 - 3-5 items per array
 - Every item must be specific to THIS product/audience, not generic
 - Every recommendation MUST include evidence_basis and evidence_summary
+- evidence_basis="mmm" ONLY when suggested_channel appears in the MMM block above with sample_size>=5
+- When evidence_basis="mmm", evidence_summary MUST include roi_mean, CI, and P(ROI>1) verbatim from the block
 - If you do not have a verified source URL for a competitor, set source_basis="estimated"
-- Confidence above 70 only allowed when evidence_basis="attribution" or evidence_basis="signal" with a real source
+- Confidence above 80 only allowed when evidence_basis="mmm" AND fit_quality>=0.3 AND sample_size>=14
+- Confidence above 70 requires evidence_basis="attribution" or "mmm" or "signal" with a real source
 - No filler. No "post more often". No "increase engagement".`;
 
     const ai = await callAI(prompt);
@@ -227,19 +268,47 @@ Rules:
       inserts.push(
         supabase.from("growth_recommendations").insert(
           ai.growth_recommendations.map((s: any) => {
-            const basis = s.evidence_basis ?? (hasAttribution ? "attribution" : "hypothesis");
-            // Cap confidence when basis is hypothesis
-            let conf = s.confidence_score ?? 50;
+            const basis = ["mmm", "attribution", "signal", "hypothesis"].includes(s.evidence_basis)
+              ? s.evidence_basis
+              : (hasMmm ? "mmm" : hasAttribution ? "attribution" : "hypothesis");
+            let conf = Number(s.confidence_score ?? 50);
+            // Enforce basis-dependent caps
             if (basis === "hypothesis" && conf > 60) conf = 60;
+            if (basis === "signal" && conf > 75) conf = 75;
+            if (basis === "attribution" && conf > 80) conf = 80;
+            if (basis === "mmm") {
+              const ch = mmmByChannel.get(String(s.suggested_channel ?? "").toLowerCase());
+              const fit = Number(ch?.fit_quality ?? 0);
+              const n = Number(ch?.sample_size ?? 0);
+              if (!ch || fit < 0.3 || n < 14) conf = Math.min(conf, 70);
+              if (conf > 90) conf = 90;
+            }
+            const sugCh = s.suggested_channel ? String(s.suggested_channel).toLowerCase() : null;
+            const mmmCite = sugCh ? mmmByChannel.get(sugCh) : null;
             return {
               ...base,
               recommendation_type: s.recommendation_type,
               title: s.title,
               explanation: s.explanation,
-              confidence_score: conf,
+              confidence_score: Math.max(0, Math.min(100, conf)),
               expected_impact: s.expected_impact,
-              supporting_signal_ids: [],
-              // Stash evidence transparency on a known column. We piggyback on status="new" and use explanation for label.
+              evidence_summary: s.evidence_summary ?? null,
+              suggested_platform: sugCh,
+              supporting_signal_ids: [{
+                basis,
+                assumptions: Array.isArray(s.assumptions) ? s.assumptions : [],
+                alternatives: Array.isArray(s.alternatives) ? s.alternatives : [],
+                mmm: mmmCite ? {
+                  channel: mmmCite.channel,
+                  roi_mean: Number(mmmCite.roi_mean ?? 0),
+                  roi_ci: [Number(mmmCite.roi_p10 ?? 0), Number(mmmCite.roi_p90 ?? 0)],
+                  p_roi_gt_1: Number(mmmCite.probability_roi_gt_1 ?? 0),
+                  marginal_roi: Number(mmmCite.marginal_roi ?? 0),
+                  sample_size: Number(mmmCite.sample_size ?? 0),
+                  fit_quality: Number(mmmCite.fit_quality ?? 0),
+                  model_version: mmmCite.model_version,
+                } : null,
+              }],
             };
           })
         )
