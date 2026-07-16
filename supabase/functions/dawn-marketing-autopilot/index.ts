@@ -316,11 +316,14 @@ function buildBrief(m: Metrics, s: DawnSettings) {
   if (m.prospects_sent_to_review > 0) recommended.push(`Review ${m.prospects_sent_to_review} high-value / low-confidence prospect${m.prospects_sent_to_review === 1 ? "" : "s"}.`);
   if (m.content_generated > 0 && s.dawn_require_review_for_content) recommended.push(`Approve ${m.content_generated} draft content piece${m.content_generated === 1 ? "" : "s"}.`);
   if (m.followups_created > 0) recommended.push(`Reply to ${m.followups_created} inbound message${m.followups_created === 1 ? "" : "s"} flagged for follow-up.`);
+  const budgetRec = m.details.budget_recommendation as any;
+  if (budgetRec?.headline) recommended.push(budgetRec.headline);
   while (recommended.length < 3) recommended.push("No additional action needed — keep autopilot running.");
 
   const risks: string[] = [];
   for (const e of m.errors) risks.push(`${e.module} failed: ${e.message}`);
   if (m.prospects_discovered === 0) risks.push("No new prospects discovered today — top-of-funnel may be drying up.");
+  if (budgetRec?.status === "insufficient_data") risks.push("Budget optimizer skipped — MMM needs ≥14 days of spend + conversions per channel.");
 
   return {
     summary: `${discovered} ${sent} ${review} ${pipeline}`.trim(),
@@ -329,9 +332,86 @@ function buildBrief(m: Metrics, s: DawnSettings) {
     review,
     pipeline_change: pipeline,
     expected_revenue_impact: m.revenue_expected,
-    recommended_actions: recommended.slice(0, 3),
+    recommended_actions: recommended.slice(0, 4),
     risks,
     learning_insights: (m.details.learning as any) ?? null,
+    budget_recommendation: budgetRec ?? null,
+    generated_at: new Date().toISOString(),
+  };
+}
+
+// ---- Budget optimizer (advisory, MMM-driven, never mutates spend) ----
+async function computeBudgetRecommendation(admin: any, userId: string) {
+  // Latest mmm_run per channel
+  const { data: rows } = await admin
+    .from("mmm_runs")
+    .select("channel, roi_mean, roi_p10, roi_p90, probability_roi_gt_1, marginal_roi, optimal_spend, saturation_point, fit_quality, sample_size, model_version, generated_at, metadata")
+    .eq("user_id", userId)
+    .order("generated_at", { ascending: false })
+    .limit(50);
+  if (!rows?.length) return { status: "no_mmm_runs" };
+
+  const latest = new Map<string, any>();
+  for (const r of rows) if (!latest.has(r.channel)) latest.set(r.channel, r);
+  const usable = [...latest.values()].filter((r: any) => r.sample_size >= 14 && Number(r.fit_quality ?? 0) >= 0.2);
+  if (!usable.length) return { status: "insufficient_data", channels_checked: latest.size };
+
+  // Total capacity budget = sum of last 7 days normalized spend
+  const since = new Date(Date.now() - 7 * 86400_000).toISOString().slice(0, 10);
+  const { data: recentSpend } = await admin
+    .from("channel_spend")
+    .select("channel, normalized_spend")
+    .eq("user_id", userId)
+    .gte("date", since);
+  const currentByChannel = new Map<string, number>();
+  let totalBudget = 0;
+  for (const r of recentSpend ?? []) {
+    const c = String(r.channel ?? "").toLowerCase();
+    const v = Number(r.normalized_spend ?? 0);
+    currentByChannel.set(c, (currentByChannel.get(c) ?? 0) + v);
+    totalBudget += v;
+  }
+  if (totalBudget <= 0) return { status: "no_recent_spend" };
+
+  // Greedy allocation: each channel's target ≈ min(optimal_spend, current * growth_cap).
+  // Growth cap keeps advice safe — never > 2x current per channel.
+  const targets = usable.map((r: any) => {
+    const current = currentByChannel.get(r.channel) ?? 0;
+    const cap = Math.max(current * 2, current + 50);
+    const target = Math.min(Number(r.optimal_spend ?? current), cap);
+    return {
+      channel: r.channel,
+      current_7d: Math.round(current * 100) / 100,
+      recommended_7d: Math.round(target * 100) / 100,
+      delta: Math.round((target - current) * 100) / 100,
+      marginal_roi: Number(r.marginal_roi ?? 0),
+      roi_mean: Number(r.roi_mean ?? 0),
+      roi_ci: [Number(r.roi_p10 ?? 0), Number(r.roi_p90 ?? 0)],
+      p_roi_gt_1: Number(r.probability_roi_gt_1 ?? 0),
+      fit_quality: Number(r.fit_quality ?? 0),
+      sample_size: Number(r.sample_size ?? 0),
+    };
+  });
+
+  // Normalize so total recommended == total current (keep budget neutral by default)
+  const sumRec = targets.reduce((s, t) => s + t.recommended_7d, 0) || 1;
+  const scale = totalBudget / sumRec;
+  for (const t of targets) {
+    t.recommended_7d = Math.round(t.recommended_7d * scale * 100) / 100;
+    t.delta = Math.round((t.recommended_7d - t.current_7d) * 100) / 100;
+  }
+
+  const bigMove = targets.slice().sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0];
+  const headline = bigMove && Math.abs(bigMove.delta) > 10
+    ? `Shift ~$${Math.abs(bigMove.delta).toFixed(0)}/wk ${bigMove.delta > 0 ? "into" : "out of"} ${bigMove.channel} (mROI ${bigMove.marginal_roi.toFixed(2)}x, P(ROI>1)=${Math.round(bigMove.p_roi_gt_1 * 100)}%). Advisory only — approve manually.`
+    : "MMM suggests current allocation is near-optimal. No shift recommended.";
+
+  return {
+    status: "ok",
+    total_budget_7d: Math.round(totalBudget * 100) / 100,
+    channels: targets,
+    headline,
+    disclaimer: "Bootstrap MMM (v0), not a Bayesian posterior. Never applied automatically.",
     generated_at: new Date().toISOString(),
   };
 }
