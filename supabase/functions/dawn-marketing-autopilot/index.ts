@@ -268,6 +268,12 @@ async function runForUser(settings: DawnSettings): Promise<{ runId: string; metr
     await admin.from("user_settings").update({ dawn_last_run_at: new Date().toISOString() }).eq("user_id", userId);
   });
 
+  // 12b. Bayesian-lite budget optimizer — advisory only, never mutates spend.
+  await runModule("budget_optimizer", m, async () => {
+    const rec = await computeBudgetRecommendation(admin, userId);
+    if (rec) m.details.budget_recommendation = rec;
+  });
+
   // 13. Build the Dawn Marketing Brief
   const brief = buildBrief(m, settings);
 
