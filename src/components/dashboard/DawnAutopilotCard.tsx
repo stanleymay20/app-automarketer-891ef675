@@ -44,6 +44,19 @@ export default function DawnAutopilotCard() {
               <Stat label="Content" value={run.content_generated} />
             </div>
             {run.summary && <p className="text-sm text-muted-foreground">{run.summary}</p>}
+            {(() => {
+              const budget = (run as any).brief?.budget_recommendation;
+              if (!budget || budget.status !== "ok") return null;
+              return (
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs space-y-1">
+                  <div className="flex items-center gap-1 font-semibold text-primary">
+                    <Sunrise className="h-3 w-3" /> MMM budget suggestion (advisory)
+                  </div>
+                  <p>{budget.headline}</p>
+                  <p className="text-[10px] text-muted-foreground">{budget.disclaimer}</p>
+                </div>
+              );
+            })()}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
