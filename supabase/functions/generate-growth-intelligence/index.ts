@@ -268,19 +268,47 @@ Rules:
       inserts.push(
         supabase.from("growth_recommendations").insert(
           ai.growth_recommendations.map((s: any) => {
-            const basis = s.evidence_basis ?? (hasAttribution ? "attribution" : "hypothesis");
-            // Cap confidence when basis is hypothesis
-            let conf = s.confidence_score ?? 50;
+            const basis = ["mmm", "attribution", "signal", "hypothesis"].includes(s.evidence_basis)
+              ? s.evidence_basis
+              : (hasMmm ? "mmm" : hasAttribution ? "attribution" : "hypothesis");
+            let conf = Number(s.confidence_score ?? 50);
+            // Enforce basis-dependent caps
             if (basis === "hypothesis" && conf > 60) conf = 60;
+            if (basis === "signal" && conf > 75) conf = 75;
+            if (basis === "attribution" && conf > 80) conf = 80;
+            if (basis === "mmm") {
+              const ch = mmmByChannel.get(String(s.suggested_channel ?? "").toLowerCase());
+              const fit = Number(ch?.fit_quality ?? 0);
+              const n = Number(ch?.sample_size ?? 0);
+              if (!ch || fit < 0.3 || n < 14) conf = Math.min(conf, 70);
+              if (conf > 90) conf = 90;
+            }
+            const sugCh = s.suggested_channel ? String(s.suggested_channel).toLowerCase() : null;
+            const mmmCite = sugCh ? mmmByChannel.get(sugCh) : null;
             return {
               ...base,
               recommendation_type: s.recommendation_type,
               title: s.title,
               explanation: s.explanation,
-              confidence_score: conf,
+              confidence_score: Math.max(0, Math.min(100, conf)),
               expected_impact: s.expected_impact,
-              supporting_signal_ids: [],
-              // Stash evidence transparency on a known column. We piggyback on status="new" and use explanation for label.
+              evidence_summary: s.evidence_summary ?? null,
+              suggested_platform: sugCh,
+              supporting_signal_ids: [{
+                basis,
+                assumptions: Array.isArray(s.assumptions) ? s.assumptions : [],
+                alternatives: Array.isArray(s.alternatives) ? s.alternatives : [],
+                mmm: mmmCite ? {
+                  channel: mmmCite.channel,
+                  roi_mean: Number(mmmCite.roi_mean ?? 0),
+                  roi_ci: [Number(mmmCite.roi_p10 ?? 0), Number(mmmCite.roi_p90 ?? 0)],
+                  p_roi_gt_1: Number(mmmCite.probability_roi_gt_1 ?? 0),
+                  marginal_roi: Number(mmmCite.marginal_roi ?? 0),
+                  sample_size: Number(mmmCite.sample_size ?? 0),
+                  fit_quality: Number(mmmCite.fit_quality ?? 0),
+                  model_version: mmmCite.model_version,
+                } : null,
+              }],
             };
           })
         )
