@@ -1221,6 +1221,75 @@ export type Database = {
         }
         Relationships: []
       }
+      email_subscribers: {
+        Row: {
+          app_id: string | null
+          consent_at: string | null
+          consent_source: string | null
+          created_at: string
+          email: string
+          id: string
+          lead_id: string | null
+          metadata: Json
+          name: string | null
+          status: string
+          unsubscribe_reason: string | null
+          unsubscribe_token: string
+          unsubscribed_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_id?: string | null
+          consent_at?: string | null
+          consent_source?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          lead_id?: string | null
+          metadata?: Json
+          name?: string | null
+          status?: string
+          unsubscribe_reason?: string | null
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string | null
+          consent_at?: string | null
+          consent_source?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          lead_id?: string | null
+          metadata?: Json
+          name?: string | null
+          status?: string
+          unsubscribe_reason?: string | null
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_subscribers_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_subscribers_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grant_applications: {
         Row: {
           answers_json: Json | null
@@ -2041,6 +2110,264 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      nurture_enrollments: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_step_order: number
+          enrolled_at: string
+          id: string
+          metadata: Json
+          next_send_at: string | null
+          sequence_id: string
+          source: string | null
+          status: string
+          subscriber_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_step_order?: number
+          enrolled_at?: string
+          id?: string
+          metadata?: Json
+          next_send_at?: string | null
+          sequence_id: string
+          source?: string | null
+          status?: string
+          subscriber_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_step_order?: number
+          enrolled_at?: string
+          id?: string
+          metadata?: Json
+          next_send_at?: string | null
+          sequence_id?: string
+          source?: string | null
+          status?: string
+          subscriber_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nurture_enrollments_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "nurture_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nurture_enrollments_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "email_subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nurture_sends: {
+        Row: {
+          clicked_at: string | null
+          created_at: string
+          enrollment_id: string
+          error: string | null
+          id: string
+          metadata: Json
+          opened_at: string | null
+          provider_message_id: string | null
+          sent_at: string | null
+          sequence_id: string
+          status: string
+          step_id: string | null
+          subject: string | null
+          subscriber_id: string
+          user_id: string
+        }
+        Insert: {
+          clicked_at?: string | null
+          created_at?: string
+          enrollment_id: string
+          error?: string | null
+          id?: string
+          metadata?: Json
+          opened_at?: string | null
+          provider_message_id?: string | null
+          sent_at?: string | null
+          sequence_id: string
+          status?: string
+          step_id?: string | null
+          subject?: string | null
+          subscriber_id: string
+          user_id: string
+        }
+        Update: {
+          clicked_at?: string | null
+          created_at?: string
+          enrollment_id?: string
+          error?: string | null
+          id?: string
+          metadata?: Json
+          opened_at?: string | null
+          provider_message_id?: string | null
+          sent_at?: string | null
+          sequence_id?: string
+          status?: string
+          step_id?: string | null
+          subject?: string | null
+          subscriber_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nurture_sends_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "nurture_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nurture_sends_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "nurture_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nurture_sends_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "nurture_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nurture_sends_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "email_subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nurture_sequences: {
+        Row: {
+          app_id: string | null
+          created_at: string
+          description: string | null
+          from_email: string | null
+          from_name: string | null
+          id: string
+          is_active: boolean
+          metadata: Json
+          name: string
+          reply_to: string | null
+          trigger_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_id?: string | null
+          created_at?: string
+          description?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name: string
+          reply_to?: string | null
+          trigger_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string | null
+          created_at?: string
+          description?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name?: string
+          reply_to?: string | null
+          trigger_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nurture_sequences_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nurture_steps: {
+        Row: {
+          body_html: string | null
+          body_text: string | null
+          created_at: string
+          delay_hours: number
+          id: string
+          is_active: boolean
+          metadata: Json
+          sequence_id: string
+          step_order: number
+          step_type: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          delay_hours?: number
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          sequence_id: string
+          step_order: number
+          step_type?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          delay_hours?: number
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          sequence_id?: string
+          step_order?: number
+          step_type?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nurture_steps_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "nurture_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       opportunities: {
         Row: {
@@ -3265,6 +3592,10 @@ export type Database = {
           landing_template: string
           name: string
         }[]
+      }
+      unsubscribe_by_token: {
+        Args: { _reason?: string; _token: string }
+        Returns: Json
       }
     }
     Enums: {
