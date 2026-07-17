@@ -37,6 +37,8 @@ import Inbox from "./pages/Inbox";
 import Review from "./pages/Review";
 import Meetings from "./pages/Meetings";
 import Proposals from "./pages/Proposals";
+import Nurture from "./pages/Nurture";
+import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
