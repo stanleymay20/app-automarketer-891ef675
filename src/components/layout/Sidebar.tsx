@@ -13,6 +13,7 @@ import {
   Landmark,
   Settings,
   Bell,
+  Mail,
   Send,
   LogOut,
   ChevronDown,
