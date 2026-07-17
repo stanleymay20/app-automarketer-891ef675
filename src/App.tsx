@@ -37,6 +37,8 @@ import Inbox from "./pages/Inbox";
 import Review from "./pages/Review";
 import Meetings from "./pages/Meetings";
 import Proposals from "./pages/Proposals";
+import Nurture from "./pages/Nurture";
+import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -96,6 +98,8 @@ function AppRoutes() {
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/settings/autopilot" element={<ProtectedRoute><AutopilotSettings /></ProtectedRoute>} />
       <Route path="/settings/dawn-autopilot" element={<ProtectedRoute><DawnAutopilotSettings /></ProtectedRoute>} />
+      <Route path="/nurture" element={<ProtectedRoute><Nurture /></ProtectedRoute>} />
+      <Route path="/unsubscribe" element={<Unsubscribe />} />
       <Route path="/lp/:slug" element={<LandingPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
