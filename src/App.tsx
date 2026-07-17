@@ -98,6 +98,8 @@ function AppRoutes() {
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/settings/autopilot" element={<ProtectedRoute><AutopilotSettings /></ProtectedRoute>} />
       <Route path="/settings/dawn-autopilot" element={<ProtectedRoute><DawnAutopilotSettings /></ProtectedRoute>} />
+      <Route path="/nurture" element={<ProtectedRoute><Nurture /></ProtectedRoute>} />
+      <Route path="/unsubscribe" element={<Unsubscribe />} />
       <Route path="/lp/:slug" element={<LandingPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
