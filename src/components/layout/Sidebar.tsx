@@ -72,6 +72,7 @@ const SECTIONS: NavSection[] = [
       { icon: CalendarClock, label: "Meetings", path: "/meetings" },
       { icon: ScrollText, label: "Proposals", path: "/proposals" },
       { icon: Inbox, label: "Inbox", path: "/inbox" },
+      { icon: Mail, label: "Nurture", path: "/nurture" },
       { icon: Megaphone, label: "Distribution", path: "/distribution" },
     ],
   },
