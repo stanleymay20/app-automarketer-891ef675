@@ -80,6 +80,35 @@ export default function Auth() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const email = form.getValues("email");
+    const parsed = z.string().email().safeParse(email);
+    if (!parsed.success) {
+      toast({
+        title: "Enter your email first",
+        description: "Type the email address for your account, then click again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setIsLoading(false);
+
+    if (error) {
+      toast({ title: "Could not send reset email", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({
+      title: "Reset email sent",
+      description: "Check your inbox for a link to set a new password.",
+    });
+  };
+
   const handleSignUp = async (values: AuthFormValues) => {
     setIsLoading(true);
     const { error } = await signUp(values.email, values.password);
