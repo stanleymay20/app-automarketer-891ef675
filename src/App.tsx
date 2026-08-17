@@ -22,6 +22,8 @@ import Auth from "./pages/Auth";
 import OAuthCallback from "./pages/OAuthCallback";
 import Revenue from "./pages/Revenue";
 import Funding from "./pages/Funding";
+import Investors from "./pages/Investors";
+import FirstClient from "./pages/FirstClient";
 import Audience from "./pages/Audience";
 import LandingPage from "./pages/LandingPage";
 import AppLanding from "./pages/AppLanding";
@@ -73,28 +75,30 @@ function AppRoutes() {
       <Route path="/oauth/callback" element={<OAuthCallback />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/today" element={<ProtectedRoute><Today /></ProtectedRoute>} />
-       <Route path="/create" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
-       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-       <Route path="/apps" element={<ProtectedRoute><Apps /></ProtectedRoute>} />
-       <Route path="/apps/:id/landing" element={<ProtectedRoute><AppLanding /></ProtectedRoute>} />
-       <Route path="/content" element={<ProtectedRoute><Content /></ProtectedRoute>} />
-       <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
-       <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-       <Route path="/weekly-reports" element={<ProtectedRoute><WeeklyReports /></ProtectedRoute>} />
-       <Route path="/intelligence" element={<ProtectedRoute><Intelligence /></ProtectedRoute>} />
-       <Route path="/revenue" element={<ProtectedRoute><Revenue /></ProtectedRoute>} />
-       <Route path="/audience" element={<ProtectedRoute><Audience /></ProtectedRoute>} />
-       <Route path="/market-intelligence" element={<ProtectedRoute><MarketIntelligence /></ProtectedRoute>} />
-       <Route path="/prospects" element={<ProtectedRoute><Prospects /></ProtectedRoute>} />
+      <Route path="/first-client" element={<ProtectedRoute><FirstClient /></ProtectedRoute>} />
+      <Route path="/create" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />
+      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+      <Route path="/apps" element={<ProtectedRoute><Apps /></ProtectedRoute>} />
+      <Route path="/apps/:id/landing" element={<ProtectedRoute><AppLanding /></ProtectedRoute>} />
+      <Route path="/content" element={<ProtectedRoute><Content /></ProtectedRoute>} />
+      <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+      <Route path="/weekly-reports" element={<ProtectedRoute><WeeklyReports /></ProtectedRoute>} />
+      <Route path="/intelligence" element={<ProtectedRoute><Intelligence /></ProtectedRoute>} />
+      <Route path="/revenue" element={<ProtectedRoute><Revenue /></ProtectedRoute>} />
+      <Route path="/audience" element={<ProtectedRoute><Audience /></ProtectedRoute>} />
+      <Route path="/market-intelligence" element={<ProtectedRoute><MarketIntelligence /></ProtectedRoute>} />
+      <Route path="/prospects" element={<ProtectedRoute><Prospects /></ProtectedRoute>} />
       <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
       <Route path="/review" element={<ProtectedRoute><Review /></ProtectedRoute>} />
       <Route path="/meetings" element={<ProtectedRoute><Meetings /></ProtectedRoute>} />
       <Route path="/proposals" element={<ProtectedRoute><Proposals /></ProtectedRoute>} />
-       <Route path="/distribution" element={<ProtectedRoute><Distribution /></ProtectedRoute>} />
-       <Route path="/orchestrator" element={<ProtectedRoute><Orchestrator /></ProtectedRoute>} />
-       <Route path="/campaigns/quantivis-loi" element={<ProtectedRoute><QuantivisLoiCampaign /></ProtectedRoute>} />
-       <Route path="/content-intelligence" element={<ProtectedRoute><ContentIntelligence /></ProtectedRoute>} />
-       <Route path="/funding" element={<ProtectedRoute><Funding /></ProtectedRoute>} />
+      <Route path="/distribution" element={<ProtectedRoute><Distribution /></ProtectedRoute>} />
+      <Route path="/orchestrator" element={<ProtectedRoute><Orchestrator /></ProtectedRoute>} />
+      <Route path="/campaigns/quantivis-loi" element={<ProtectedRoute><QuantivisLoiCampaign /></ProtectedRoute>} />
+      <Route path="/content-intelligence" element={<ProtectedRoute><ContentIntelligence /></ProtectedRoute>} />
+      <Route path="/funding" element={<ProtectedRoute><Funding /></ProtectedRoute>} />
+      <Route path="/funding/investors" element={<ProtectedRoute><Investors /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/settings/autopilot" element={<ProtectedRoute><AutopilotSettings /></ProtectedRoute>} />
       <Route path="/settings/dawn-autopilot" element={<ProtectedRoute><DawnAutopilotSettings /></ProtectedRoute>} />
