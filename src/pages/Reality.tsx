@@ -26,7 +26,7 @@ function MetricCard({ label, value, sub }: { label: string; value: React.ReactNo
 
 export default function Reality() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { data, isLoading, refetch, isFetching } = useRealitySnapshot();
+  const { data, isLoading, error, refetch, isFetching } = useRealitySnapshot();
   const failures = usePublishFailures();
   const funnelTest = useFunnelTest();
 
@@ -51,6 +51,24 @@ export default function Reality() {
               </Button>
             </div>
           </div>
+
+          {error && (
+            <Card className="border-destructive/40">
+              <CardContent className="flex items-start gap-3 p-4">
+                <AlertCircle className="mt-0.5 h-4 w-4 text-destructive" />
+                <div className="text-sm">
+                  <div className="font-medium">Couldn't load your reality snapshot</div>
+                  <p className="text-muted-foreground">
+                    {(error as Error).message?.includes("sign in")
+                      ? "Your session expired. Sign in again to load this dashboard."
+                      : (error as Error).message}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+
 
 
 
