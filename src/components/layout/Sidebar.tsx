@@ -23,6 +23,7 @@ import {
   Lightbulb,
   BarChart3,
   DollarSign,
+  TrendingUp,
   X,
   Zap,
   Inbox,
@@ -47,6 +48,7 @@ const SECTIONS: NavSection[] = [
     label: "Growth OS",
     items: [
       { icon: Zap, label: "Today", path: "/today" },
+      { icon: Target, label: "First Client", path: "/first-client" },
       { icon: Gauge, label: "Home", path: "/dashboard" },
       { icon: Gauge, label: "Reality", path: "/" },
       { icon: DollarSign, label: "Revenue", path: "/revenue" },
@@ -79,7 +81,10 @@ const SECTIONS: NavSection[] = [
   },
   {
     label: "Funding",
-    items: [{ icon: Landmark, label: "Grants", path: "/funding" }],
+    items: [
+      { icon: Landmark, label: "Grants", path: "/funding" },
+      { icon: TrendingUp, label: "Investors", path: "/funding/investors" },
+    ],
   },
 ];
 
