@@ -12,14 +12,22 @@ export type RealitySnapshot = {
   health_breakdown: { engines_active: number; recent_activity: number; attribution: number; adoption: number };
 };
 
+async function requireSession() {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) throw new Error("Please sign in to view this data.");
+  return data.session;
+}
+
 export function useRealitySnapshot() {
   return useQuery({
     queryKey: ["reality-snapshot"],
     queryFn: async (): Promise<RealitySnapshot> => {
+      await requireSession();
       const { data, error } = await supabase.functions.invoke("reality-snapshot");
       if (error) throw error;
       return data as RealitySnapshot;
     },
+    retry: false,
     refetchOnWindowFocus: false,
     staleTime: 30_000,
   });
@@ -31,10 +39,12 @@ export function usePublishFailures() {
   return useQuery({
     queryKey: ["publish-failures"],
     queryFn: async (): Promise<{ total_failed: number; groups: FailureGroup[] }> => {
+      await requireSession();
       const { data, error } = await supabase.functions.invoke("analyze-publish-failures");
       if (error) throw error;
       return data;
     },
+    retry: false,
     refetchOnWindowFocus: false,
   });
 }
