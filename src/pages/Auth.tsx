@@ -29,9 +29,32 @@ type AuthFormValues = z.infer<typeof authSchema>;
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+
+    if (result.error) {
+      setIsGoogleLoading(false);
+      toast({
+        title: "Google sign-in failed",
+        description: result.error.message ?? "Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (result.redirected) return;
+
+    setIsGoogleLoading(false);
+    navigate("/dashboard");
+  };
 
   const form = useForm<AuthFormValues>({
     resolver: zodResolver(authSchema),
