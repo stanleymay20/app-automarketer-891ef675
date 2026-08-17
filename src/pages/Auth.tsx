@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.png";
 
 const authSchema = z.object({
@@ -78,6 +79,35 @@ export default function Auth() {
     } else {
       navigate("/dashboard");
     }
+  };
+
+  const handleForgotPassword = async () => {
+    const email = form.getValues("email");
+    const parsed = z.string().email().safeParse(email);
+    if (!parsed.success) {
+      toast({
+        title: "Enter your email first",
+        description: "Type the email address for your account, then click again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setIsLoading(false);
+
+    if (error) {
+      toast({ title: "Could not send reset email", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({
+      title: "Reset email sent",
+      description: "Check your inbox for a link to set a new password.",
+    });
   };
 
   const handleSignUp = async (values: AuthFormValues) => {
@@ -177,6 +207,14 @@ export default function Auth() {
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "Signing in..." : "Sign In"}
                   </Button>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={isLoading}
+                    className="w-full text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                  >
+                    Forgot password?
+                  </button>
                 </form>
               </Form>
             </TabsContent>

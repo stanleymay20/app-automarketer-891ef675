@@ -19,6 +19,7 @@ import Settings from "./pages/Settings";
 import AutopilotSettings from "./pages/AutopilotSettings";
 import DawnAutopilotSettings from "./pages/DawnAutopilotSettings";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import OAuthCallback from "./pages/OAuthCallback";
 import Revenue from "./pages/Revenue";
 import Funding from "./pages/Funding";
@@ -71,6 +72,7 @@ function AppRoutes() {
       <Route path="/" element={user ? <ProtectedRoute><Reality /></ProtectedRoute> : <Landing />} />
       <Route path="/index" element={<Navigate to="/" replace />} />
       <Route path="/auth" element={user ? <Navigate to="/" replace /> : <Auth />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route path="/oauth/callback" element={<OAuthCallback />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
