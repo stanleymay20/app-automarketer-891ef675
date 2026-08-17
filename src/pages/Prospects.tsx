@@ -202,6 +202,10 @@ function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onCl
   const enroll = useEnrollSequence();
   const { data: history } = useProspectActions(prospect?.id);
   const [channel, setChannel] = useState<string>("linkedin_message");
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewDrafts, setReviewDrafts] = useState<
+    { subject: string; body: string; day: number; editing: boolean }[]
+  >([]);
   const { toast } = useToast();
 
   if (!prospect) return null;
@@ -245,11 +249,6 @@ function OutreachDialog({ prospect, onClose }: { prospect: Prospect | null; onCl
       approved: true,
     });
   };
-
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [reviewDrafts, setReviewDrafts] = useState<
-    { subject: string; body: string; day: number; editing: boolean }[]
-  >([]);
 
   const openSequenceReview = () => {
     if (!prospect.contact_email) return toast({ title: "No contact email on file" });
