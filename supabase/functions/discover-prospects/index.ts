@@ -204,12 +204,22 @@ Deno.serve(async (req) => {
               : "any size";
           const industryText = industry ? ` in the ${industry} industry` : "";
           const segmentText = segment ? ` (segment: "${segment}")` : "";
+          const geo = geography ?? (icp?.geography as string | null) ?? null;
+          const geoText = geo ? ` headquartered in ${geo}` : "";
+          const geoRule = geo
+            ? `\n\nGEOGRAPHY CONSTRAINT: Only include organizations headquartered in ${geo}. Exclude companies outside this region even if otherwise a good fit.`
+            : "";
+          const triggers: string[] = Array.isArray(icp?.buying_triggers) ? icp.buying_triggers : [];
+          const triggerText = triggers.length
+            ? `\n\nPRIORITIZE organizations showing at least one credible, recent buying trigger: ${triggers.join(", ")}. State the trigger and its source in the evidence.`
+            : "";
           const sizeHardRule = range && range.max < 500
             ? `\n\nHARD CONSTRAINT: Return ONLY companies with ${sizeText}${industryText}. Do NOT return well-known enterprise companies, Fortune 500s, or companies with 1000+ employees, EVEN IF they are a strong thematic fit. Explicitly forbidden examples: Siemens, SAP, Salesforce, Microsoft, Google, Atlassian, McKinsey, Deloitte, Accenture, IBM, Oracle, Adobe, HubSpot, Shopify, Stripe, and similar large public companies. If you cannot find 5 verifiable real companies in this exact size range, RETURN FEWER rather than substituting a larger company.`
             : "";
 
-          const brief = `5 real companies${industryText} of size ${sizeText} that would buy this product${segmentText}.${sizeHardRule}`;
-          const searchQuery = `Real, specific small/mid-market companies${industryText}, ${sizeText}${segmentText}, that would buy a product like: ${productName} (${productDesc}). Audience: ${audience}. Avoid Fortune 500 and well-known enterprises. Return each with name, URL, employee count if known, one-line fit reason.`;
+          const brief = `5 real companies${industryText}${geoText} of size ${sizeText} that would buy this product${segmentText}.${sizeHardRule}${geoRule}${triggerText}`;
+          const searchQuery = `Real, specific small/mid-market companies${industryText}${geoText}, ${sizeText}${segmentText}, that would buy a product like: ${productName} (${productDesc}). Audience: ${audience}.${triggers.length ? ` Prefer companies with recent evidence of: ${triggers.join(", ")}.` : ""} Avoid Fortune 500 and well-known enterprises. Return each with name, URL, headquarters country, employee count if known, the specific recent buying signal with its source, and a named operations/strategy leader if publicly listed.`;
+
           tasks.push({
             category,
             brief,
