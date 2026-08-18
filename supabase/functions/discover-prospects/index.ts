@@ -82,18 +82,28 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const body = await req.json().catch(() => ({}));
     const appId: string | undefined = body.app_id;
+    const icpIds: string[] = Array.isArray(body.icp_ids) ? body.icp_ids.filter((x: any) => typeof x === "string") : [];
+    const geography: string | null = typeof body.geography === "string" && body.geography.trim() ? body.geography.trim() : null;
     const requestedCats: Category[] = (body.categories && body.categories.length ? body.categories : CATEGORIES).filter((c: string) => CATEGORIES.includes(c as Category));
+
+    // Scope intelligence to the selected app when one is given, so a multi-app
+    // account never discovers prospects against another product's ICPs.
+    const scoped = (q: any) => (appId ? q.eq("app_id", appId) : q);
 
     // Pull intelligence context
     const [appRes, icpsRes, personasRes, journeyRes, anglesRes, learnRes, convRes] = await Promise.all([
       appId ? admin.from("apps").select("*").eq("id", appId).maybeSingle() : Promise.resolve({ data: null } as any),
-      admin.from("icps").select("*").eq("user_id", user.id).limit(10),
-      admin.from("personas").select("*").eq("user_id", user.id).limit(10),
+      (icpIds.length
+        ? admin.from("icps").select("*").eq("user_id", user.id).in("id", icpIds)
+        : scoped(admin.from("icps").select("*").eq("user_id", user.id))
+      ).limit(10),
+      scoped(admin.from("personas").select("*").eq("user_id", user.id)).limit(10),
       admin.from("journey_stages").select("*").eq("user_id", user.id).limit(10),
       admin.from("messaging_angles").select("*").eq("user_id", user.id).limit(10),
       admin.from("learning_insights").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(10),
       admin.from("conversions").select("amount, source_content_id").eq("user_id", user.id).limit(50),
     ]);
+
 
     const app = appRes.data;
     const context = {
