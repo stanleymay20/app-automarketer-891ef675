@@ -43,6 +43,84 @@ END $$;
 CREATE INDEX IF NOT EXISTS prospects_user_sales_readiness_idx
   ON public.prospects (user_id, sales_readiness_score DESC NULLS LAST);
 
+-- Derive sales readiness from stored qualification evidence. A prestigious or
+-- high-fit account cannot look sales-ready when there is no named buyer or
+-- usable contact path.
+CREATE OR REPLACE FUNCTION public.prospects_compute_sales_readiness()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  v_fit integer := LEAST(100, GREATEST(0, COALESCE(NEW.fit_score, 0)));
+  v_reach integer := LEAST(100, GREATEST(0, COALESCE(NEW.reachability_score, 0)));
+  v_buy integer := LEAST(100, GREATEST(0, COALESCE(NEW.buying_signal_score, 0)));
+  v_urg integer := LEAST(100, GREATEST(0, COALESCE(NEW.urgency_score, 0)));
+  v_conf integer := LEAST(100, GREATEST(0, COALESCE(NEW.opportunity_confidence, 0)));
+  v_has_named_dm boolean := false;
+  v_has_contact_path boolean := false;
+  v_intent integer;
+  v_ready integer;
+BEGIN
+  v_has_named_dm :=
+    (NULLIF(btrim(COALESCE(NEW.contact_name, '')), '') IS NOT NULL
+     AND NULLIF(btrim(COALESCE(NEW.contact_role, '')), '') IS NOT NULL)
+    OR (jsonb_typeof(COALESCE(NEW.decision_makers, '[]'::jsonb)) = 'array'
+        AND jsonb_array_length(COALESCE(NEW.decision_makers, '[]'::jsonb)) > 0);
+
+  v_has_contact_path :=
+    NULLIF(btrim(COALESCE(NEW.contact_email, '')), '') IS NOT NULL
+    OR NULLIF(btrim(COALESCE(NEW.contact_linkedin, '')), '') IS NOT NULL;
+
+  -- Reachability from AI is evidence, but contactability is a stricter sales gate.
+  IF NOT v_has_named_dm THEN v_reach := LEAST(v_reach, 45); END IF;
+  IF NOT v_has_contact_path THEN v_reach := LEAST(v_reach, 35); END IF;
+  IF NOT v_has_named_dm AND NOT v_has_contact_path THEN v_reach := LEAST(v_reach, 20); END IF;
+
+  v_intent := ROUND(0.65 * v_buy + 0.35 * v_urg);
+  v_ready := ROUND(0.35 * v_fit + 0.30 * v_reach + 0.25 * v_intent + 0.10 * v_conf);
+
+  -- Hard caps keep cold account names from masquerading as qualified opportunities.
+  IF NOT v_has_named_dm THEN v_ready := LEAST(v_ready, 49); END IF;
+  IF NOT v_has_contact_path THEN v_ready := LEAST(v_ready, 39); END IF;
+  IF v_buy = 0 AND v_urg = 0 THEN v_ready := LEAST(v_ready, 55); END IF;
+
+  NEW.account_fit_score := v_fit;
+  NEW.contactability_score := v_reach;
+  NEW.buying_intent_score := v_intent;
+  NEW.sales_readiness_score := LEAST(100, GREATEST(0, v_ready));
+  NEW.sales_readiness_confidence := LEAST(100, GREATEST(0,
+    ROUND(0.35 * COALESCE(NEW.icp_fit_confidence, 0)
+        + 0.30 * COALESCE(NEW.reachability_confidence, 0)
+        + 0.25 * COALESCE(NEW.buying_signal_confidence, 0)
+        + 0.10 * COALESCE(NEW.urgency_confidence, 0))
+  ));
+  NEW.sales_readiness_reasoning := format(
+    'Account fit %s; contactability %s; buying intent %s; named decision-maker %s; usable contact path %s.',
+    v_fit, v_reach, v_intent,
+    CASE WHEN v_has_named_dm THEN 'yes' ELSE 'no' END,
+    CASE WHEN v_has_contact_path THEN 'yes' ELSE 'no' END
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_prospects_compute_sales_readiness ON public.prospects;
+CREATE TRIGGER trg_prospects_compute_sales_readiness
+  BEFORE INSERT OR UPDATE OF
+    fit_score, reachability_score, buying_signal_score, urgency_score,
+    opportunity_confidence, icp_fit_confidence, reachability_confidence,
+    buying_signal_confidence, urgency_confidence,
+    contact_name, contact_role, contact_email, contact_linkedin, decision_makers
+  ON public.prospects
+  FOR EACH ROW EXECUTE FUNCTION public.prospects_compute_sales_readiness();
+
+-- Backfill readiness for existing rows without changing funnel stages or outreach state.
+UPDATE public.prospects
+SET fit_score = fit_score
+WHERE sales_readiness_score IS NULL;
+
 -- 3) Approval-first controls. These are additive and default safe for new rows.
 ALTER TABLE public.autopilot_settings
   ADD COLUMN IF NOT EXISTS min_reachability integer NOT NULL DEFAULT 70,
