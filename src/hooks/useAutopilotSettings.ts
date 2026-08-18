@@ -14,6 +14,12 @@ export interface AutopilotSettings {
   max_auto_value: number;
   allowed_segments: Segment[];
   approval_required_segments: Segment[];
+  min_reachability: number;
+  require_named_decision_maker: boolean;
+  first_touch_requires_review: boolean;
+  discovery_daily_cap: number;
+  outreach_draft_daily_cap: number;
+  autonomous_send_cap: number;
   sent_today: number;
   sent_today_date: string;
   created_at: string;
@@ -24,10 +30,16 @@ export const DEFAULT_AUTOPILOT: Omit<AutopilotSettings, "id" | "user_id" | "crea
   enabled: false,
   min_opportunity_score: 80,
   min_confidence: 60,
-  daily_send_cap: 20,
+  daily_send_cap: 0,
   max_auto_value: 5000,
   allowed_segments: ["hot"],
-  approval_required_segments: ["warm"],
+  approval_required_segments: ["hot", "warm", "nurture"],
+  min_reachability: 70,
+  require_named_decision_maker: true,
+  first_touch_requires_review: true,
+  discovery_daily_cap: 5,
+  outreach_draft_daily_cap: 3,
+  autonomous_send_cap: 0,
 };
 
 export const HARD_DAILY_CAP = 50;
@@ -57,16 +69,27 @@ export function useUpdateAutopilotSettings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
 
-      // Enforce hard daily cap regardless of input
       const safePatch = { ...patch };
       if (typeof safePatch.daily_send_cap === "number") {
         safePatch.daily_send_cap = Math.min(HARD_DAILY_CAP, Math.max(0, Math.round(safePatch.daily_send_cap)));
+      }
+      if (typeof safePatch.autonomous_send_cap === "number") {
+        safePatch.autonomous_send_cap = Math.min(HARD_DAILY_CAP, Math.max(0, Math.round(safePatch.autonomous_send_cap)));
+      }
+      if (typeof safePatch.discovery_daily_cap === "number") {
+        safePatch.discovery_daily_cap = Math.min(100, Math.max(0, Math.round(safePatch.discovery_daily_cap)));
+      }
+      if (typeof safePatch.outreach_draft_daily_cap === "number") {
+        safePatch.outreach_draft_daily_cap = Math.min(100, Math.max(0, Math.round(safePatch.outreach_draft_daily_cap)));
       }
       if (typeof safePatch.min_opportunity_score === "number") {
         safePatch.min_opportunity_score = Math.min(100, Math.max(0, Math.round(safePatch.min_opportunity_score)));
       }
       if (typeof safePatch.min_confidence === "number") {
         safePatch.min_confidence = Math.min(100, Math.max(0, Math.round(safePatch.min_confidence)));
+      }
+      if (typeof safePatch.min_reachability === "number") {
+        safePatch.min_reachability = Math.min(100, Math.max(0, Math.round(safePatch.min_reachability)));
       }
       if (typeof safePatch.max_auto_value === "number") {
         safePatch.max_auto_value = Math.max(0, safePatch.max_auto_value);
