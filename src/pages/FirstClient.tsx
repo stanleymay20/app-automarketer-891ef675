@@ -46,6 +46,22 @@ function stageTone(stage: string) {
   return "bg-secondary/10 text-secondary-foreground border-secondary/25";
 }
 
+function readiness(p: Prospect) {
+  return Number((p as Prospect & { sales_readiness_score?: number | null }).sales_readiness_score ?? 0);
+}
+
+function accountFit(p: Prospect) {
+  return Number((p as Prospect & { account_fit_score?: number | null }).account_fit_score ?? p.fit_score ?? 0);
+}
+
+function contactability(p: Prospect) {
+  return Number((p as Prospect & { contactability_score?: number | null }).contactability_score ?? p.reachability_score ?? 0);
+}
+
+function buyingIntent(p: Prospect) {
+  return Number((p as Prospect & { buying_intent_score?: number | null }).buying_intent_score ?? 0);
+}
+
 export default function FirstClient() {
   const { data: apps = [] } = useApps();
   const [appId, setAppId] = useState<string>("");
@@ -74,15 +90,18 @@ export default function FirstClient() {
   const topTargets = useMemo(
     () => customers
       .filter((p) => !["won", "lost"].includes(p.stage))
-      .sort((a, b) => b.prospect_score - a.prospect_score)
+      .sort((a, b) => {
+        const readinessDelta = readiness(b) - readiness(a);
+        return readinessDelta !== 0 ? readinessDelta : b.prospect_score - a.prospect_score;
+      })
       .slice(0, 8),
     [customers],
   );
 
   const sprintSteps = [
     { done: apps.length > 0, title: "Choose one offer", text: "Focus the sprint on one product or service and one clear buyer." },
-    { done: metrics.targets >= 20, title: "Build a 20–30 account list", text: "Use customer discovery to find ICP-matched companies, then keep only evidence-backed fits." },
-    { done: metrics.qualified >= 10, title: "Qualify the best 10", text: "Prioritize fit, urgency, reachability and a real decision-maker contact." },
+    { done: metrics.targets >= 20, title: "Build a 20-account list", text: "Use customer discovery to find ICP-matched mid-market companies, then keep only evidence-backed fits." },
+    { done: metrics.qualified >= 10, title: "Qualify the best 10", text: "Prioritize sales readiness: fit, buying intent, reachability and a named decision-maker contact." },
     { done: metrics.contacted >= 5, title: "Contact 5–10 per day", text: "Use personalized drafts and approval mode. Do not mass-send generic messages." },
     { done: metrics.replied > 0, title: "Convert replies into calls", text: "Reply quickly, diagnose the problem and ask for a short discovery call." },
     { done: metrics.proposals > 0, title: "Send a small paid pilot", text: "Make the first purchase easy: narrow scope, measurable outcome and a clear price." },
@@ -100,7 +119,7 @@ export default function FirstClient() {
             </div>
             <h1 className="font-display text-2xl font-bold sm:text-3xl">Turn the Growth OS into your first paying client</h1>
             <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              One focused funnel from ICP-matched account discovery to outreach, meeting, proposal and Won. Research and scoring can automate; high-impact outreach stays reviewable.
+              One focused funnel from ICP-matched account discovery to outreach, meeting, proposal and Won. Accounts are ranked by sales readiness, so company prestige cannot hide missing buyers, contact paths or buying signals.
             </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -177,7 +196,7 @@ export default function FirstClient() {
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <div>
                 <CardTitle>Best accounts to work now</CardTitle>
-                <CardDescription>Highest-scoring active customer prospects for the selected offering.</CardDescription>
+                <CardDescription>Ranked by sales readiness first, then legacy prospect score.</CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild><Link to="/prospects">All prospects <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
             </CardHeader>
@@ -201,13 +220,16 @@ export default function FirstClient() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold">{p.name}</span>
                           <Badge variant="outline" className={stageTone(p.stage)}>{p.stage}</Badge>
-                          <Badge variant="secondary">score {p.prospect_score}</Badge>
+                          <Badge variant="secondary">readiness {readiness(p)}</Badge>
+                          <Badge variant="outline">fit {accountFit(p)}</Badge>
                         </div>
                         <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{p.evidence_summary || p.match_reason || p.description || "No evidence summary yet."}</p>
                         <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
                           {p.contact_name && <span>{p.contact_name}{p.contact_role ? ` · ${p.contact_role}` : ""}</span>}
                           {p.contact_email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> email ready</span>}
                           {p.industry && <span>{p.industry}</span>}
+                          <span>contactability {contactability(p)}</span>
+                          <span>intent {buyingIntent(p)}</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
@@ -224,7 +246,7 @@ export default function FirstClient() {
 
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardContent className="p-4 text-sm">
-            <strong>First-client guardrail:</strong> automate research, enrichment, scoring, reminders and draft generation aggressively; keep cold outreach approval-first until the message, audience and deliverability are proven. The goal is relevant conversations, not maximum send volume.
+            <strong>First-client guardrail:</strong> automate research, enrichment, scoring, reminders and draft generation aggressively; keep cold outreach approval-first until the message, audience and deliverability are proven. A high account-fit score alone is not permission to send.
           </CardContent>
         </Card>
       </div>
