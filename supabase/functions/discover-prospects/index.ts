@@ -377,6 +377,16 @@ Rules:
             source_confidence: conf,
             match_reason: p.match_reason ?? null,
             evidence_summary: p.evidence_summary ?? null,
+            company_name: String(p.company ?? p.name ?? "").slice(0, 200) || null,
+            employee_count: typeof p.estimated_employees === "number" ? p.estimated_employees : null,
+            contact_name: typeof p.decision_maker_name === "string" && p.decision_maker_name.trim() ? p.decision_maker_name.trim().slice(0, 120) : null,
+            contact_role: typeof p.decision_maker_role === "string" && p.decision_maker_role.trim() ? p.decision_maker_role.trim().slice(0, 120) : null,
+            contact_linkedin: typeof p.decision_maker_linkedin === "string" && /^https?:\/\/(www\.)?linkedin\.com\//i.test(p.decision_maker_linkedin) ? p.decision_maker_linkedin : null,
+            buying_signal_score: typeof p.buying_signal_score === "number" ? clamp(p.buying_signal_score) : 0,
+            buying_signal_reasoning: typeof p.buying_signal === "string" && p.buying_signal.trim() ? p.buying_signal.trim() : null,
+            buying_signal_evidence: typeof p.buying_signal_source === "string" && /^https?:\/\//i.test(p.buying_signal_source)
+              ? [p.buying_signal_source]
+              : [],
             signals,
             evidence: {
               context_size: context.conversions,
@@ -384,6 +394,9 @@ Rules:
               run_id: runId,
               icp_label,
               size_range: sizeRange,
+              geography: geography ?? null,
+              buying_signal: p.buying_signal ?? null,
+              buying_signal_source: p.buying_signal_source ?? null,
               estimated_employees: typeof p.estimated_employees === "number" ? p.estimated_employees : null,
             },
             source: search ? "perplexity+ai" : "ai_only",
@@ -391,6 +404,7 @@ Rules:
             stage,
             status,
             discovery_run_id: runId,
+
           })
           .select()
           .single();
