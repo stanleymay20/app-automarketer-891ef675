@@ -82,18 +82,28 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const body = await req.json().catch(() => ({}));
     const appId: string | undefined = body.app_id;
+    const icpIds: string[] = Array.isArray(body.icp_ids) ? body.icp_ids.filter((x: any) => typeof x === "string") : [];
+    const geography: string | null = typeof body.geography === "string" && body.geography.trim() ? body.geography.trim() : null;
     const requestedCats: Category[] = (body.categories && body.categories.length ? body.categories : CATEGORIES).filter((c: string) => CATEGORIES.includes(c as Category));
+
+    // Scope intelligence to the selected app when one is given, so a multi-app
+    // account never discovers prospects against another product's ICPs.
+    const scoped = (q: any) => (appId ? q.eq("app_id", appId) : q);
 
     // Pull intelligence context
     const [appRes, icpsRes, personasRes, journeyRes, anglesRes, learnRes, convRes] = await Promise.all([
       appId ? admin.from("apps").select("*").eq("id", appId).maybeSingle() : Promise.resolve({ data: null } as any),
-      admin.from("icps").select("*").eq("user_id", user.id).limit(10),
-      admin.from("personas").select("*").eq("user_id", user.id).limit(10),
+      (icpIds.length
+        ? admin.from("icps").select("*").eq("user_id", user.id).in("id", icpIds)
+        : scoped(admin.from("icps").select("*").eq("user_id", user.id))
+      ).limit(10),
+      scoped(admin.from("personas").select("*").eq("user_id", user.id)).limit(10),
       admin.from("journey_stages").select("*").eq("user_id", user.id).limit(10),
       admin.from("messaging_angles").select("*").eq("user_id", user.id).limit(10),
       admin.from("learning_insights").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(10),
       admin.from("conversions").select("amount, source_content_id").eq("user_id", user.id).limit(50),
     ]);
+
 
     const app = appRes.data;
     const context = {
@@ -194,12 +204,22 @@ Deno.serve(async (req) => {
               : "any size";
           const industryText = industry ? ` in the ${industry} industry` : "";
           const segmentText = segment ? ` (segment: "${segment}")` : "";
+          const geo = geography ?? (icp?.geography as string | null) ?? null;
+          const geoText = geo ? ` headquartered in ${geo}` : "";
+          const geoRule = geo
+            ? `\n\nGEOGRAPHY CONSTRAINT: Only include organizations headquartered in ${geo}. Exclude companies outside this region even if otherwise a good fit.`
+            : "";
+          const triggers: string[] = Array.isArray(icp?.buying_triggers) ? icp.buying_triggers : [];
+          const triggerText = triggers.length
+            ? `\n\nPRIORITIZE organizations showing at least one credible, recent buying trigger: ${triggers.join(", ")}. State the trigger and its source in the evidence.`
+            : "";
           const sizeHardRule = range && range.max < 500
             ? `\n\nHARD CONSTRAINT: Return ONLY companies with ${sizeText}${industryText}. Do NOT return well-known enterprise companies, Fortune 500s, or companies with 1000+ employees, EVEN IF they are a strong thematic fit. Explicitly forbidden examples: Siemens, SAP, Salesforce, Microsoft, Google, Atlassian, McKinsey, Deloitte, Accenture, IBM, Oracle, Adobe, HubSpot, Shopify, Stripe, and similar large public companies. If you cannot find 5 verifiable real companies in this exact size range, RETURN FEWER rather than substituting a larger company.`
             : "";
 
-          const brief = `5 real companies${industryText} of size ${sizeText} that would buy this product${segmentText}.${sizeHardRule}`;
-          const searchQuery = `Real, specific small/mid-market companies${industryText}, ${sizeText}${segmentText}, that would buy a product like: ${productName} (${productDesc}). Audience: ${audience}. Avoid Fortune 500 and well-known enterprises. Return each with name, URL, employee count if known, one-line fit reason.`;
+          const brief = `5 real companies${industryText}${geoText} of size ${sizeText} that would buy this product${segmentText}.${sizeHardRule}${geoRule}${triggerText}`;
+          const searchQuery = `Real, specific small/mid-market companies${industryText}${geoText}, ${sizeText}${segmentText}, that would buy a product like: ${productName} (${productDesc}). Audience: ${audience}.${triggers.length ? ` Prefer companies with recent evidence of: ${triggers.join(", ")}.` : ""} Avoid Fortune 500 and well-known enterprises. Return each with name, URL, headquarters country, employee count if known, the specific recent buying signal with its source, and a named operations/strategy leader if publicly listed.`;
+
           tasks.push({
             category,
             brief,
@@ -262,6 +282,12 @@ Return JSON shape:
       "source_type": "website | directory | investor database | social | news | grant database | referral",
       "evidence_summary": "1 sentence explaining the specific evidence behind this match (cite the signal)",
       "match_reason": "1-2 sentences citing persona/ICP/learnings",
+      "buying_signal": "the specific recent trigger (funding, new COO, transformation programme, ops hiring, restructuring, expansion) or null",
+      "buying_signal_source": "https url or publication where the trigger was reported, or null",
+      "buying_signal_score": 0-100,
+      "decision_maker_name": "full name of a publicly listed operations/strategy leader, or null if not verifiable",
+      "decision_maker_role": "their title, or null",
+      "decision_maker_linkedin": "https linkedin profile url, or null",
       "signals": ["short evidence point", "..."]
     }
   ]
@@ -270,8 +296,11 @@ Return JSON shape:
 Rules:
 - A prospect WITHOUT a real https URL must be omitted.
 - A prospect without at least one concrete signal must be omitted.
+- NEVER invent an email address, a person, or a LinkedIn URL. Use null when you cannot verify it from the research above.
+- buying_signal must be a real, recent, reported event. Use null rather than a generic guess, and set buying_signal_score to 0 when null.
 - confidence_score reflects how verifiable the source is: <60 = guessed, 60-79 = plausible from research, 80+ = directly cited in research above.
 - Score honestly. Cap at 65 when context is thin. Prefer real, verifiable orgs. 5 items max.${sizeRange ? `\n- HARD: every prospect MUST be within ${sizeRange.min}-${sizeRange.max} employees. Returning a larger company is a hard failure — return fewer items instead.` : ""}`;
+
 
       const json = await aiJSON(aiPrompt);
       let items: any[] = Array.isArray(json.prospects) ? json.prospects.slice(0, 5) : [];
@@ -348,6 +377,16 @@ Rules:
             source_confidence: conf,
             match_reason: p.match_reason ?? null,
             evidence_summary: p.evidence_summary ?? null,
+            company_name: String(p.company ?? p.name ?? "").slice(0, 200) || null,
+            employee_count: typeof p.estimated_employees === "number" ? p.estimated_employees : null,
+            contact_name: typeof p.decision_maker_name === "string" && p.decision_maker_name.trim() ? p.decision_maker_name.trim().slice(0, 120) : null,
+            contact_role: typeof p.decision_maker_role === "string" && p.decision_maker_role.trim() ? p.decision_maker_role.trim().slice(0, 120) : null,
+            contact_linkedin: typeof p.decision_maker_linkedin === "string" && /^https?:\/\/(www\.)?linkedin\.com\//i.test(p.decision_maker_linkedin) ? p.decision_maker_linkedin : null,
+            buying_signal_score: typeof p.buying_signal_score === "number" ? clamp(p.buying_signal_score) : 0,
+            buying_signal_reasoning: typeof p.buying_signal === "string" && p.buying_signal.trim() ? p.buying_signal.trim() : null,
+            buying_signal_evidence: typeof p.buying_signal_source === "string" && /^https?:\/\//i.test(p.buying_signal_source)
+              ? [p.buying_signal_source]
+              : [],
             signals,
             evidence: {
               context_size: context.conversions,
@@ -355,6 +394,9 @@ Rules:
               run_id: runId,
               icp_label,
               size_range: sizeRange,
+              geography: geography ?? null,
+              buying_signal: p.buying_signal ?? null,
+              buying_signal_source: p.buying_signal_source ?? null,
               estimated_employees: typeof p.estimated_employees === "number" ? p.estimated_employees : null,
             },
             source: search ? "perplexity+ai" : "ai_only",
@@ -362,6 +404,7 @@ Rules:
             stage,
             status,
             discovery_run_id: runId,
+
           })
           .select()
           .single();

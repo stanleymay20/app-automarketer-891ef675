@@ -353,15 +353,21 @@ export type Database = {
         Row: {
           allowed_segments: string[]
           approval_required_segments: string[]
+          autonomous_send_cap: number
           created_at: string
           daily_send_cap: number
+          discovery_daily_cap: number
           enabled: boolean
+          first_touch_requires_review: boolean
           gmail_last_synced_at: string | null
           gmail_reply_sync_enabled: boolean
           id: string
           max_auto_value: number
           min_confidence: number
           min_opportunity_score: number
+          min_reachability: number
+          outreach_draft_daily_cap: number
+          require_named_decision_maker: boolean
           sent_today: number
           sent_today_date: string
           updated_at: string
@@ -370,15 +376,21 @@ export type Database = {
         Insert: {
           allowed_segments?: string[]
           approval_required_segments?: string[]
+          autonomous_send_cap?: number
           created_at?: string
           daily_send_cap?: number
+          discovery_daily_cap?: number
           enabled?: boolean
+          first_touch_requires_review?: boolean
           gmail_last_synced_at?: string | null
           gmail_reply_sync_enabled?: boolean
           id?: string
           max_auto_value?: number
           min_confidence?: number
           min_opportunity_score?: number
+          min_reachability?: number
+          outreach_draft_daily_cap?: number
+          require_named_decision_maker?: boolean
           sent_today?: number
           sent_today_date?: string
           updated_at?: string
@@ -387,15 +399,21 @@ export type Database = {
         Update: {
           allowed_segments?: string[]
           approval_required_segments?: string[]
+          autonomous_send_cap?: number
           created_at?: string
           daily_send_cap?: number
+          discovery_daily_cap?: number
           enabled?: boolean
+          first_touch_requires_review?: boolean
           gmail_last_synced_at?: string | null
           gmail_reply_sync_enabled?: boolean
           id?: string
           max_auto_value?: number
           min_confidence?: number
           min_opportunity_score?: number
+          min_reachability?: number
+          outreach_draft_daily_cap?: number
+          require_named_decision_maker?: boolean
           sent_today?: number
           sent_today_date?: string
           updated_at?: string
@@ -1540,11 +1558,14 @@ export type Database = {
       icps: {
         Row: {
           app_id: string
+          buying_triggers: string[]
           company_size: string | null
           created_at: string
+          geography: string | null
           id: string
           industry: string | null
           notes: string | null
+          pain_points: string[]
           segment: string
           signals: string[] | null
           sort_order: number
@@ -1553,11 +1574,14 @@ export type Database = {
         }
         Insert: {
           app_id: string
+          buying_triggers?: string[]
           company_size?: string | null
           created_at?: string
+          geography?: string | null
           id?: string
           industry?: string | null
           notes?: string | null
+          pain_points?: string[]
           segment: string
           signals?: string[] | null
           sort_order?: number
@@ -1566,11 +1590,14 @@ export type Database = {
         }
         Update: {
           app_id?: string
+          buying_triggers?: string[]
           company_size?: string | null
           created_at?: string
+          geography?: string | null
           id?: string
           industry?: string | null
           notes?: string | null
+          pain_points?: string[]
           segment?: string
           signals?: string[] | null
           sort_order?: number
@@ -3083,10 +3110,12 @@ export type Database = {
       }
       prospects: {
         Row: {
+          account_fit_score: number | null
           actual_value: number | null
           app_id: string | null
           autopilot_routed_at: string | null
           autopilot_state: string | null
+          buying_intent_score: number | null
           buying_signal_confidence: number | null
           buying_signal_evidence: Json
           buying_signal_reasoning: string | null
@@ -3098,6 +3127,7 @@ export type Database = {
           contact_linkedin: string | null
           contact_name: string | null
           contact_role: string | null
+          contactability_score: number | null
           contacted_at: string | null
           converted_at: string | null
           created_at: string
@@ -3157,6 +3187,9 @@ export type Database = {
           review_queued_at: string | null
           review_reason: string | null
           review_status: string | null
+          sales_readiness_confidence: number | null
+          sales_readiness_reasoning: string | null
+          sales_readiness_score: number | null
           saved_at: string | null
           segment: string | null
           segment_reason: string | null
@@ -3181,10 +3214,12 @@ export type Database = {
           won_at: string | null
         }
         Insert: {
+          account_fit_score?: number | null
           actual_value?: number | null
           app_id?: string | null
           autopilot_routed_at?: string | null
           autopilot_state?: string | null
+          buying_intent_score?: number | null
           buying_signal_confidence?: number | null
           buying_signal_evidence?: Json
           buying_signal_reasoning?: string | null
@@ -3196,6 +3231,7 @@ export type Database = {
           contact_linkedin?: string | null
           contact_name?: string | null
           contact_role?: string | null
+          contactability_score?: number | null
           contacted_at?: string | null
           converted_at?: string | null
           created_at?: string
@@ -3255,6 +3291,9 @@ export type Database = {
           review_queued_at?: string | null
           review_reason?: string | null
           review_status?: string | null
+          sales_readiness_confidence?: number | null
+          sales_readiness_reasoning?: string | null
+          sales_readiness_score?: number | null
           saved_at?: string | null
           segment?: string | null
           segment_reason?: string | null
@@ -3279,10 +3318,12 @@ export type Database = {
           won_at?: string | null
         }
         Update: {
+          account_fit_score?: number | null
           actual_value?: number | null
           app_id?: string | null
           autopilot_routed_at?: string | null
           autopilot_state?: string | null
+          buying_intent_score?: number | null
           buying_signal_confidence?: number | null
           buying_signal_evidence?: Json
           buying_signal_reasoning?: string | null
@@ -3294,6 +3335,7 @@ export type Database = {
           contact_linkedin?: string | null
           contact_name?: string | null
           contact_role?: string | null
+          contactability_score?: number | null
           contacted_at?: string | null
           converted_at?: string | null
           created_at?: string
@@ -3353,6 +3395,9 @@ export type Database = {
           review_queued_at?: string | null
           review_reason?: string | null
           review_status?: string | null
+          sales_readiness_confidence?: number | null
+          sales_readiness_reasoning?: string | null
+          sales_readiness_score?: number | null
           saved_at?: string | null
           segment?: string | null
           segment_reason?: string | null
