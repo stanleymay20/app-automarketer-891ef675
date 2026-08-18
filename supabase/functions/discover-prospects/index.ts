@@ -282,6 +282,12 @@ Return JSON shape:
       "source_type": "website | directory | investor database | social | news | grant database | referral",
       "evidence_summary": "1 sentence explaining the specific evidence behind this match (cite the signal)",
       "match_reason": "1-2 sentences citing persona/ICP/learnings",
+      "buying_signal": "the specific recent trigger (funding, new COO, transformation programme, ops hiring, restructuring, expansion) or null",
+      "buying_signal_source": "https url or publication where the trigger was reported, or null",
+      "buying_signal_score": 0-100,
+      "decision_maker_name": "full name of a publicly listed operations/strategy leader, or null if not verifiable",
+      "decision_maker_role": "their title, or null",
+      "decision_maker_linkedin": "https linkedin profile url, or null",
       "signals": ["short evidence point", "..."]
     }
   ]
@@ -290,8 +296,11 @@ Return JSON shape:
 Rules:
 - A prospect WITHOUT a real https URL must be omitted.
 - A prospect without at least one concrete signal must be omitted.
+- NEVER invent an email address, a person, or a LinkedIn URL. Use null when you cannot verify it from the research above.
+- buying_signal must be a real, recent, reported event. Use null rather than a generic guess, and set buying_signal_score to 0 when null.
 - confidence_score reflects how verifiable the source is: <60 = guessed, 60-79 = plausible from research, 80+ = directly cited in research above.
 - Score honestly. Cap at 65 when context is thin. Prefer real, verifiable orgs. 5 items max.${sizeRange ? `\n- HARD: every prospect MUST be within ${sizeRange.min}-${sizeRange.max} employees. Returning a larger company is a hard failure — return fewer items instead.` : ""}`;
+
 
       const json = await aiJSON(aiPrompt);
       let items: any[] = Array.isArray(json.prospects) ? json.prospects.slice(0, 5) : [];
