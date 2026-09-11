@@ -92,7 +92,7 @@ jobs:
         run: |
           changed="$(git diff --name-only | sort)"
           printf '%s\n' "$changed"
-          expected=$(printf '%s\n' bun.lockb package-lock.json package.json | sort)
+          expected=$(printf '%s\n' bun.lock package-lock.json package.json | sort)
           test "$changed" = "$expected"
 
       - name: Commit validated dependency graph
@@ -100,6 +100,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json bun.lockb
+          git add package.json package-lock.json bun.lock
           git commit -m "Harden AutoMarketer dependency graph [skip ci]"
           git push origin HEAD:main
