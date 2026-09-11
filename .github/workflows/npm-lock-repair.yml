@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: automarketer-npm-lock-repair
+  cancel-in-progress: true
+
 jobs:
   repair:
     runs-on: ubuntu-latest
