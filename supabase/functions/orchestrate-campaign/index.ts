@@ -72,6 +72,27 @@ Deno.serve(async (req) => {
       });
     }
 
+    let bookProfile: any = null;
+    let bookDistribution: any[] = [];
+    const isBook = app.offering_type === "Book";
+    if (isBook) {
+      const [{ data: profile }, { data: targets }] = await Promise.all([
+        supabase
+          .from("book_marketing_profiles")
+          .select("*")
+          .eq("app_id", app.id)
+          .maybeSingle(),
+        supabase
+          .from("distribution_targets")
+          .select("target_type,platform,name,url,audience_fit,conversion_potential,distribution_score,rationale")
+          .eq("app_id", app.id)
+          .order("distribution_score", { ascending: false })
+          .limit(8),
+      ]);
+      bookProfile = profile ?? null;
+      bookDistribution = targets ?? [];
+    }
+
     let persona: any = null;
     if (body.persona_id) {
       const { data } = await supabase.from("personas").select("*").eq("id", body.persona_id).maybeSingle();
@@ -95,7 +116,27 @@ TARGET AUDIENCE: ${app.target_audience ?? ""}
 PERSONA: ${personaSummary}
 JOURNEY STAGE: ${body.journey_stage ?? "consideration"}
 MESSAGING ANGLE: ${body.messaging_angle ?? "default"} ${angle?.hook_template ? `(hook: ${angle.hook_template})` : ""}
-GOAL: ${body.goal ?? "drive qualified leads"}
+GOAL: ${body.goal ?? (isBook ? "drive qualified readers and measurable book conversions" : "drive qualified leads")}
+${isBook ? `
+BOOK MODE:
+TITLE: ${bookProfile?.title ?? app.name}
+SUBTITLE: ${bookProfile?.subtitle ?? ""}
+AUTHOR: ${bookProfile?.author_name ?? ""}
+PAPERBACK ISBN: ${bookProfile?.isbn_paperback ?? ""}
+HARDCOVER ISBN: ${bookProfile?.isbn_hardcover ?? ""}
+EPUB ISBN: ${bookProfile?.isbn_epub ?? ""}
+ASIN: ${bookProfile?.asin ?? ""}
+PRIMARY CONVERSION URL: ${bookProfile?.primary_conversion_url ?? app.website_url ?? ""}
+GENRES: ${(bookProfile?.genres ?? []).join(", ")}
+THEMES: ${(bookProfile?.themes ?? []).join(", ")}
+PRIORITY MARKETS: ${(bookProfile?.markets ?? []).join(", ")}
+LAUNCH STAGE: ${bookProfile?.launch_stage ?? "unknown"}
+LAUNCH DATE: ${bookProfile?.launch_date ?? ""}
+REVIEW GOAL: ${bookProfile?.review_goal ?? ""}
+SALES GOAL: ${bookProfile?.sales_goal ?? ""}
+TOP READER-DISTRIBUTION TARGETS:
+${bookDistribution.map((t: any) => `- ${t.name} (${t.target_type}${t.platform ? `/${t.platform}` : ""}) score=${t.distribution_score}; fit=${t.audience_fit}; conversion=${t.conversion_potential}; ${t.rationale ?? ""}`).join("\n")}
+` : ""}
 `.trim();
 
     // ── 1. Create campaign row ────────────────────────────────
@@ -119,8 +160,20 @@ GOAL: ${body.goal ?? "drive qualified leads"}
     if (campErr || !campaign) throw new Error(`campaign insert failed: ${campErr?.message}`);
 
     // ── 2. AI generates the whole campaign payload in ONE call ─
-    const system = `You generate complete marketing campaigns. Return strict JSON. Write like a human, not an AI. No buzzwords (e.g. "revolutionize", "unleash", "leverage synergies"). Be specific, concrete, evidence-based.`;
+    const system = isBook
+      ? `You generate evidence-grounded book marketing campaigns. Return strict JSON. Write like a thoughtful human publicist, not an AI. Be specific and concrete. Never invent endorsements, reviews, awards, bestseller status, sales figures, rankings, media coverage, author credentials or reader reactions. Never promise sales. Never recommend fake, purchased, reciprocal or incentivized reviews. Never advise bypassing community rules, mass-spamming groups, deceptive scarcity or undisclosed paid promotion. Treat group membership/follower counts as potential audience only, never actual reach. External promoter assets must use {{TRACKED_URL}} rather than an untracked retailer link. Preserve the book's actual themes and audience; do not sensationalize them.`
+      : `You generate complete marketing campaigns. Return strict JSON. Write like a human, not an AI. No buzzwords (e.g. "revolutionize", "unleash", "leverage synergies"). Be specific, concrete, evidence-based.`;
     const prompt = `${context}
+
+${isBook ? `BOOK-CAMPAIGN REQUIREMENTS:
+- Build for qualified readers, not vanity reach.
+- Use the strongest relevant distribution targets above, but do not assume access to them.
+- Calls to action should use {{TRACKED_URL}} for external/promoter distribution.
+- Reviewer outreach asks for consideration or an honest review; never asks for a positive review.
+- Community copy must tell the operator to check and follow each community's promotion rules.
+- Separate organic/community work from paid-ad hypotheses.
+- Any performance target is a goal, not a prediction.
+` : ""}
 
 Return JSON with this exact shape:
 {
@@ -139,14 +192,39 @@ Return JSON with this exact shape:
   "distribution_strategy": { "summary": string, "channels": [ { "name": string, "why": string, "first_action": string } ] }, // 3-5 channels
   "creative_brief": { "big_idea": string, "tone": string, "do": [string,string,string], "dont": [string,string], "key_message": string, "proof_points": [string,string,string] },
   "image_brief": { "concept": string, "style": string, "composition": string, "color_palette": [string,string,string], "subject": string, "negative": string, "ai_prompt": string }, // ai_prompt must be ready to paste into an image model
-  "video_brief": { "concept": string, "format": string, "duration_seconds": number, "hook": string, "beats": [string,string,string,string], "cta": string, "captions_style": string }
+  "video_brief": { "concept": string, "format": string, "duration_seconds": number, "hook": string, "beats": [string,string,string,string], "cta": string, "captions_style": string },
+  "book_campaign": {
+    "reader_hooks": [string,string,string,string,string],
+    "community_posts": [
+      { "platform": string, "audience": string, "body": string, "operator_note": string }
+    ],
+    "reviewer_outreach": [
+      { "audience": string, "subject": string, "body": string }
+    ],
+    "book_club_pitch": { "subject": string, "body": string, "discussion_hook": string },
+    "promoter_brief": {
+      "objective": string,
+      "priority_audiences": [string,string,string],
+      "priority_markets": [string,string,string],
+      "required_tracking": string,
+      "required_evidence": [string,string,string],
+      "prohibited_tactics": [string,string,string,string]
+    },
+    "launch_plan": [
+      { "phase": string, "timing": string, "objective": string, "actions": [string,string,string] }
+    ]
+  }
 }
 
 Critical:
 - Posts must read like the persona's peer wrote them.
 - Landing variants must be DIFFERENT angles (e.g. v1 = ROI proof, v2 = founder story).
 - Image brief ai_prompt: editorial/McKinsey style, no people unless persona demands it, brand colors implied.
-- No placeholder text. Everything specific to THIS app and persona.`;
+- No placeholder text except the required literal {{TRACKED_URL}} token in external book-promotion copy.
+- Everything must be specific to THIS offering and persona.
+${isBook ? `- book_campaign is REQUIRED and must be fully populated.
+- Do not invent book facts not present in the context.
+- Community and reviewer messaging must protect review integrity and community rules.` : "- For non-book offerings, book_campaign may be an empty object."}`;
 
     const payload = await callAI(system, prompt, true);
 
@@ -206,6 +284,21 @@ Critical:
     pushAsset("creative_brief", "Creative brief", payload.creative_brief?.big_idea ?? "", payload.creative_brief ?? {});
     pushAsset("image_brief", "Image brief", payload.image_brief?.concept ?? "", payload.image_brief ?? {});
     pushAsset("video_brief", "Video brief", payload.video_brief?.concept ?? "", payload.video_brief ?? {});
+
+    if (isBook && payload.book_campaign) {
+      (payload.book_campaign.community_posts ?? []).forEach((p: any, i: number) => {
+        pushAsset("book_community_post", `Book community post ${i + 1}: ${p.platform ?? "community"}`, p.body ?? "", p);
+      });
+      (payload.book_campaign.reviewer_outreach ?? []).forEach((p: any, i: number) => {
+        pushAsset("book_reviewer_outreach", `Reviewer outreach ${i + 1}: ${p.audience ?? "reviewer"}`, p.body ?? "", p);
+      });
+      pushAsset("book_club_pitch", "Book-club pitch", payload.book_campaign.book_club_pitch?.body ?? "", payload.book_campaign.book_club_pitch ?? {});
+      pushAsset("book_promoter_brief", "External promoter brief", payload.book_campaign.promoter_brief?.objective ?? "", payload.book_campaign.promoter_brief ?? {});
+      pushAsset("book_launch_plan", "Book launch / relaunch plan", "", {
+        reader_hooks: payload.book_campaign.reader_hooks ?? [],
+        launch_plan: payload.book_campaign.launch_plan ?? [],
+      });
+    }
 
     if (assets.length > 0) {
       await supabase.from("campaign_assets").insert(assets);

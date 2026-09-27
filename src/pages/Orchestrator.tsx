@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useApps } from "@/hooks/useApps";
 import { usePersonas, useJourneyStages, useMessagingAngles } from "@/hooks/useAudience";
 import { useOrchestrateCampaign, useCampaignAssets, useRecentCampaigns } from "@/hooks/useOrchestrator";
-import { Rocket, Sparkles, FileText, Image as ImageIcon, Video, Mail, Globe, Megaphone, Lightbulb } from "lucide-react";
+import { Rocket, Sparkles, FileText, Image as ImageIcon, Video, Mail, Globe, Megaphone, Lightbulb, BookOpen } from "lucide-react";
 
 const ASSET_GROUPS: { key: string; label: string; icon: any; types: string[] }[] = [
   { key: "posts", label: "Posts", icon: FileText, types: ["linkedin_post", "x_post"] },
@@ -18,6 +19,8 @@ const ASSET_GROUPS: { key: string; label: string; icon: any; types: string[] }[]
   { key: "briefs", label: "Creative briefs", icon: Lightbulb, types: ["creative_brief", "image_brief", "video_brief"] },
   { key: "outreach", label: "Outreach", icon: Mail, types: ["outreach_email", "lead_magnet"] },
   { key: "distribution", label: "Distribution", icon: Megaphone, types: ["distribution_plan"] },
+  { key: "book_outreach", label: "Book outreach", icon: Mail, types: ["book_community_post", "book_reviewer_outreach", "book_club_pitch"] },
+  { key: "book_launch", label: "Book launch", icon: BookOpen, types: ["book_promoter_brief", "book_launch_plan"] },
 ];
 
 const ICON_FOR_TYPE: Record<string, any> = {
@@ -25,11 +28,19 @@ const ICON_FOR_TYPE: Record<string, any> = {
   landing_variant: Globe, lead_magnet: Mail, outreach_email: Mail,
   distribution_plan: Megaphone,
   creative_brief: Lightbulb, image_brief: ImageIcon, video_brief: Video,
+  book_community_post: Megaphone, book_reviewer_outreach: Mail, book_club_pitch: BookOpen,
+  book_promoter_brief: BookOpen, book_launch_plan: Rocket,
 };
 
 export default function Orchestrator() {
   const { data: apps = [] } = useApps();
+  const [searchParams] = useSearchParams();
   const [appId, setAppId] = useState<string>("");
+  useEffect(() => {
+    const requested = searchParams.get("app");
+    if (requested && apps.some((a) => a.id === requested)) setAppId(requested);
+  }, [apps, searchParams]);
+  const selectedApp = apps.find((a) => a.id === appId);
   const { data: personas = [] } = usePersonas(appId);
   const { data: stages = [] } = useJourneyStages(appId);
   const { data: angles = [] } = useMessagingAngles(appId);
@@ -80,7 +91,11 @@ export default function Orchestrator() {
         <Card>
           <CardHeader>
             <CardTitle>New campaign</CardTitle>
-            <CardDescription>Pick the inputs. Everything else is generated.</CardDescription>
+            <CardDescription>
+              {selectedApp?.offering_type === "Book"
+                ? "Book Mode uses the book profile and reader-distribution intelligence to produce a controlled launch/relaunch pack."
+                : "Pick the inputs. Everything else is generated."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -117,6 +132,12 @@ export default function Orchestrator() {
               <Label>Goal (optional)</Label>
               <Input value={goal} onChange={e => setGoal(e.target.value)} placeholder="e.g. 25 qualified demos from COO persona in healthcare" />
             </div>
+            {selectedApp?.offering_type === "Book" && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+                <Badge className="mr-2">Book Mode</Badge>
+                Review integrity, community rules and tracked external CTAs are enforced in the generation brief.
+              </div>
+            )}
             <Button onClick={launch} disabled={!appId || orchestrate.isPending} className="gap-2">
               <Sparkles className="h-4 w-4" />
               {orchestrate.isPending ? "Generating campaign…" : "Launch campaign"}
