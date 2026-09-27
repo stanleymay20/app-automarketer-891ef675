@@ -95,6 +95,7 @@ export default function BookMarketing() {
     engagements_reported: "",
     conversions_reported: "",
     revenue_reported: "",
+    revenue_currency: "EUR",
     posted_at: "",
     notes: "",
   });
@@ -154,6 +155,42 @@ export default function BookMarketing() {
   }, [data]);
 
   const promoterName = (id: string | null) => data?.promoters.find((p) => p.id === id)?.name ?? "Direct / internal";
+
+  const promoterScorecards = useMemo(() => {
+    return (data?.promoters ?? []).map((promoter) => {
+      const assignments = (data?.assignments ?? []).filter((a) => a.promoter_id === promoter.id);
+      const assignmentIds = new Set(assignments.map((a) => a.id));
+      const placements = (data?.placements ?? []).filter((p) => assignmentIds.has(p.assignment_id));
+      const clicks = (data?.clicks ?? []).filter((click) => assignmentIds.has(click.assignment_id)).length;
+      const claimedAudience = assignments.reduce((sum, a) => sum + Number(a.audience_size_claimed ?? 0), 0);
+      const reportedImpressions = placements.reduce((sum, p) => sum + Number(p.impressions_reported ?? 0), 0);
+      const reportedConversions = placements.reduce((sum, p) => sum + Number(p.conversions_reported ?? 0), 0);
+      const currencies = new Set<string>();
+      if (promoter.fee != null) currencies.add(promoter.fee_currency || "EUR");
+      assignments.forEach((a) => { if (a.budget != null) currencies.add(a.budget_currency || "EUR"); });
+      placements.forEach((p) => { if (Number(p.revenue_reported ?? 0) > 0) currencies.add(p.revenue_currency || "EUR"); });
+      const currency = currencies.size === 1 ? Array.from(currencies)[0] : "MIXED";
+      const cost = Number(promoter.fee ?? 0) + assignments.reduce((sum, a) => sum + Number(a.budget ?? 0), 0);
+      const reportedRevenue = placements.reduce((sum, p) => sum + Number(p.revenue_reported ?? 0), 0);
+      const evidenceRows = placements.filter((p) => p.post_url || p.evidence_url).length;
+      const evidenceCompleteness = assignments.length ? Math.min(100, Math.round((evidenceRows / assignments.length) * 100)) : 0;
+      return {
+        promoter,
+        assignments: assignments.length,
+        clicks,
+        claimedAudience,
+        reportedImpressions,
+        reportedConversions,
+        cost,
+        reportedRevenue,
+        currency,
+        evidenceCompleteness,
+        cpc: clicks > 0 && currency !== "MIXED" ? cost / clicks : null,
+        cpa: reportedConversions > 0 && currency !== "MIXED" ? cost / reportedConversions : null,
+        reportedRoas: cost > 0 && currency !== "MIXED" ? reportedRevenue / cost : null,
+      };
+    }).sort((a, b) => b.clicks - a.clicks || b.reportedConversions - a.reportedConversions);
+  }, [data]);
 
   const onSaveProfile = () => {
     if (!appId || !profileForm.title.trim()) return;
@@ -419,6 +456,59 @@ export default function BookMarketing() {
           </Card>
         )}
 
+        {promoterScorecards.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Promoter scorecard</CardTitle>
+              <CardDescription>Tracked clicks are independent. Impressions, conversions and revenue remain explicitly reported until reconciled with platform or retailer evidence.</CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-x-auto p-0">
+              <table className="w-full min-w-[980px] text-sm">
+                <thead className="border-b text-xs text-muted-foreground">
+                  <tr>
+                    <th className="p-3 text-left">Promoter</th>
+                    <th className="p-3 text-right">Assignments</th>
+                    <th className="p-3 text-right">Claimed audience</th>
+                    <th className="p-3 text-right">Reported impressions</th>
+                    <th className="p-3 text-right">Tracked clicks</th>
+                    <th className="p-3 text-right">Reported conv.</th>
+                    <th className="p-3 text-right">Evidence</th>
+                    <th className="p-3 text-right">Cost / click</th>
+                    <th className="p-3 text-right">Reported CPA</th>
+                    <th className="p-3 text-right">Reported ROAS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {promoterScorecards.map((s) => (
+                    <tr key={s.promoter.id} className="border-b last:border-0">
+                      <td className="p-3">
+                        <div className="font-medium">{s.promoter.name}</div>
+                        <div className="text-[11px] text-muted-foreground">{s.promoter.status}</div>
+                      </td>
+                      <td className="p-3 text-right tabular-nums">{s.assignments}</td>
+                      <td className="p-3 text-right tabular-nums">{s.claimedAudience.toLocaleString()}</td>
+                      <td className="p-3 text-right tabular-nums">{s.reportedImpressions.toLocaleString()}</td>
+                      <td className="p-3 text-right font-semibold tabular-nums">{s.clicks}</td>
+                      <td className="p-3 text-right tabular-nums">{s.reportedConversions}</td>
+                      <td className="p-3 text-right">
+                        <Badge variant={s.evidenceCompleteness >= 100 ? "default" : s.evidenceCompleteness > 0 ? "secondary" : "outline"}>
+                          {s.evidenceCompleteness}%
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-right tabular-nums">{s.cpc == null ? "—" : `${s.currency} ${s.cpc.toFixed(2)}`}</td>
+                      <td className="p-3 text-right tabular-nums">{s.cpa == null ? "—" : `${s.currency} ${s.cpa.toFixed(2)}`}</td>
+                      <td className="p-3 text-right tabular-nums">{s.reportedRoas == null ? "—" : `${s.reportedRoas.toFixed(2)}×`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="border-t p-3 text-[11px] text-muted-foreground">
+                Cost combines the promoter fee plus assignment budgets. ROAS and CPA are labelled reported because retailer/platform conversion evidence may not yet be independently reconciled. Mixed-currency campaigns are not ratio-scored.
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-primary/30">
           <CardHeader>
             <CardTitle>Measurement rule</CardTitle>
@@ -434,7 +524,7 @@ export default function BookMarketing() {
             <div><Label>Post URL</Label><Input value={placementForm.post_url} onChange={(e) => setPlacementForm((p) => ({ ...p, post_url: e.target.value }))} /></div>
             <div><Label>Evidence URL / screenshot link</Label><Input value={placementForm.evidence_url} onChange={(e) => setPlacementForm((p) => ({ ...p, evidence_url: e.target.value }))} /></div>
             <div className="grid grid-cols-2 gap-3"><div><Label>Reported impressions</Label><Input type="number" min="0" value={placementForm.impressions_reported} onChange={(e) => setPlacementForm((p) => ({ ...p, impressions_reported: e.target.value }))} /></div><div><Label>Reported engagements</Label><Input type="number" min="0" value={placementForm.engagements_reported} onChange={(e) => setPlacementForm((p) => ({ ...p, engagements_reported: e.target.value }))} /></div></div>
-            <div className="grid grid-cols-2 gap-3"><div><Label>Reported conversions</Label><Input type="number" min="0" value={placementForm.conversions_reported} onChange={(e) => setPlacementForm((p) => ({ ...p, conversions_reported: e.target.value }))} /></div><div><Label>Reported revenue</Label><Input type="number" min="0" value={placementForm.revenue_reported} onChange={(e) => setPlacementForm((p) => ({ ...p, revenue_reported: e.target.value }))} /></div></div>
+            <div className="grid grid-cols-3 gap-3"><div><Label>Reported conversions</Label><Input type="number" min="0" value={placementForm.conversions_reported} onChange={(e) => setPlacementForm((p) => ({ ...p, conversions_reported: e.target.value }))} /></div><div><Label>Reported revenue</Label><Input type="number" min="0" value={placementForm.revenue_reported} onChange={(e) => setPlacementForm((p) => ({ ...p, revenue_reported: e.target.value }))} /></div><div><Label>Currency</Label><Input value={placementForm.revenue_currency} onChange={(e) => setPlacementForm((p) => ({ ...p, revenue_currency: e.target.value.toUpperCase() }))} /></div></div>
             <div><Label>Posted at</Label><Input type="datetime-local" value={placementForm.posted_at} onChange={(e) => setPlacementForm((p) => ({ ...p, posted_at: e.target.value }))} /></div>
             <div><Label>Notes</Label><Textarea value={placementForm.notes} onChange={(e) => setPlacementForm((p) => ({ ...p, notes: e.target.value }))} /></div>
             <Button disabled={!placementTarget || addPlacement.isPending} onClick={() => placementTarget && addPlacement.mutate({
@@ -445,6 +535,7 @@ export default function BookMarketing() {
               engagements_reported: placementForm.engagements_reported ? Number(placementForm.engagements_reported) : null,
               conversions_reported: placementForm.conversions_reported ? Number(placementForm.conversions_reported) : 0,
               revenue_reported: placementForm.revenue_reported ? Number(placementForm.revenue_reported) : 0,
+              revenue_currency: placementForm.revenue_currency || "EUR",
               posted_at: placementForm.posted_at ? new Date(placementForm.posted_at).toISOString() : null,
               notes: placementForm.notes || null,
             }, { onSuccess: () => setPlacementTarget(null) })}>Save evidence</Button>
