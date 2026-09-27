@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useApps } from "@/hooks/useApps";
+import { useDiscoverDistribution, useDistribution } from "@/hooks/useDistribution";
 import {
   useAddBookPromoter,
   useAddPromotionPlacement,
@@ -43,6 +44,8 @@ export default function BookMarketing() {
   const addPromoter = useAddBookPromoter();
   const addAssignment = useCreatePromotionAssignment();
   const addPlacement = useAddPromotionPlacement();
+  const discoverDistribution = useDiscoverDistribution();
+  const { data: distribution } = useDistribution(appId || undefined);
 
   const [profileForm, setProfileForm] = useState({
     title: "",
@@ -198,12 +201,23 @@ export default function BookMarketing() {
             <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight"><BookOpen className="h-6 w-6" /> Book Growth OS</h1>
             <p className="text-sm text-muted-foreground">Reader acquisition, human promoters, community placements and measurable attribution — in one control surface.</p>
           </div>
-          <Select value={appId} onValueChange={setAppId}>
-            <SelectTrigger className="w-[280px]"><SelectValue placeholder="Select a book" /></SelectTrigger>
-            <SelectContent>
-              {bookApps.map((app) => <SelectItem key={app.id} value={app.id}>{app.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={!appId || !data?.profile || discoverDistribution.isPending}
+              onClick={() => discoverDistribution.mutate({ appId })}
+            >
+              {discoverDistribution.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Megaphone className="h-4 w-4" />}
+              Discover reader channels
+            </Button>
+            <Select value={appId} onValueChange={setAppId}>
+              <SelectTrigger className="w-[280px]"><SelectValue placeholder="Select a book" /></SelectTrigger>
+              <SelectContent>
+                {bookApps.map((app) => <SelectItem key={app.id} value={app.id}>{app.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
@@ -368,6 +382,35 @@ export default function BookMarketing() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {(distribution?.targets?.length ?? 0) > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Top reader-acquisition opportunities</CardTitle>
+              <CardDescription>Evidence-ranked targets from the shared Distribution Intelligence engine. Large communities do not automatically rank highly.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {distribution!.targets.slice(0, 6).map((t) => (
+                <div key={t.id} className="rounded-lg border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-medium">{t.name}</div>
+                      <div className="text-xs text-muted-foreground">{t.target_type}{t.platform ? ` · ${t.platform}` : ""}</div>
+                    </div>
+                    <Badge>{t.distribution_score}</Badge>
+                  </div>
+                  {t.rationale && <p className="mt-2 text-xs text-muted-foreground">{t.rationale}</p>}
+                  <div className="mt-3 flex gap-3 text-[11px]">
+                    <span>Fit {t.audience_fit}</span>
+                    <span>Conversion {t.conversion_potential}</span>
+                    <span>Reach {t.reach_potential}</span>
+                  </div>
+                  {t.url && <a href={t.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline">Inspect target <ExternalLink className="h-3 w-3" /></a>}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         )}
 
         <Card className="border-primary/30">
