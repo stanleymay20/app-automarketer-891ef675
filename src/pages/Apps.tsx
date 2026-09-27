@@ -74,6 +74,11 @@ export default function Apps() {
                       <DropdownMenuItem asChild>
                         <Link to={`/apps/${app.id}/landing`}>Landing Page</Link>
                       </DropdownMenuItem>
+                      {app.offering_type === "Book" && (
+                        <DropdownMenuItem asChild>
+                          <Link to="/book-marketing">Book Marketing</Link>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         className="text-destructive"
                         onClick={() => deleteApp.mutate(app.id)}
