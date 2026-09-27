@@ -41,6 +41,7 @@ import Review from "./pages/Review";
 import Meetings from "./pages/Meetings";
 import Proposals from "./pages/Proposals";
 import Nurture from "./pages/Nurture";
+import BookMarketing from "./pages/BookMarketing";
 import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
 
@@ -96,6 +97,7 @@ function AppRoutes() {
       <Route path="/meetings" element={<ProtectedRoute><Meetings /></ProtectedRoute>} />
       <Route path="/proposals" element={<ProtectedRoute><Proposals /></ProtectedRoute>} />
       <Route path="/distribution" element={<ProtectedRoute><Distribution /></ProtectedRoute>} />
+      <Route path="/book-marketing" element={<ProtectedRoute><BookMarketing /></ProtectedRoute>} />
       <Route path="/orchestrator" element={<ProtectedRoute><Orchestrator /></ProtectedRoute>} />
       <Route path="/campaigns/quantivis-loi" element={<ProtectedRoute><QuantivisLoiCampaign /></ProtectedRoute>} />
       <Route path="/content-intelligence" element={<ProtectedRoute><ContentIntelligence /></ProtectedRoute>} />
