@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -202,6 +203,11 @@ export default function BookMarketing() {
             <p className="text-sm text-muted-foreground">Reader acquisition, human promoters, community placements and measurable attribution — in one control surface.</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button asChild variant="default" className="gap-2" disabled={!appId || !data?.profile}>
+              <Link to={appId ? `/orchestrator?app=${appId}` : "/orchestrator"}>
+                <BookOpen className="h-4 w-4" /> Build launch campaign
+              </Link>
+            </Button>
             <Button
               variant="outline"
               className="gap-2"
