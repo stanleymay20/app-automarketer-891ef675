@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   CalendarClock,
   ScrollText,
+  BookOpen,
 } from "lucide-react";
 import { useReviewPendingCount } from "@/hooks/useReviewQueue";
 import { usePendingProposalsCount } from "@/hooks/useProposals";
@@ -61,6 +62,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { icon: FileText, label: "Create Post", path: "/create" },
       { icon: AppWindow, label: "Campaigns", path: "/content" },
+      { icon: BookOpen, label: "Book Marketing", path: "/book-marketing" },
       { icon: Calendar, label: "Calendar", path: "/calendar" },
       { icon: Rocket, label: "Orchestrator", path: "/orchestrator" },
       { icon: ScrollText, label: "Quantivis LOI", path: "/campaigns/quantivis-loi" },
