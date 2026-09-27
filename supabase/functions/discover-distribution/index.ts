@@ -118,8 +118,27 @@ Deno.serve(async (req) => {
     const attribution = { platformPosts, platformClicks, platformLeads, platformConvs, platformRevenue };
 
     const app = appRes.data;
+    let bookProfile: any = null;
+    if (app?.offering_type === "Book" && appId) {
+      const { data } = await admin
+        .from("book_marketing_profiles")
+        .select("title,subtitle,author_name,asin,isbn_paperback,isbn_hardcover,isbn_epub,primary_conversion_url,genres,themes,markets,launch_stage,launch_date,review_goal,sales_goal")
+        .eq("app_id", appId)
+        .maybeSingle();
+      bookProfile = data ?? null;
+    }
+
     const context = {
-      product: app ? { name: app.name, description: app.description, audience: app.target_audience, goal: app.primary_goal, website: app.website_url } : null,
+      product: app ? {
+        name: app.name,
+        description: app.description,
+        audience: app.target_audience,
+        goal: app.primary_goal,
+        goal_type: app.goal_type,
+        offering_type: app.offering_type,
+        website: app.website_url,
+      } : null,
+      book: bookProfile,
       icps: (icpsRes.data ?? []).map((i: any) => ({ segment: i.segment, industry: i.industry, size: i.company_size })),
       personas: (personasRes.data ?? []).map((p: any) => ({ title: p.title, pains: p.pains, channels: p.channels })),
       angles: (anglesRes.data ?? []).map((a: any) => a.angle_name),
@@ -127,18 +146,30 @@ Deno.serve(async (req) => {
       attribution,
     };
 
-    const briefs: Record<TargetType, string> = {
+    const genericBriefs: Record<TargetType, string> = {
       channel: "10 best owned/social/distribution channels: LinkedIn, X, Reddit, Facebook, Instagram, TikTok, YouTube, Email, Medium, Hacker News, Product Hunt, Discord, Slack communities. Pick the 6-10 most relevant for this audience.",
       community: "8 real, specific communities the persona is active in: named subreddits (r/...), Facebook groups, LinkedIn groups, Discord servers, Slack communities, forums.",
       influencer: "6 real industry creators, thought leaders, newsletter writers or podcast hosts with reach to this persona. Include handle/URL.",
       event: "6 upcoming conferences, meetups, industry events, startup events or webinars (next 6 months) where this audience attends.",
     };
 
+    const bookBriefs: Record<TargetType, string> = {
+      channel: "Find the best reader-acquisition channels for this specific book. Consider Goodreads, BookBub, The StoryGraph, Amazon/retailer merchandising surfaces, author newsletters, podcasts, YouTube/BookTube, TikTok/BookTok, Instagram/Bookstagram, Facebook, Reddit, LinkedIn where relevant, libraries, bookstores, book clubs, church/faith networks, academic/professional communities, diaspora communities and direct email. Rank by audience fit and likely conversion, not headline audience size. Do not recommend a channel merely because it is large.",
+      community: "Find 8 real, specific reader communities for this book's genres, themes, markets and audience: named Facebook groups, subreddits, LinkedIn groups, Goodreads groups, book clubs, library communities, faith communities, academic/professional groups, diaspora communities, forums or Discord/Slack groups. Prefer communities with clear relevance and legitimate promotion/recommendation rules. Avoid generic mass-promotion groups unless there is evidence of real engagement.",
+      influencer: "Find 6 real people or media outlets that could credibly put this book in front of relevant readers: book reviewers, BookTok/Bookstagram/BookTube creators, podcasters, newsletter writers, librarians, academics, pastors/faith leaders, historians, subject-matter creators or journalists as appropriate to the book. Include a real profile/channel URL and why their audience matches the book.",
+      event: "Find 6 real upcoming opportunities in the next 6 months where this book could reach qualified readers: book fairs, literary festivals, author events, library programs, book-club events, conferences, church/fellowship events, academic panels, diaspora/community events or relevant webinars. Prefer events with a plausible author/book participation path.",
+    };
+
+    const isBook = app?.offering_type === "Book";
+    const briefs = isBook ? bookBriefs : genericBriefs;
+
     const created: any[] = [];
 
     for (const type of requested) {
       const search = await perplexity(
-        `For: ${context.product?.name ?? "an AI growth platform"} — ${context.product?.description ?? ""}. Audience: ${context.product?.audience ?? "founders, marketers, operators"}. ${briefs[type]} Return each with name, URL, 1-line reason it fits.`
+        isBook
+          ? `BOOK DISTRIBUTION RESEARCH. Title: ${context.book?.title ?? context.product?.name ?? "book"}. Subtitle: ${context.book?.subtitle ?? ""}. Author: ${context.book?.author_name ?? ""}. Description: ${context.product?.description ?? ""}. Audience: ${context.product?.audience ?? ""}. Genres: ${(context.book?.genres ?? []).join(", ")}. Themes: ${(context.book?.themes ?? []).join(", ")}. Priority markets: ${(context.book?.markets ?? []).join(", ")}. Launch stage: ${context.book?.launch_stage ?? "unknown"}. TASK: ${briefs[type]} Return real names and URLs. Distinguish verified facts from estimates. Do not equate group membership with actual reach.`
+          : `For: ${context.product?.name ?? "an AI growth platform"} — ${context.product?.description ?? ""}. Audience: ${context.product?.audience ?? "founders, marketers, operators"}. ${briefs[type]} Return each with name, URL, 1-line reason it fits.`
       );
 
       const prompt = `Discover ${type}s for distribution.\n\nCONTEXT:\n${JSON.stringify(context, null, 2)}\n\nTASK: ${briefs[type]}\n\nWEB RESEARCH:\n${search || "(no live research; rely on general knowledge of real " + type + "s)"}\n\nFor each item return:\n{\n  "name": "string",\n  "platform": "lowercase platform slug if applicable (linkedin/x/reddit/discord/slack/youtube/podcast/event/email/medium/hackernews/producthunt/...) or 'other'",\n  "description": "1 sentence",\n  "url": "https url or empty",\n  "audience": "who is there",\n  "event_date": "YYYY-MM-DD or null (events only)",\n  "audience_fit": 0-100,\n  "reach_potential": 0-100,\n  "competition_level": 0-100 (higher = more saturated/competitive),\n  "cost_score": 0-100 (higher = cheaper/free),\n  "conversion_potential": 0-100,\n  "rationale": "1-2 sentences citing persona/channels/learnings/attribution",\n  "signals": ["short evidence point", "..."]\n}\n\nIf attribution shows clicks/conversions for a platform, weight conversion_potential up; if zero across the board, cap conversion_potential at 65. Return JSON: { "items": [...] } max 8 items.`;
@@ -172,7 +203,7 @@ Deno.serve(async (req) => {
           distribution_score: overall,
           rationale: it.rationale ?? null,
           signals: it.signals ?? [],
-          metadata: { has_web: !!search },
+          metadata: { has_web: !!search, discovery_mode: isBook ? "book" : "general" },
           source: search ? "perplexity+ai" : "ai_only",
         }).select().single();
         if (row) created.push(row);
