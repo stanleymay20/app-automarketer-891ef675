@@ -76,6 +76,7 @@ export type PromotionPlacement = {
   engagements_reported: number | null;
   conversions_reported: number;
   revenue_reported: number;
+  revenue_currency: string;
   posted_at: string | null;
   notes: string | null;
 };
@@ -216,6 +217,7 @@ export function useAddPromotionPlacement() {
       engagements_reported?: number | null;
       conversions_reported?: number;
       revenue_reported?: number;
+      revenue_currency?: string;
       posted_at?: string | null;
       notes?: string | null;
     }) => {
