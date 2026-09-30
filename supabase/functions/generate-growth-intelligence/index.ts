@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
       { count: clicksCount },
       { count: leadsCount },
       { data: convs },
+      { data: productEvents },
       { data: mmmRows },
     ] = await Promise.all([
       supabase.from("icps").select("segment,industry").eq("app_id", app.id).limit(5),
@@ -88,12 +89,49 @@ Deno.serve(async (req) => {
       supabase.from("click_events").select("id", { count: "exact", head: true }).eq("app_id", app.id),
       supabase.from("leads").select("id", { count: "exact", head: true }).eq("app_id", app.id),
       supabase.from("conversions").select("amount").eq("app_id", app.id),
+      supabase.from("product_events")
+        .select("event_type,campaign,source,medium,occurred_at")
+        .eq("app_id", app.id)
+        .order("occurred_at", { ascending: false })
+        .limit(2000),
       supabase.from("mmm_runs").select("channel, roi_mean, roi_p10, roi_p90, probability_roi_gt_1, marginal_roi, saturation_point, optimal_spend, fit_quality, sample_size, model_version, generated_at, metadata")
         .eq("user_id", user.id).order("generated_at", { ascending: false }).limit(50),
     ]);
 
     const conversionsCount = convs?.length ?? 0;
     const revenueTotal = (convs ?? []).reduce((s: number, c: any) => s + Number(c.amount ?? 0), 0);
+
+    // First-party product activation funnel. Keep this distinct from social
+    // engagement so the growth engine can optimize for real product outcomes.
+    const activationFunnel: Record<string, number> = {};
+    const activationByCampaign: Record<string, {
+      total: number;
+      book_generated: number;
+      quiz_completed: number;
+      certificate_issued: number;
+      paid_conversion: number;
+    }> = {};
+    for (const event of productEvents ?? []) {
+      const eventType = String((event as any).event_type ?? "");
+      if (!eventType) continue;
+      activationFunnel[eventType] = (activationFunnel[eventType] ?? 0) + 1;
+
+      const campaign = String((event as any).campaign ?? "").trim();
+      if (!campaign) continue;
+      const bucket = activationByCampaign[campaign] ?? {
+        total: 0,
+        book_generated: 0,
+        quiz_completed: 0,
+        certificate_issued: 0,
+        paid_conversion: 0,
+      };
+      bucket.total += 1;
+      if (eventType === "book_generated") bucket.book_generated += 1;
+      if (eventType === "quiz_completed") bucket.quiz_completed += 1;
+      if (eventType === "certificate_issued") bucket.certificate_issued += 1;
+      if (eventType === "paid_conversion") bucket.paid_conversion += 1;
+      activationByCampaign[campaign] = bucket;
+    }
 
     // Platform breakdown
     const platformCounts: Record<string, number> = {};
@@ -126,13 +164,20 @@ Deno.serve(async (req) => {
       leads: leadsCount ?? 0,
       conversions: conversionsCount,
       revenue: revenueTotal,
+      product_activations: (productEvents ?? []).length,
+      activation_funnel: activationFunnel,
+      activation_by_campaign: activationByCampaign,
       platform_mix: platformCounts,
       angle_mix: angleCounts,
       mmm: mmmSummary,
       mmm_available: hasMmm,
     };
 
-    const hasAttribution = evidence.posts_analyzed >= 1 || evidence.clicks > 0 || evidence.leads > 0;
+    const hasAttribution =
+      evidence.posts_analyzed >= 1 ||
+      evidence.clicks > 0 ||
+      evidence.leads > 0 ||
+      evidence.product_activations > 0;
 
     const mmmBlock = hasMmm
       ? `\nMARKETING MIX MODEL (bootstrap v0 — NOT a full Bayesian posterior; treat CIs as directional):\n${JSON.stringify(mmmSummary, null, 2)}\nUse this to prefer channels with high P(ROI>1) and non-saturated marginal ROI. Cite the number verbatim in evidence_summary (e.g. "LinkedIn ROI 2.1x [CI 1.4–3.0], P(ROI>1)=87%, marginal 1.6x — below saturation").`
@@ -152,7 +197,7 @@ Prior learning insights: ${JSON.stringify(insights ?? [])}
 
 REAL ATTRIBUTION EVIDENCE (use this when justifying recommendations):
 ${JSON.stringify({ ...evidence, mmm: undefined, mmm_available: undefined }, null, 2)}
-${hasAttribution ? "" : "NOTE: No click/lead attribution yet. Recommendations must be labeled as initial hypotheses, not learned insights."}
+${hasAttribution ? "" : "NOTE: No click/lead/product-activation attribution yet. Recommendations must be labeled as initial hypotheses, not learned insights."}
 ${mmmBlock}
 
 Generate a JSON object with this exact shape:
