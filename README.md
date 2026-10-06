@@ -36,6 +36,13 @@ App runs on `http://localhost:8080`. Environment is auto-populated from Lovable 
 npx vitest run
 ```
 
+## ChatGPT connector
+
+The `connector/` service exposes six authenticated MCP tools for reading marketing data and saving review-required drafts.
+Account consent lives at `/chatgpt-connect`; connections can be revoked in **Settings → ChatGPT**.
+See [connector deployment and verification](connector/README.md). Deployment requires Lovable-managed schema/configuration
+and a separate HTTPS Node service; committing this code alone does not activate the connection.
+
 ## Quantivis EXIST LOI Outreach campaign
 
 AutoMarketer includes a draft-only campaign template for Quantivis:
