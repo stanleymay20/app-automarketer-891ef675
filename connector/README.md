@@ -3,6 +3,10 @@
 An authenticated Streamable HTTP MCP service that wraps the maintained Scroll Marketer data model.
 This is implementation-ready source, not a deployed or publicly listed plugin.
 
+The confirmed app origin is `https://app-automarketer.lovable.app`. Its consent page will be
+`https://app-automarketer.lovable.app/chatgpt-connect` after this change is released.
+This app URL is not the separate connector service's `/mcp` endpoint.
+
 ## Tools
 
 | Tool | Scope | Existing data/action |
