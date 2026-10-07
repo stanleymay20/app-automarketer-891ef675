@@ -1,0 +1,34 @@
+# Staging only. Supply an isolated backend and staging consent-app origin.
+# Never populate this service with the production Lovable backend.
+services:
+  - type: web
+    name: scrollmarketer-connector-staging
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: feat/chatgpt-mcp-connector
+    autoDeployTrigger: "off"
+    dockerfilePath: ./connector/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: CONNECTOR_CLIENT_ID
+        value: scrollmarketer-chatgpt-staging
+      - key: CONNECTOR_PUBLIC_URL
+        sync: false
+      - key: SCROLLMARKETER_APP_URL
+        sync: false
+      - key: CONNECTOR_REDIRECT_URIS
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: CONNECTOR_BRIDGE_URL
+        sync: false
+      - key: CONNECTOR_BRIDGE_SECRET
+        sync: false

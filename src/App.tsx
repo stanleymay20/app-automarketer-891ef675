@@ -16,6 +16,7 @@ import Calendar from "./pages/Calendar";
 import Analytics from "./pages/Analytics";
 import WeeklyReports from "./pages/WeeklyReports";
 import Settings from "./pages/Settings";
+import ChatGPTConnect from "./pages/ChatGPTConnect";
 import AutopilotSettings from "./pages/AutopilotSettings";
 import DawnAutopilotSettings from "./pages/DawnAutopilotSettings";
 import Auth from "./pages/Auth";
@@ -104,6 +105,7 @@ function AppRoutes() {
       <Route path="/funding" element={<ProtectedRoute><Funding /></ProtectedRoute>} />
       <Route path="/funding/investors" element={<ProtectedRoute><Investors /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/chatgpt-connect" element={<ChatGPTConnect />} />
       <Route path="/settings/autopilot" element={<ProtectedRoute><AutopilotSettings /></ProtectedRoute>} />
       <Route path="/settings/dawn-autopilot" element={<ProtectedRoute><DawnAutopilotSettings /></ProtectedRoute>} />
       <Route path="/nurture" element={<ProtectedRoute><Nurture /></ProtectedRoute>} />
