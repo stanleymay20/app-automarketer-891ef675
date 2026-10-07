@@ -88,6 +88,28 @@ does not call a paid AI gateway or send outreach. There are no send, publish, sc
 
 ## Release checks
 
+### Render staging Blueprint
+
+The repository-root `render.yaml` prepares a free Frankfurt Docker web service
+from `feat/chatgpt-mcp-connector`, with manual deployments and `/health` checks.
+In Render select **jimp's workspace (jimpcompany@gmail.com)**, the feature branch,
+and this Blueprint file. Do not merge the feature into production just to load
+the staging Blueprint. Set the connector URL to the HTTPS address assigned by
+Render and use the exact callback from the ChatGPT staging client configuration.
+
+This Blueprint does not provision a backend or apply migrations. Before applying
+it, supply an isolated Supabase-compatible backend with the app schema, test Auth
+users, the connector migration and deployed bridge. `SCROLLMARKETER_APP_URL` must
+point to a separately hosted consent app using that same staging backend; the
+existing Lovable preview shares production and is unsuitable. Generate a distinct
+32-byte base64url bridge credential and save it in both staging server secret stores.
+All backend and origin values are prompted rather than defaulted to production.
+No service-role key belongs in this Render service. `/health` confirms the process
+is running; it does not establish database or OAuth readiness. Verify the full
+sign-in, consent, tool, tenant-isolation and revoke flow before production release.
+
+### Commands
+
 ```sh
 cd connector
 npm ci --ignore-scripts
