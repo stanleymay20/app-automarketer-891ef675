@@ -33,7 +33,12 @@ does not call a paid AI gateway or send outreach. There are no send, publish, sc
   collected by the connector. JWT verification uses Supabase `auth.getUser`, not a client-supplied user ID.
 - Opaque connector credentials are persisted as SHA-256 hashes. Private tables have RLS and no anon/authenticated grants.
   Service RPCs use SECURITY INVOKER and are executable only by service_role.
-- The connector backend uses a server-side service-role credential. Since this bypasses RLS, every read carries an explicit
+- Lovable Cloud mode uses one server-to-server Edge Function that keeps the privileged key inside its managed runtime.
+  Render verifies app login with the public Supabase key and calls the bridge using a separate secret.
+  The bridge accepts only fixed Store methods and exact projections, with bounded input and no arbitrary SQL/RPC/table access.
+  A compromised connector or bridge secret can access connector users' data: this remains a privileged boundary.
+  Use distinct staging/production secrets, gateway rate limits and secret rotation; never expose it in a browser.
+- The canonical database Store uses a server-side service-role credential. Since this bypasses RLS, every read carries an explicit
   user predicate; draft RPCs recheck offering ownership and configured platforms. Test coverage includes a second tenant.
   This is a privileged backend: keep this key exclusively in the hosting provider's server secret store.
 - Revoking a grant invalidates all its tokens. Replaying an already consumed refresh token revokes its family.
@@ -53,16 +58,24 @@ does not call a paid AI gateway or send outreach. There are no send, publish, sc
    Do not assume this repository grants direct access to the Lovable-managed Supabase project.
 2. Run your usual database advisors in the authorized Lovable/backend environment and regenerate Supabase types.
    Confirm the private tables/RPCs are inaccessible to anon and authenticated users.
-3. Deploy this directory as a separate Node HTTPS service. Docker context must be `connector/`:
+3. Deploy as a separate Node HTTPS service. Docker context is the **repository root** to include the
+   canonical Store shared with the Edge Function. In Render use `connector/Dockerfile`, root build context,
+   and leave Root Directory unset:
 
    ```sh
-   docker build -t scrollmarketer-connector connector
+   docker build -f connector/Dockerfile -t scrollmarketer-connector .
    # Supply values through the hosting provider's server secret store.
    docker run --env-file /secure/path/connector.env -p 8787:8787 scrollmarketer-connector
    ```
 
 4. Set variables shown in `.env.example`. Use exact public **origins** for `CONNECTOR_PUBLIC_URL` and
-   `SCROLLMARKETER_APP_URL`. Obtain the service credential through the authorized Lovable/backend control plane.
+   `SCROLLMARKETER_APP_URL`. Lovable Cloud cannot export its service-role key. Deploy `chatgpt-connector-bridge` through its authorized
+   control plane after staging validation. Set `CONNECTOR_BRIDGE_SECRET` in Lovable backend secrets and Render
+   to the same random 32-byte base64url value; never copy it into chat, Git or frontend variables.
+   In Render set `SUPABASE_PUBLISHABLE_KEY`, `CONNECTOR_BRIDGE_URL` and `CONNECTOR_BRIDGE_SECRET`,
+   leaving `SUPABASE_SERVICE_ROLE_KEY` empty. The bridge URL must belong to `SUPABASE_URL`.
+   The Edge Function reads its runtime-injected service-role key. `verify_jwt=false` allows its own server secret
+   to authenticate calls; it fails closed for missing/invalid credentials. Verify this boundary in staging.
    Copy exact redirect URI(s) from ChatGPT's OAuth configuration into `CONNECTOR_REDIRECT_URIS`; never use wildcards.
    The example callback is deliberately a placeholder.
 5. In Lovable set `VITE_SCROLLMARKETER_CONNECTOR_URL` to the connector's HTTPS origin and publish the app.
@@ -107,11 +120,19 @@ quality gate to auto-approve still-pending drafts.
 
 ## Lovable handoff
 
-Use the code on the PR branch; do not recreate an alternative connector implementation. Apply the connector migration,
-configure only the public frontend connector URL, regenerate types, and publish the consent/settings screens. Keep the
-service-role credential server-side. Do not enable automatic sending for Quantivis EXIST LOI Outreach. Report migration,
+Use the code on the PR branch; do not recreate an alternative connector implementation. Validate the migration and
+bridge in an isolated backend first. After release gates pass, deploy through the authorized Lovable control plane,
+configure only the public frontend connector URL, regenerate types, and publish the consent/settings screens. The
+service-role credential stays exclusively inside the managed backend function. Do not enable automatic sending for Quantivis EXIST LOI Outreach. Report migration,
 advisor and live consent/revocation results before claiming activation.
 
 References: [OpenAI MCP tools](https://developers.openai.com/plugins/build/mcp-server),
 [OpenAI authentication](https://developers.openai.com/plugins/build/auth),
 [Supabase identity verification](https://supabase.com/docs/reference/javascript/auth-getuser).
+
+## Current deployment status
+
+Lovable inspection on 2026-10-07 confirmed preview and production share one backend, without isolated staging.
+A draft does not isolate the database. Create a separate staging backend before applying this migration.
+Neither the bridge nor the migration has been deployed. Local PostgreSQL and HTTP tests do not prove a
+managed Deno deployment or real ChatGPT OAuth. Lovable remains the control plane for this backend.

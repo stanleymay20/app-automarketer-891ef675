@@ -4,7 +4,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { createApp } from '../src/app.mjs';
 import { opaque, hash, challenge, loadConfig, validateAuthorization } from '../src/security.mjs';
-import { database, USER, OTHER, APP, OTHER_APP } from './database.mjs';
+import { database as directDatabase, USER, OTHER, APP, OTHER_APP } from './database.mjs';
 
 const config = { publicUrl: 'https://connector.example.com', appUrl: 'https://scrollmarketer.example.com',
   resource: 'https://connector.example.com/mcp', clientId: 'scrollmarketer-chatgpt',
@@ -13,6 +13,18 @@ const params = verifier => ({ client_id: config.clientId, redirect_uri: config.r
   response_type: 'code', code_challenge_method: 'S256', code_challenge: challenge(verifier),
   state: opaque(), scope: 'marketing:read drafts:write' });
 
+import { bridgeFixture } from './bridge-fixture.mjs';
+
+// Repeat the same OAuth/MCP/Postgres contract through the real HTTP bridge.
+for (const mode of ['direct', 'bridge']) {
+  const database = async () => {
+    const original = await directDatabase();
+    if (mode === 'direct') return original;
+    const bridge = await bridgeFixture(original.store);
+    const closeDatabase = original.db.close.bind(original.db);
+    original.db.close = async () => { await bridge.close(); await closeDatabase(); };
+    return { db: original.db, store: bridge.store };
+  };
 test('authorization validation rejects callback substitution, missing PKCE/resource, and unsupported scopes', () => {
   const p = params(opaque());
   assert.equal(validateAuthorization(p, config).scopes.length, 2);
@@ -35,9 +47,9 @@ test('real Postgres: ownership, idempotency, private credentials, and manual app
   await assert.rejects(store.createDraft(USER, { ...args, app_id: OTHER_APP }));
   await assert.rejects(store.createDraft(USER, { ...args, platform: 'instagram' }));
   await store.createDraft(OTHER, { ...args, app_id: OTHER_APP });
-  const own = await store.list('content', 'id,content_text', USER);
+  const own = await store.list('content', 'id,app_id,platform,content_text,status,scheduled_for,published_at,external_url,created_at', USER);
   assert.equal(own.records.length, 1);
-  const foreign = await store.list('content', 'id', USER, { app_id: OTHER_APP });
+  const foreign = await store.list('content', 'id,app_id,platform,content_text,status,scheduled_for,published_at,external_url,created_at', USER, { app_id: OTHER_APP });
   assert.equal(foreign.records.length, 0);
   await assert.rejects(db.query("update public.content set status='approved' where id=$1", [first.id]));
   await assert.rejects(db.query('update public.content set connector_requires_review=false where id=$1', [first.id]));
@@ -160,9 +172,9 @@ test('real Postgres: expired requests/access/grants and nullable metrics remain 
     p_access_hash: hash(opaque()), p_new_refresh_hash: hash(opaque()) }), null);
   await db.query("insert into public.content(user_id,app_id,platform,content_text,status) values($1,$2,'x','No measured data','published')", [USER, APP]);
   await db.query("insert into public.content(user_id,app_id,platform,content_text,status,impressions) values($1,$2,'x','Measured zero','published',0)", [USER, APP]);
-  const first = await store.list('content', 'id,impressions', USER, { status: 'published', limit: 1 });
+  const first = await store.list('content', 'id,app_id,platform,published_at,impressions,engagements,clicks,updated_at', USER, { status: 'published', limit: 1 });
   assert.equal(first.next_offset, 1);
-  const second = await store.list('content', 'id,impressions', USER, { status: 'published', limit: 1, offset: 1 });
+  const second = await store.list('content', 'id,app_id,platform,published_at,impressions,engagements,clicks,updated_at', USER, { status: 'published', limit: 1, offset: 1 });
   assert.equal(second.next_offset, null);
   assert.deepEqual([first.records[0].impressions, second.records[0].impressions].sort(), [0, null]);
   const deniedRequest = opaque();
@@ -170,3 +182,5 @@ test('real Postgres: expired requests/access/grants and nullable metrics remain 
   assert.ok(await store.deny(hash(deniedRequest)));
   assert.equal(await store.approve(hash(deniedRequest), USER, hash(opaque())), null);
 });
+
+}

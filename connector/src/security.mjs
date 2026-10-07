@@ -14,11 +14,26 @@ export function parseScopes(value = 'marketing:read') {
 
 export function loadConfig(env) {
   const required = ['CONNECTOR_PUBLIC_URL', 'SCROLLMARKETER_APP_URL', 'CONNECTOR_CLIENT_ID',
-    'CONNECTOR_REDIRECT_URIS', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+    'CONNECTOR_REDIRECT_URIS', 'SUPABASE_URL'];
   for (const key of required) if (!env[key]) throw new Error(`Missing ${key}`);
   const publicUrl = new URL(env.CONNECTOR_PUBLIC_URL);
   const appUrl = new URL(env.SCROLLMARKETER_APP_URL);
   const local = env.NODE_ENV === 'test' || env.NODE_ENV === 'development';
+  const backend = new URL(env.SUPABASE_URL);
+  if (backend.protocol !== 'https:' || backend.username || backend.password || backend.search || backend.hash || backend.pathname !== '/') {
+    throw new Error('Invalid backend origin');
+  }
+  let bridge;
+  if (env.CONNECTOR_BRIDGE_URL || env.CONNECTOR_BRIDGE_SECRET) {
+    if (!env.SUPABASE_PUBLISHABLE_KEY || !/^[A-Za-z0-9_-]{43,128}$/.test(env.CONNECTOR_BRIDGE_SECRET || '')) {
+      throw new Error('Bridge requires public key and a random 32-byte or longer secret');
+    }
+    if (env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Do not export the Cloud service-role key');
+    if (env.CONNECTOR_BRIDGE_URL !== `${backend.origin}/functions/v1/chatgpt-connector-bridge`) {
+      throw new Error('Bridge must use the configured backend endpoint');
+    }
+    bridge = { url: env.CONNECTOR_BRIDGE_URL, secret: env.CONNECTOR_BRIDGE_SECRET };
+  } else if (!env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Missing backend credentials');
   for (const url of [publicUrl, appUrl]) {
     if (url.username || url.password || url.search || url.hash || url.pathname !== '/') throw new Error('Use an origin URL');
     if (url.protocol !== 'https:' && !(local && url.hostname === 'localhost' && url.protocol === 'http:')) throw new Error('HTTPS required');
@@ -29,7 +44,7 @@ export function loadConfig(env) {
     if (url.protocol !== 'https:' || url.username || url.password || url.hash) throw new Error('Invalid redirect URI');
   }
   return { publicUrl: publicUrl.origin, appUrl: appUrl.origin, clientId: env.CONNECTOR_CLIENT_ID,
-    redirects, resource: `${publicUrl.origin}/mcp` };
+    redirects, resource: `${publicUrl.origin}/mcp`, bridge };
 }
 
 export function validateAuthorization(query, config) {
