@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Phase9DecisionSupportContainer } from "@/components/strategy/Phase9DecisionSupportContainer";
 import {
   DecisionContextPurpose,
   useGenerateStrategicRecommendations,
@@ -214,6 +215,10 @@ export function DecisionContextPanel({ appId }: { appId?: string }) {
             </div>
           </div>
         )}
+
+        <div className="border-t pt-5">
+          <Phase9DecisionSupportContainer appId={appId} />
+        </div>
       </CardContent>
     </Card>
   );
