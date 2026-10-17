@@ -57,6 +57,7 @@ Long-term product moat should be an auditable graph connecting:
 - partners
 - strategic objectives
 - evidence and uncertainty
+- scenarios and sensitivities
 - recommendations/decisions
 - experiments/campaigns
 - outcomes
@@ -173,40 +174,27 @@ Unknowns can be resolved. Assumptions or inferences can be validated/invalidated
 
 New table: `strategic_questions`.
 
-Each question records:
-
-- current confidence
-- decision impact
-- answerability
-- urgency
-- expected effort
-- status and answer
+Each question records current confidence, decision impact, answerability, urgency, effort, status and answer.
 
 When a strategic decision is created with `next_information_needed`, a database trigger turns that statement into a tracked question. Hard-to-reverse decisions receive a higher default decision-impact input than reversible ones. These are explicit deterministic defaults, not model-generated certainty.
 
 ### Information-value proxy
 
-The system uses a deterministic prioritisation proxy:
-
 `information_value_score = uncertainty × decision impact × answerability`
 
-where uncertainty is `100 - current_confidence`, and all inputs are normalised to 0–100. The stored score is therefore also 0–100.
+where uncertainty is `100 - current_confidence`, with inputs normalised to 0–100.
 
-This score is **not expected monetary value** and must not be presented as such. It ranks questions by how much decision uncertainty they may reduce, given likely impact and answerability. Urgency and effort remain visible separately rather than being hidden inside the score.
+This score is **not expected monetary value**. It ranks questions by how much decision uncertainty they may reduce, given likely impact and answerability.
 
 ### Next-best-question workflow
 
 `/strategy` contains an Evidence & Uncertainty panel that:
 
 - shows observations, assumptions, unresolved unknowns and recorded confidence
-- lets the user record evidence/uncertainty with provenance
-- lets the user add decision questions
+- records evidence/uncertainty with provenance
 - ranks open questions by information-value score and urgency
 - exposes the highest-ranked question as the next best question
 - records answers without pretending the answer itself is automatically verified evidence
-- asks the user to add supporting observations separately
-
-This preserves the difference between learning that something was said and proving that the underlying claim is true.
 
 ## Slice 3 — Opportunity and market choice
 
@@ -236,15 +224,13 @@ Unknown factors remain `NULL`; they are never silently replaced by neutral score
 
 Attractiveness is not emitted until at least four of ten factors are known. Evidence coverage is always shown next to attractiveness.
 
-Decision readiness is deliberately conservative:
-
 `decision_readiness = attractiveness × evidence_coverage × evidence_confidence`
 
 Coverage and confidence are normalised to 0–1. This is a prioritisation proxy, not ROI, NPV, TAM or probability of success.
 
 ### White-space doctrine
 
-The white-space proxy requires demand, customer value and competition inputs. It does not prove an unmet need. The user records a white-space hypothesis separately, preserving the distinction between score and claim.
+The white-space proxy requires demand, customer value and competition inputs. It does not prove an unmet need. The user records a white-space hypothesis separately.
 
 ### Route-to-market reuse
 
@@ -260,43 +246,105 @@ This deliberately does not create or approve an `enter` decision. Missing market
 
 In addition to owner-scoped RLS, database triggers verify that linked app/objective/market-option records belong to the same user.
 
+## Slice 4 — Strategy simulation
+
+Detailed handoff: `docs/SCROLLMARKETER_PHASE4_STRATEGY_SIMULATION.md`
+
+Migration: `supabase/migrations/20261017190000_strategy_simulation_engine.sql`
+
+Phase 4 adds:
+
+- `strategic_scenarios`
+- `strategic_scenario_branches`
+- `strategic_sensitivity_tests`
+- move/countermove trees
+- explicit decision-holds / decision-changes assessment
+- reversible response planning
+- low/base/high sensitivity cases
+- scenario conclusions
+
+### Competitor-history constraint
+
+Reverse engineering showed that current `competitor_signals` are refreshed by deleting prior app-level signals and inserting a new snapshot. They are therefore **not durable behavioral history** and must not be used to manufacture competitor-response probabilities.
+
+Historical competitor-response evidence must be stored as explicit `strategic_evidence_items` observations.
+
+### Likelihood doctrine
+
+A scenario branch has one of three likelihood bases:
+
+- `unknown` — likelihood remains `NULL`
+- `manual_assumption` — an explicit subjective percentage, always labeled as assumption
+- `observed_frequency` — requires linked observation evidence plus response/comparable counts
+
+For observed frequency:
+
+`historical_frequency = observed_response_count / comparable_event_count × 100`
+
+The result is descriptive history, not a calibrated guarantee of future behavior.
+
+### Stress proxy
+
+For a branch that may change the decision and has known likelihood:
+
+`stress_score = likelihood × absolute impact`
+
+This is a prioritisation aid, not expected loss or expected financial value.
+
+### Robustness view
+
+The Scenario Lab reports how often the current decision holds or changes across **assessed branches**. This is intentionally not probability-weighted.
+
+### Sensitivity doctrine
+
+Sensitivity cases store explicit low/base/high inputs and outcomes. The system does not invent the ranges or outputs, and every case records whether its basis is observation, experiment, assumption, model or other.
+
+### Scenario Lab UI
+
+`/strategy` now supports:
+
+- create scenario linked to objective/decision/market option
+- define base move and decision question
+- add root branches and nested countermoves
+- leave likelihood unknown
+- record manual assumptions explicitly
+- use historical frequency only with observation evidence
+- assess impact and whether the decision holds/changes
+- prepare a response and its reversibility
+- record sensitivity cases
+- save a scenario conclusion
+
 ## Repository validation state
 
-Latest exact head validated before this documentation update: `9268849dadd4eaa4fa93fecf2d7e0066d66c8d43`.
+Latest code head validated before the Phase 4 documentation commits:
 
-GitHub Actions run `39043640328` on that exact head:
+`d5b201f7d5671952a04f93754e48519902515918`
+
+GitHub Actions run `39044192891`:
 
 - lint: PASS
 - test: PASS
 - build: PASS
 
-Because this documentation update itself creates a new commit, it does not substitute for final exact-head validation before merge. Reconfirm CI on the final branch head.
+Documentation commits after that code validation still require final exact-head CI before merge.
 
 ## Important deployment constraint
 
-The `/strategy` page now depends on all three additive database migrations, in order:
+The `/strategy` page now depends on all four additive database migrations, in order:
 
 - `supabase/migrations/20261017162000_strategic_objectives_decision_ledger.sql`
 - `supabase/migrations/20261017170000_evidence_uncertainty_engine.sql`
 - `supabase/migrations/20261017180000_market_choice_engine.sql`
+- `supabase/migrations/20261017190000_strategy_simulation_engine.sql`
 
 Do **not** deploy the UI to a runtime where these migrations have not been applied in order. Do not apply them directly to production without the normal controlled Lovable Cloud migration/release path and validation.
 
 ## Next implementation phases
 
-### Phase 4 — Simulation
-
-- scenario objects
-- move/countermove trees
-- sensitivity analysis
-- competitor response probabilities based only on observable historical behavior
-- compare market/strategy choices under multiple plausible futures
-- reversible experiment recommendation before hard commitment
-
 ### Phase 5 — Authority and deterministic governance
 
 - policy-backed authority thresholds
-- approval requirements by risk/reversibility/capital/legal impact
+- approval requirements by risk/reversibility/capital/legal/brand impact
 - bounded autonomous execution
 - kill conditions and automatic stop rules
 - complete decision/action audit chain
