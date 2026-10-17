@@ -40,12 +40,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch active goal
+    // Fetch active strategic objective. growth_goals remains the measurable
+    // source of truth; newer columns add market, rationale and commitment context.
     const { data: goals } = await supabase
       .from("growth_goals")
       .select("*")
       .eq("app_id", app_id)
       .eq("status", "active")
+      .order("created_at", { ascending: false })
       .limit(1);
 
     const activeGoal = goals?.[0];
@@ -81,14 +83,48 @@ Deno.serve(async (req) => {
       });
     }
 
+    const daysLeft = activeGoal
+      ? Math.ceil((new Date(activeGoal.end_date).getTime() - Date.now()) / 86400000)
+      : null;
+
     const context = {
-      app: { name: app.name, description: app.description, tone: app.brand_tone, audience: app.target_audience, platforms: app.platforms },
-      goal: activeGoal ? { type: activeGoal.goal_type, target: activeGoal.target_value, current: activeGoal.current_value, daysLeft: Math.ceil((new Date(activeGoal.end_date).getTime() - Date.now()) / 86400000) } : null,
-      insights: insights?.map((i) => i.insight_text) || [],
+      app: {
+        name: app.name,
+        description: app.description,
+        tone: app.brand_tone,
+        audience: app.target_audience,
+        platforms: app.platforms,
+      },
+      strategicObjective: activeGoal
+        ? {
+            id: activeGoal.id,
+            name: activeGoal.objective_name ?? activeGoal.goal_type,
+            measure: activeGoal.goal_type,
+            target: activeGoal.target_value,
+            current: activeGoal.current_value,
+            daysLeft,
+            rationale: activeGoal.strategic_rationale ?? null,
+            targetMarket: activeGoal.target_market ?? null,
+            targetSegment: activeGoal.target_segment ?? null,
+            evidenceThreshold: activeGoal.evidence_threshold ?? 70,
+            commitmentClass: activeGoal.commitment_class ?? "reversible",
+            riskTolerance: activeGoal.risk_tolerance ?? "moderate",
+            assumptions: activeGoal.assumptions ?? [],
+            constraints: activeGoal.constraints ?? [],
+          }
+        : null,
+      insights: insights?.map((i) => ({
+        insight: i.insight_text,
+        confidence: i.confidence,
+      })) || [],
       recentPerformance: {
         totalPosts: recentContent?.length || 0,
-        avgImpressions: recentContent?.length ? Math.round(recentContent.reduce((s, c) => s + (c.impressions || 0), 0) / recentContent.length) : 0,
-        avgEngagements: recentContent?.length ? Math.round(recentContent.reduce((s, c) => s + (c.engagements || 0), 0) / recentContent.length) : 0,
+        avgImpressions: recentContent?.length
+          ? Math.round(recentContent.reduce((s, c) => s + (c.impressions || 0), 0) / recentContent.length)
+          : 0,
+        avgEngagements: recentContent?.length
+          ? Math.round(recentContent.reduce((s, c) => s + (c.engagements || 0), 0) / recentContent.length)
+          : 0,
       },
       maxPostsPerDay: policy?.max_posts_per_day || 4,
     };
@@ -104,7 +140,15 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a marketing campaign strategist. Generate a 7-day content plan.
+            content: `You are ScrollMarketer's campaign strategist. Generate a 7-day content plan that is subordinate to the active strategic objective.
+
+Decision rules:
+- Treat observed performance and stored insights as evidence; do not invent evidence that is not present.
+- Treat missing market, segment, rationale, assumptions or constraints as unknown, not as permission to fabricate them.
+- Optimize toward the strategic objective, not vanity metrics.
+- Respect the target market and target segment when they are known.
+- If evidence is weak or the objective is a hard-to-reverse commitment, prefer messaging that learns cheaply rather than implying that a major strategic commitment has already been validated.
+- Do not make legal, regulatory, financial-performance or product claims that are unsupported by the supplied context.
 
 Context:
 ${JSON.stringify(context, null, 2)}
@@ -113,6 +157,7 @@ Return ONLY valid JSON:
 {
   "campaign_name": "short descriptive name",
   "strategy_summary": "2-3 sentence strategy explanation",
+  "objective_alignment": "how this campaign advances the strategic objective without exceeding the evidence",
   "themes": ["theme1", "theme2", "theme3"],
   "platform_mix": ["platform1", "platform2"],
   "posting_frequency": number_per_week,
@@ -124,7 +169,9 @@ Return ONLY valid JSON:
           },
           {
             role: "user",
-            content: `Generate a weekly campaign plan for ${app.name}. ${activeGoal ? `Goal: ${activeGoal.goal_type} - reach ${activeGoal.target_value} in ${Math.ceil((new Date(activeGoal.end_date).getTime() - Date.now()) / 86400000)} days.` : "No specific goal set."}`,
+            content: activeGoal
+              ? `Generate a weekly campaign plan for ${app.name}. Strategic objective: ${activeGoal.objective_name ?? activeGoal.goal_type}. Measure: ${activeGoal.goal_type}; target ${activeGoal.target_value}; current ${activeGoal.current_value}; ${daysLeft} days remain.`
+              : `Generate a conservative weekly campaign plan for ${app.name}. No strategic objective has been set, so do not invent one.`,
           },
         ],
         temperature: 0.7,
@@ -161,13 +208,18 @@ Return ONLY valid JSON:
 
     if (campaignError) throw campaignError;
 
-    // Audit log
+    // Audit log captures the objective context used, so future reviews can
+    // distinguish what was known at decision time from later outcomes.
     await supabase.from("automation_audit_log").insert({
       user_id,
       action_type: "campaign_created",
       entity_type: "campaign",
       entity_id: campaign.id,
-      details: { plan },
+      details: {
+        plan,
+        strategic_objective_id: activeGoal?.id ?? null,
+        strategic_objective_snapshot: context.strategicObjective,
+      },
     });
 
     console.log(`[CampaignPlanner] Created campaign: ${plan.campaign_name}`);
