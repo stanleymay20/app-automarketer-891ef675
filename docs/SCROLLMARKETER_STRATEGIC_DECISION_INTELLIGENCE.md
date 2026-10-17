@@ -25,6 +25,8 @@ Marketing is one execution option inside that decision system. The system must a
 8. **Preserve strategic memory.** Store what was known at decision time, what was decided, why, what happened and what was learned.
 9. **Global learning is multidirectional.** A useful mechanism learned in any market may be tested in other markets; do not assume headquarters or one geography is always the source of truth.
 10. **Do not weaken existing security, RLS, CI, approval or audit controls to ship strategy features.**
+11. **Autonomy is policy-bounded.** Probabilistic recommendations never imply execution authority; deterministic governance decides whether a bounded action may proceed.
+12. **Approval must stay fresh.** A material decision or policy change invalidates reuse of an older approval/evaluation.
 
 ## Four nested loops
 
@@ -58,8 +60,10 @@ Long-term product moat should be an auditable graph connecting:
 - strategic objectives
 - evidence and uncertainty
 - scenarios and sensitivities
+- governance policies and approvals
 - recommendations/decisions
 - experiments/campaigns
+- actions
 - outcomes
 - learnings
 
@@ -301,7 +305,7 @@ Sensitivity cases store explicit low/base/high inputs and outcomes. The system d
 
 ### Scenario Lab UI
 
-`/strategy` now supports:
+`/strategy` supports:
 
 - create scenario linked to objective/decision/market option
 - define base move and decision question
@@ -314,42 +318,104 @@ Sensitivity cases store explicit low/base/high inputs and outcomes. The system d
 - record sensitivity cases
 - save a scenario conclusion
 
+## Slice 5 — Deterministic governance and authority
+
+Detailed handoff: `docs/SCROLLMARKETER_PHASE5_GOVERNANCE_AUTHORITY.md`
+
+Migrations:
+
+- `supabase/migrations/20261017200000_deterministic_governance_engine.sql`
+- `supabase/migrations/20261017201000_governance_freshness_guards.sql`
+- `supabase/migrations/20261017202000_governance_fail_closed_actions.sql`
+
+Phase 5 adds:
+
+- `strategic_governance_policies`
+- `strategic_approval_requests`
+- `strategic_stop_rules`
+- `strategic_governance_evaluations`
+- append-only `strategic_action_log`
+- `strategic_decisions.execution_mode`
+- Governance & Authority panel in `/strategy`
+
+### Authority doctrine
+
+A recommendation never implies authority.
+
+`bounded_execute` policies are invalid unless the owner explicitly configures:
+
+- minimum confidence
+- maximum commitment amount/currency
+- allowed reversibility classes
+
+Policies are created disabled. No enabled applicable policy means bounded autonomous execution is blocked.
+
+### Approval doctrine
+
+Every bounded-autonomous strategic decision must already be `approved`.
+
+Policies may additionally require human, legal, brand or executive approval. Hard-to-reverse decisions always require executive approval.
+
+Missing approval yields REVIEW; current-version rejected approval yields BLOCK.
+
+### Freshness doctrine
+
+Governance evaluations and approval requests are bound to fingerprints of the material decision state and selected policy version.
+
+A material decision change or any policy update invalidates reuse of stale approvals/evaluations. Bounded execution requires a fresh ALLOW matching both current fingerprints.
+
+### Stop-rule doctrine
+
+Machine-checkable rules currently cover:
+
+- confidence floor
+- commitment ceiling
+- deadline
+- manual halt
+
+Unknown confidence/commitment is not silently treated as safe when a corresponding rule exists.
+
+### Existing autonomy preserved
+
+Existing `automation_policies` and `autopilot_settings` remain intact. Strategic governance does not silently replace their content/prospect-specific behavior.
+
+### Runtime boundary
+
+Phase 5 establishes the deterministic strategic execution gate; it does not yet attach a generic side-effect executor or continuous external-metric monitor.
+
+Before a bounded-autonomous strategic decision enters or changes execution state, the database requires a fresh ALLOW and no stop-rule breach. Future strategic executors must use that gate before governed side effects.
+
 ## Repository validation state
 
-Latest code head validated before the Phase 4 documentation commits:
-
-`d5b201f7d5671952a04f93754e48519902515918`
-
-GitHub Actions run `39044192891`:
+The Phase 5 UI/governance code head `e5edbe152b8faf26eacf03bd767a340a5f445646` passed GitHub Actions run `39045135543`:
 
 - lint: PASS
 - test: PASS
 - build: PASS
 
-Documentation commits after that code validation still require final exact-head CI before merge.
+The freshness-hardening code head `d4b797bdaf0b68f3bd7b7b015b858f23856ebb5b` passed GitHub Actions run `39045316760`:
+
+- lint: PASS
+- test: PASS
+- build: PASS
+
+Later migration/documentation commits still require final exact-head CI before merge.
 
 ## Important deployment constraint
 
-The `/strategy` page now depends on all four additive database migrations, in order:
+The `/strategy` page now depends on all strategic migrations in order:
 
 - `supabase/migrations/20261017162000_strategic_objectives_decision_ledger.sql`
 - `supabase/migrations/20261017170000_evidence_uncertainty_engine.sql`
 - `supabase/migrations/20261017180000_market_choice_engine.sql`
 - `supabase/migrations/20261017190000_strategy_simulation_engine.sql`
+- `supabase/migrations/20261017200000_deterministic_governance_engine.sql`
+- `supabase/migrations/20261017201000_governance_freshness_guards.sql`
+- `supabase/migrations/20261017202000_governance_fail_closed_actions.sql`
 
-Do **not** deploy the UI to a runtime where these migrations have not been applied in order. Do not apply them directly to production without the normal controlled Lovable Cloud migration/release path and validation.
+Do **not** deploy the UI to a runtime where these migrations have not been reviewed and applied in order. Do not apply them directly to production without the normal controlled Lovable Cloud migration/release path and validation.
 
 ## Next implementation phases
-
-### Phase 5 — Authority and deterministic governance
-
-- policy-backed authority thresholds
-- approval requirements by risk/reversibility/capital/legal/brand impact
-- bounded autonomous execution
-- kill conditions and automatic stop rules
-- complete decision/action audit chain
-
-Thresholds must be explicitly configured or approved; do not invent arbitrary capital limits in code.
 
 ### Phase 6 — Strategic memory and causal learning
 
@@ -366,7 +432,7 @@ Use postmortems for both wins and failures. Do not confuse correlation with caus
 
 ### Phase 7 — Commercial world model
 
-Unify company, market, customer, competitor, product, pricing, channel, partner, strategy, experiment and outcome entities into a queryable Commercial Decision Graph.
+Unify company, market, customer, competitor, product, pricing, channel, partner, strategy, experiment, governance, action and outcome entities into a queryable Commercial Decision Graph.
 
 ## Engineering continuation rules
 
