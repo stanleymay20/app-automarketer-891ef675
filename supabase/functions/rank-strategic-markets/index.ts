@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
 
     const annotations = basis.map((market: any) => {
       const id = String(market.market_option_id);
+      const hasAnnotation = aiByMarket.has(id);
       const item = aiByMarket.get(id) ?? {};
       const evidenceRefs = asStringArray(item.evidence_refs).filter((x) => evidenceIds.has(x));
       const memoryRefs = asStringArray(item.memory_refs).filter((x) => memoryIds.has(x));
@@ -118,21 +119,23 @@ Deno.serve(async (req) => {
       if (market.rank_state === "insufficient_evidence" && recommendation === "test" && Number(market.evidence_coverage ?? 0) < 40) recommendation = "research";
       if (market.rank_state === "excluded") recommendation = "deprioritize";
 
-      let confidence = clamp(item.confidence);
-      if (market.rank_state === "insufficient_evidence") confidence = Math.min(confidence, 60);
-      if (Number(market.evidence_coverage ?? 0) < 70 || Number(market.evidence_confidence ?? 0) < 70) confidence = Math.min(confidence, 80);
-      if (evidenceRefs.length === 0 && memoryRefs.length === 0) confidence = Math.min(confidence, 60);
+      let confidence: number | null = hasAnnotation ? clamp(item.confidence) : null;
+      if (confidence !== null) {
+        if (market.rank_state === "insufficient_evidence") confidence = Math.min(confidence, 60);
+        if (Number(market.evidence_coverage ?? 0) < 70 || Number(market.evidence_confidence ?? 0) < 70) confidence = Math.min(confidence, 80);
+        if (evidenceRefs.length === 0 && memoryRefs.length === 0) confidence = Math.min(confidence, 60);
+      }
 
       return {
         market_option_id: id,
         recommendation,
-        rationale: String(item.rationale ?? "").trim() || null,
+        rationale: hasAnnotation ? String(item.rationale ?? "").trim() || null : null,
         confidence,
         evidence_refs: evidenceRefs,
         memory_refs: memoryRefs,
         question_refs: questionRefs,
         unknown_refs: unknownRefs,
-        next_information_needed: item.next_information_needed == null ? null : String(item.next_information_needed).trim() || null,
+        next_information_needed: !hasAnnotation || item.next_information_needed == null ? null : String(item.next_information_needed).trim() || null,
       };
     });
 
