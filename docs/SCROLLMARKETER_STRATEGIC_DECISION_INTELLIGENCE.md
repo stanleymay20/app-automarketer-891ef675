@@ -208,6 +208,18 @@ This score is **not expected monetary value** and must not be presented as such.
 
 This preserves the difference between learning that something was said and proving that the underlying claim is true.
 
+## Repository validation state
+
+Latest exact head validated before this documentation-only commit: `bc99d484281da48df3051bb5e9264df110261307`.
+
+GitHub Actions run `39042733700` on that exact code head:
+
+- lint: PASS
+- test: PASS
+- build: PASS
+
+Because this paragraph itself changes the branch head, it does not substitute for final exact-head validation before merge. The engineering rule remains: re-run/confirm CI on the final head used for merge.
+
 ## Important deployment constraint
 
 The `/strategy` page now depends on both additive database migrations:
