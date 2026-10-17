@@ -56,6 +56,7 @@ Long-term product moat should be an auditable graph connecting:
 - channels/distribution
 - partners
 - strategic objectives
+- evidence and uncertainty
 - recommendations/decisions
 - experiments/campaigns
 - outcomes
@@ -63,11 +64,13 @@ Long-term product moat should be an auditable graph connecting:
 
 The graph must capture both current state and decision history.
 
-## First implementation slice
+## Implementation branch
 
 Branch: `feature/strategic-objectives-decision-ledger`
 
-This slice deliberately extends existing primitives instead of creating a parallel product.
+The work deliberately extends existing primitives instead of creating a parallel product.
+
+## Slice 1 — Strategic objectives and decision ledger
 
 ### Strategic objectives
 
@@ -113,7 +116,7 @@ RLS is owner-scoped. Recommendation and execution remain separate states.
 
 Route: `/strategy`
 
-Initial capabilities:
+Capabilities:
 
 - select an offering/app
 - create a strategic objective
@@ -125,7 +128,7 @@ Initial capabilities:
 
 ### Campaign integration
 
-`generate-campaign` now reads the active strategic objective and treats campaigns as subordinate execution. Its prompt is instructed to:
+`generate-campaign` reads the active strategic objective and treats campaigns as subordinate execution. Its prompt is instructed to:
 
 - use supplied evidence only
 - avoid fabricating unknown context
@@ -135,23 +138,86 @@ Initial capabilities:
 
 The campaign audit log captures a snapshot of the strategic objective used at generation time.
 
+## Slice 2 — Evidence and uncertainty engine
+
+Migration: `supabase/migrations/20261017170000_evidence_uncertainty_engine.sql`
+
+### Evidence register
+
+New table: `strategic_evidence_items`.
+
+Every item must be explicitly classified as one of:
+
+- `observation` — something actually observed or measured
+- `inference` — an interpretation drawn from observations
+- `assumption` — a belief being relied on but not established
+- `unknown` — information that is currently missing
+
+The record also carries source type/reference, confidence, evidence strength, impact if wrong, decision relevance, status and optional verification/resolution fields.
+
+The UI must never promote an inference or assumption into an observation merely because confidence is high. Validation changes status; it does not rewrite provenance.
+
+### Assumption and unknown lifecycle
+
+Evidence states are:
+
+- `active`
+- `validated`
+- `invalidated`
+- `resolved`
+- `superseded`
+
+Unknowns can be resolved. Assumptions or inferences can be validated/invalidated while their original classification remains auditable.
+
+### Decision questions
+
+New table: `strategic_questions`.
+
+Each question records:
+
+- current confidence
+- decision impact
+- answerability
+- urgency
+- expected effort
+- status and answer
+
+When a strategic decision is created with `next_information_needed`, a database trigger turns that statement into a tracked question. Hard-to-reverse decisions receive a higher default decision-impact input than reversible ones. These are explicit deterministic defaults, not model-generated certainty.
+
+### Information-value proxy
+
+The system uses a deterministic prioritisation proxy:
+
+`information_value_score = uncertainty × decision impact × answerability`
+
+where uncertainty is `100 - current_confidence`, and all inputs are normalised to 0–100. The stored score is therefore also 0–100.
+
+This score is **not expected monetary value** and must not be presented as such. It ranks questions by how much decision uncertainty they may reduce, given likely impact and answerability. Urgency and effort remain visible separately rather than being hidden inside the score.
+
+### Next-best-question workflow
+
+`/strategy` now contains an Evidence & Uncertainty panel that:
+
+- shows observations, assumptions, unresolved unknowns and recorded confidence
+- lets the user record evidence/uncertainty with provenance
+- lets the user add decision questions
+- ranks open questions by information-value score and urgency
+- exposes the highest-ranked question as the next best question
+- records answers without pretending the answer itself is automatically verified evidence
+- asks the user to add supporting observations separately
+
+This preserves the difference between learning that something was said and proving that the underlying claim is true.
+
 ## Important deployment constraint
 
-The new `/strategy` page depends on the additive database migration:
+The `/strategy` page now depends on both additive database migrations:
 
-`supabase/migrations/20261017162000_strategic_objectives_decision_ledger.sql`
+- `supabase/migrations/20261017162000_strategic_objectives_decision_ledger.sql`
+- `supabase/migrations/20261017170000_evidence_uncertainty_engine.sql`
 
-Do **not** deploy the UI to a runtime where this migration has not been applied. Do not apply it directly to production without the normal controlled Lovable Cloud migration/release path and validation.
+Do **not** deploy the UI to a runtime where these migrations have not been applied in order. Do not apply them directly to production without the normal controlled Lovable Cloud migration/release path and validation.
 
 ## Next implementation phases
-
-### Phase 2 — Evidence and uncertainty
-
-- structured evidence records linked to decisions
-- explicit observation vs inference tagging
-- assumption lifecycle (untested / supported / contradicted)
-- unknowns ranked by decision impact
-- "next best question" / value-of-information workflow
 
 ### Phase 3 — Opportunity and market choice
 
