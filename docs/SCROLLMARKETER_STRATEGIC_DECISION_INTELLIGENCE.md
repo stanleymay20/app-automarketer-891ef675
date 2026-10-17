@@ -27,6 +27,7 @@ Marketing is one execution option inside that decision system. The system must a
 10. **Do not weaken existing security, RLS, CI, approval or audit controls to ship strategy features.**
 11. **Autonomy is policy-bounded.** Probabilistic recommendations never imply execution authority; deterministic governance decides whether a bounded action may proceed.
 12. **Approval must stay fresh.** A material decision or policy change invalidates reuse of an older approval/evaluation.
+13. **Outcome is not mechanism.** A measured result may justify a lesson or hypothesis, but stronger causal/transferability states require explicit evidence or transfer testing.
 
 ## Four nested loops
 
@@ -65,7 +66,9 @@ Long-term product moat should be an auditable graph connecting:
 - experiments/campaigns
 - actions
 - outcomes
-- learnings
+- mechanism hypotheses
+- transfer tests
+- durable learnings
 
 The graph must capture both current state and decision history.
 
@@ -157,19 +160,64 @@ Existing `automation_policies`, `autopilot_settings` and their domain-specific b
 
 Phase 5 establishes the deterministic strategic execution gate; it does not yet attach a generic side-effect executor or continuous external-metric monitor. Before a bounded-autonomous strategic decision enters or changes execution state, the database requires a fresh ALLOW and no stop-rule breach. Future strategic executors must use that gate before governed side effects.
 
+## Slice 6 — Strategic memory and causal learning
+
+Detailed handoff: `docs/SCROLLMARKETER_PHASE6_STRATEGIC_MEMORY.md`
+
+Migrations:
+
+- `supabase/migrations/20261017210000_strategic_memory_causal_learning.sql`
+- `supabase/migrations/20261017211000_strategic_memory_epistemic_guards.sql`
+
+Phase 6 extends the existing durable `learning_events` log rather than creating a competing memory store. Existing tactical `learning_insights` remains the regenerated operational pattern cache and is not silently promoted into causal knowledge.
+
+Durable strategic learning now separates:
+
+- action/intervention
+- context and source snapshot
+- observed outcome
+- mechanism hypothesis
+- causal-status confidence
+- evidence that supports/challenges/provides context
+- transferability scope
+- explicit cross-context transfer tests
+- corrections/invalidation without erasing history
+
+### Causal doctrine
+
+New learning starts conservatively as unknown/correlation/plausible. Stronger states are evidence-backed review states:
+
+- supported requires validated supporting observation evidence or a completed supporting transfer test;
+- challenged requires validated challenging observation evidence or an appropriate completed transfer result;
+- falsified requires validated challenging experiment evidence or a completed falsifying transfer test.
+
+`Supported` still does not mean causation is proven.
+
+### Transfer doctrine
+
+A transfer test requires an explicit source mechanism hypothesis. Completion requires an explicit result. `tested` transferability requires a completed transfer test; `not_transferable` requires a challenged/falsified completed transfer result. Completing a transfer test never auto-promotes the source learning.
+
+### Memory-history doctrine
+
+Strategic learning is durable. Authenticated clients invalidate or supersede strategic memory rather than deleting it. Corrections can mark an older learning superseded while preserving the historical record.
+
+### Feedback-loop boundary
+
+Strategic memory is not automatically injected back into campaign generation or autonomous execution in Phase 6. That avoids self-reinforcing model loops before a later Commercial Decision Graph/policy layer defines which reviewed memories are eligible for automated reuse.
+
 ## Repository validation state
 
-Exact current implementation head before this documentation-only commit:
+Latest integrated Phase 6 code head before the documentation commits:
 
-`c86f8d10ff0f0b46a2f23cfe3763557fdb589c9f`
+`5b05a4e9caf41b3ab40ee19627361c0988c16c18`
 
-GitHub Actions run `39045574826`:
+GitHub Actions run `39048284372`:
 
 - lint: PASS
 - test: PASS
 - build: PASS
 
-Because this documentation update creates another branch head, final merge review must still confirm exact-head CI on the final commit selected for merge.
+Because the documentation commits create later branch heads, final merge review must still confirm exact-head CI on the final commit selected for merge.
 
 ## Important deployment constraint
 
@@ -182,27 +230,18 @@ The `/strategy` page depends on all strategic migrations in order:
 - `supabase/migrations/20261017200000_deterministic_governance_engine.sql`
 - `supabase/migrations/20261017201000_governance_freshness_guards.sql`
 - `supabase/migrations/20261017202000_governance_fail_closed_actions.sql`
+- `supabase/migrations/20261017210000_strategic_memory_causal_learning.sql`
+- `supabase/migrations/20261017211000_strategic_memory_epistemic_guards.sql`
 
 Do **not** deploy `/strategy` to a runtime where these migrations have not been reviewed and applied in order. Do not apply them directly to production without the controlled Lovable Cloud migration/release path and non-production validation.
 
-## Next implementation phases
-
-### Phase 6 — Strategic memory and causal learning
-
-Store:
-
-- action
-- context
-- outcome
-- mechanism hypothesis
-- confidence
-- transferability
-
-Use postmortems for both wins and failures. Do not confuse correlation with causation.
+## Next implementation phase
 
 ### Phase 7 — Commercial world model
 
-Unify company, market, customer, competitor, product, pricing, channel, partner, strategy, experiment, governance, action and outcome entities into a queryable Commercial Decision Graph.
+Unify company, market, customer, competitor, product, pricing, channel, partner, strategy, experiment, governance, action, outcome, evidence, mechanism and learning entities into a queryable Commercial Decision Graph.
+
+Phase 7 should define explicit reuse policies for strategic memory rather than allowing every stored lesson to influence every future recommendation.
 
 ## Engineering continuation rules
 
@@ -212,6 +251,7 @@ Unify company, market, customer, competitor, product, pricing, channel, partner,
 - Keep migrations additive until data migration/removal is explicitly planned.
 - RLS must remain enabled for user-owned strategic data.
 - Never expose service-role credentials to the client.
+- Preserve epistemic labels: observation, inference, hypothesis and causal state are not interchangeable.
 - Do not call work complete until exact branch/head has passed the repository's required build/lint/test checks.
 - Do not merge or deploy merely because code compiles.
 - Database migration application, managed-runtime validation and production release are separate gates.
