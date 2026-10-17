@@ -74,6 +74,35 @@ CREATE POLICY "Users manage own strategic market options" ON public.strategic_ma
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+-- Keep cross-entity links owner-consistent even if a foreign UUID is somehow known.
+CREATE OR REPLACE FUNCTION public.validate_strategic_market_option_ownership()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.apps
+    WHERE id = NEW.app_id AND user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'Market option app must belong to the same user';
+  END IF;
+
+  IF NEW.goal_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.growth_goals
+    WHERE id = NEW.goal_id AND user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'Market option goal must belong to the same user';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS strategic_market_options_validate_ownership ON public.strategic_market_options;
+CREATE TRIGGER strategic_market_options_validate_ownership
+  BEFORE INSERT OR UPDATE OF user_id, app_id, goal_id ON public.strategic_market_options
+  FOR EACH ROW EXECUTE FUNCTION public.validate_strategic_market_option_ownership();
+
 -- Weighted opportunity scoring. Only known factors contribute to the weighted
 -- mean. Coverage is stored separately so a high score with sparse evidence is
 -- visibly different from a well-supported score.
@@ -154,6 +183,26 @@ ALTER TABLE public.strategic_decisions
 
 CREATE INDEX IF NOT EXISTS strategic_decisions_market_option_idx
   ON public.strategic_decisions (market_option_id, created_at DESC);
+
+CREATE OR REPLACE FUNCTION public.validate_strategic_decision_market_option_ownership()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.market_option_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.strategic_market_options
+    WHERE id = NEW.market_option_id AND user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'Strategic decision market option must belong to the same user';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS strategic_decisions_validate_market_option_ownership ON public.strategic_decisions;
+CREATE TRIGGER strategic_decisions_validate_market_option_ownership
+  BEFORE INSERT OR UPDATE OF user_id, market_option_id ON public.strategic_decisions
+  FOR EACH ROW EXECUTE FUNCTION public.validate_strategic_decision_market_option_ownership();
 
 COMMENT ON TABLE public.strategic_market_options IS
   'Evidence-aware market/segment options for opportunity ranking, white-space hypotheses, entry mode, pioneering cost and commitment analysis.';
