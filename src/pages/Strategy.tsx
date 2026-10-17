@@ -18,6 +18,7 @@ import { EvidenceUncertaintyPanel } from "@/components/strategy/EvidenceUncertai
 import { GovernanceAuthorityPanel } from "@/components/strategy/GovernanceAuthorityPanel";
 import { MarketChoicePanel } from "@/components/strategy/MarketChoicePanel";
 import { ScenarioLabPanel } from "@/components/strategy/ScenarioLabPanel";
+import { StrategicMemoryPanel } from "@/components/strategy/StrategicMemoryPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -257,6 +258,8 @@ export default function Strategy() {
         <ScenarioLabPanel appId={effectiveAppId} objectives={objectives} decisions={decisions} />
 
         <GovernanceAuthorityPanel appId={effectiveAppId} decisions={decisions} />
+
+        <StrategicMemoryPanel appId={effectiveAppId} decisions={decisions} />
 
         <div className="grid gap-6 xl:grid-cols-[1fr_1.35fr]">
           <section className="space-y-3">
