@@ -14,6 +14,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { CommercialWorldModelPanel } from "@/components/strategy/CommercialWorldModelPanel";
 import { EvidenceUncertaintyPanel } from "@/components/strategy/EvidenceUncertaintyPanel";
 import { GovernanceAuthorityPanel } from "@/components/strategy/GovernanceAuthorityPanel";
 import { MarketChoicePanel } from "@/components/strategy/MarketChoicePanel";
@@ -260,6 +261,8 @@ export default function Strategy() {
         <GovernanceAuthorityPanel appId={effectiveAppId} decisions={decisions} />
 
         <StrategicMemoryPanel appId={effectiveAppId} decisions={decisions} />
+
+        <CommercialWorldModelPanel appId={effectiveAppId} apps={apps ?? []} />
 
         <div className="grid gap-6 xl:grid-cols-[1fr_1.35fr]">
           <section className="space-y-3">
