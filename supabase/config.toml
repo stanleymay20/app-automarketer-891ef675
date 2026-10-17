@@ -106,3 +106,6 @@ verify_jwt = false
 
 [functions.track-book-promo]
 verify_jwt = false
+
+[functions.ingest-product-event]
+verify_jwt = false
