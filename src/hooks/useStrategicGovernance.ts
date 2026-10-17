@@ -45,6 +45,8 @@ export interface StrategicApprovalRequest {
   reason: string | null;
   decision_snapshot: Record<string, unknown>;
   policy_snapshot: Record<string, unknown>;
+  decision_fingerprint: string;
+  policy_fingerprint: string;
   requested_by: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
@@ -76,12 +78,13 @@ export interface StrategicGovernanceEvaluation {
   app_id: string | null;
   decision_id: string;
   policy_id: string | null;
-  requested_action: "autonomous_execute" | "manual_execute" | "approve";
+  requested_action: "autonomous_execute";
   result: GovernanceResult;
   reasons: string[];
   decision_snapshot: Record<string, unknown>;
   policy_snapshot: Record<string, unknown>;
   decision_fingerprint: string;
+  policy_fingerprint: string;
   created_at: string;
 }
 
@@ -189,7 +192,7 @@ export function useCreateGovernancePolicy() {
         decision_types: input.decision_types ?? [],
         currency: input.currency ?? "EUR",
         allowed_reversibility: input.allowed_reversibility ?? [],
-        human_approval_required: input.human_approval_required ?? true,
+        human_approval_required: input.human_approval_required ?? false,
         legal_review_required: input.legal_review_required ?? false,
         brand_review_required: input.brand_review_required ?? false,
         executive_approval_required: input.executive_approval_required ?? false,
