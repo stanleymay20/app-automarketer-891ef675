@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ExperimentPortfolioPanel } from "@/components/strategy/ExperimentPortfolioPanel";
 import { Phase9DecisionSupportContainer } from "@/components/strategy/Phase9DecisionSupportContainer";
 import {
   DecisionContextPurpose,
@@ -218,6 +219,10 @@ export function DecisionContextPanel({ appId }: { appId?: string }) {
 
         <div className="border-t pt-5">
           <Phase9DecisionSupportContainer appId={appId} />
+        </div>
+
+        <div className="border-t pt-5">
+          <ExperimentPortfolioPanel appId={appId} />
         </div>
       </CardContent>
     </Card>
