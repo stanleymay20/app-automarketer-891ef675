@@ -9,7 +9,7 @@ ScrollMarketer is evolving from AI marketing automation into a **Commercial Deci
 
 The product should answer a higher-order question before generating tactics:
 
-> What is the business trying to achieve, where should it compete, what evidence supports the move, how reversible is the commitment, and what is the smallest valid next action?
+> What is the business trying to achieve, where should it compete, what evidence supports the move, how reversible is the commitment, what does prior reviewed experience teach us, and what is the smallest valid next action?
 
 Marketing is one execution option inside that decision system. The system must also be able to recommend research, waiting, testing, partnering, repositioning, product changes, pricing changes, market entry/exit, or scaling.
 
@@ -26,8 +26,11 @@ Marketing is one execution option inside that decision system. The system must a
 9. **Global learning is multidirectional.** A useful mechanism learned in any market may be tested in other markets; do not assume headquarters or one geography is always the source of truth.
 10. **Do not weaken existing security, RLS, CI, approval or audit controls to ship strategy features.**
 11. **Autonomy is policy-bounded.** Probabilistic recommendations never imply execution authority; deterministic governance decides whether a bounded action may proceed.
-12. **Approval must stay fresh.** A material decision or policy change invalidates reuse of an older approval/evaluation.
+12. **Approval must stay fresh.** Material decision, policy or reviewed-memory changes invalidate reuse of older approvals.
 13. **Outcome is not mechanism.** A measured result may justify a lesson or hypothesis, but stronger causal/transferability states require explicit evidence or transfer testing.
+14. **Native records remain authoritative.** The Commercial Decision Graph is a query/relationship layer over canonical domain records, not a duplicate database.
+15. **Memory existence is not memory permission.** A strategic learning is not automatically prompt context; reuse requires an explicit, fresh purpose/scope review.
+16. **Memory permission is not execution authority.** Reviewed-memory reuse never bypasses deterministic governance.
 
 ## Four nested loops
 
@@ -41,13 +44,13 @@ Find opportunity -> expose uncertainty -> simulate -> choose -> allocate.
 Experiment -> launch -> measure -> optimize within authority.
 
 ### 4. Learning loop
-Explain outcome -> store mechanism -> update beliefs -> transfer learning.
+Explain outcome -> store mechanism -> update beliefs -> test transfer -> review reuse.
 
-These loops operate at different speeds. Real-time ad optimization must not cause constant strategic repositioning.
+These loops operate at different speeds. Real-time optimization must not cause constant strategic repositioning.
 
 ## Commercial Decision Graph
 
-Long-term product moat should be an auditable graph connecting:
+The product moat should become an auditable graph connecting:
 
 - markets
 - customers and segments
@@ -69,8 +72,9 @@ Long-term product moat should be an auditable graph connecting:
 - mechanism hypotheses
 - transfer tests
 - durable learnings
+- reviewed memory-reuse permissions
 
-The graph must capture both current state and decision history.
+The graph must capture both current state and decision history without replacing the native tables that own those records.
 
 ## Implementation branch
 
@@ -86,11 +90,11 @@ Existing `growth_goals` remains the measurable strategic-objective layer and `st
 
 Migration: `supabase/migrations/20261017170000_evidence_uncertainty_engine.sql`
 
-`strategic_evidence_items` preserves the distinction between observation, inference, assumption and unknown. `strategic_questions` ranks unresolved questions using a deterministic information-value proxy:
+`strategic_evidence_items` preserves observation/inference/assumption/unknown distinctions. `strategic_questions` ranks unresolved questions with a deterministic information-value proxy:
 
 `information_value_score = uncertainty × decision impact × answerability`
 
-The score is a prioritisation aid, not expected monetary value.
+This is a prioritisation aid, not expected monetary value.
 
 ## Slice 3 — Opportunity and market choice
 
@@ -110,11 +114,7 @@ Detailed handoff: `docs/SCROLLMARKETER_PHASE4_STRATEGY_SIMULATION.md`
 
 Migration: `supabase/migrations/20261017190000_strategy_simulation_engine.sql`
 
-Phase 4 adds scenario containers, move/countermove branches, explicit low/base/high sensitivities, and decision-holds/changes analysis.
-
-Current `competitor_signals` are ephemeral refreshed snapshots, not durable behavior history. Competitor likelihood therefore stays unknown unless the user explicitly records a manual assumption or links historical observation evidence with response/comparable counts.
-
-Observed historical frequency remains descriptive history, not a guarantee of future probability.
+Phase 4 adds scenario containers, move/countermove branches and explicit low/base/high sensitivities. Existing `competitor_signals` are ephemeral refreshed snapshots, not durable behavior history, so competitor likelihood remains unknown unless an explicit manual assumption or qualifying historical observation is supplied.
 
 ## Slice 5 — Deterministic governance and authority
 
@@ -126,39 +126,11 @@ Migrations:
 - `supabase/migrations/20261017201000_governance_freshness_guards.sql`
 - `supabase/migrations/20261017202000_governance_fail_closed_actions.sql`
 
-Phase 5 adds:
+Phase 5 adds governance policies, approval requests, stop rules, deterministic evaluations, an append-only action log and `strategic_decisions.execution_mode`.
 
-- `strategic_governance_policies`
-- `strategic_approval_requests`
-- `strategic_stop_rules`
-- `strategic_governance_evaluations`
-- append-only `strategic_action_log`
-- `strategic_decisions.execution_mode`
-- Governance & Authority panel in `/strategy`
+A bounded-execution policy is invalid without explicit owner-configured confidence, commitment and reversibility limits. No applicable enabled policy means bounded autonomous execution is blocked. Hard-to-reverse decisions require executive approval. Decision/policy fingerprints prevent stale approval reuse.
 
-### Authority doctrine
-
-A recommendation never implies authority. A `bounded_execute` policy is invalid unless the owner explicitly configures minimum confidence, maximum commitment amount/currency, and allowed reversibility classes. Policies are created disabled. No enabled applicable policy means bounded autonomous execution is blocked.
-
-### Approval doctrine
-
-Every bounded-autonomous strategic decision must already be `approved`. Policies may additionally require human, legal, brand or executive approval. Hard-to-reverse decisions always require executive approval.
-
-### Freshness doctrine
-
-Governance evaluations and approval requests are bound to fingerprints of the material decision state and selected policy version. A material decision or policy change invalidates stale approvals/evaluations. Bounded execution requires a fresh ALLOW matching current decision and policy fingerprints.
-
-### Stop-rule doctrine
-
-Machine-checkable rules currently cover confidence floor, commitment ceiling, deadline and manual halt. Unknown confidence/commitment is not silently treated as safe when the corresponding rule exists.
-
-### Existing autonomy preserved
-
-Existing `automation_policies`, `autopilot_settings` and their domain-specific behavior remain intact. Strategic governance does not silently replace the existing content or prospecting control planes.
-
-### Runtime boundary
-
-Phase 5 establishes the deterministic strategic execution gate; it does not yet attach a generic side-effect executor or continuous external-metric monitor. Before a bounded-autonomous strategic decision enters or changes execution state, the database requires a fresh ALLOW and no stop-rule breach. Future strategic executors must use that gate before governed side effects.
+Existing `automation_policies` and `autopilot_settings` remain intact; strategic governance does not silently replace those domain-specific control planes.
 
 ## Slice 6 — Strategic memory and causal learning
 
@@ -169,79 +141,133 @@ Migrations:
 - `supabase/migrations/20261017210000_strategic_memory_causal_learning.sql`
 - `supabase/migrations/20261017211000_strategic_memory_epistemic_guards.sql`
 
-Phase 6 extends the existing durable `learning_events` log rather than creating a competing memory store. Existing tactical `learning_insights` remains the regenerated operational pattern cache and is not silently promoted into causal knowledge.
+Phase 6 extends the existing durable `learning_events` log rather than creating a competing memory store. Tactical `learning_insights` remains a regenerated operational pattern cache and is not silently promoted into causal knowledge.
 
-Durable strategic learning now separates:
+Strategic learning separates action/context, observed outcome, mechanism hypothesis, causal status, confidence, evidence links, transferability, transfer testing and corrections/invalidation.
 
-- action/intervention
-- context and source snapshot
-- observed outcome
-- mechanism hypothesis
-- causal-status confidence
-- evidence that supports/challenges/provides context
-- transferability scope
-- explicit cross-context transfer tests
-- corrections/invalidation without erasing history
+Strong causal labels are evidence-backed review states. `supported` still does not mean causation is proven. Strategic history is durable: corrections supersede rather than erase, and authenticated clients do not delete strategic learnings.
 
-### Causal doctrine
+Phase 6 deliberately does not automatically feed strategic memory back into generation or autonomy.
 
-New learning starts conservatively as unknown/correlation/plausible. Stronger states are evidence-backed review states:
+## Slice 7 — Commercial Decision Graph / Commercial World Model
 
-- supported requires validated supporting observation evidence or a completed supporting transfer test;
-- challenged requires validated challenging observation evidence or an appropriate completed transfer result;
-- falsified requires validated challenging experiment evidence or a completed falsifying transfer test.
+Detailed handoff: `docs/SCROLLMARKETER_PHASE7_COMMERCIAL_WORLD_MODEL.md`
 
-`Supported` still does not mean causation is proven.
+Migrations:
 
-### Transfer doctrine
+- `supabase/migrations/20261017220000_commercial_decision_graph.sql`
+- `supabase/migrations/20261017221000_reviewed_memory_reuse.sql`
+- `supabase/migrations/20261017222000_commercial_graph_memory_reuse_hardening.sql`
+- `supabase/migrations/20261017223000_memory_reuse_review_history_guard.sql`
 
-A transfer test requires an explicit source mechanism hypothesis. Completion requires an explicit result. `tested` transferability requires a completed transfer test; `not_transferable` requires a challenged/falsified completed transfer result. Completing a transfer test never auto-promotes the source learning.
+### Native-record doctrine
 
-### Memory-history doctrine
+The graph does not clone ScrollMarketer's authoritative domain tables. `commercial_graph_nodes` is a `security_invoker` normalized read view over existing offerings, objectives, decisions, market options, scenarios, campaigns, personas, prospects, distribution targets, strategic evidence and strategic learning.
 
-Strategic learning is durable. Authenticated clients invalidate or supersede strategic memory rather than deleting it. Corrections can mark an older learning superseded while preserving the historical record.
+`commercial_graph_entities` exists only for commercially important concepts without a canonical native table, such as a stable competitor, partner, pricing offer, regulator or supplier.
 
-### Feedback-loop boundary
+### Relationship doctrine
 
-Strategic memory is not automatically injected back into campaign generation or autonomous execution in Phase 6. That avoids self-reinforcing model loops before a later Commercial Decision Graph/policy layer defines which reviewed memories are eligible for automated reuse.
+`commercial_graph_relationships` combines two classes of edge:
+
+- structural edges derived from authoritative native relationships;
+- explicit semantic edges stored in `commercial_graph_edges`.
+
+Structural edges are read-only consequences of native records. Semantic edges are explicit claims that may be app- or portfolio-scoped, manual/evidence/review based, nullable-confidence and revocable.
+
+App-scoped edges cannot silently connect two different offerings. Cross-offering relations require explicit portfolio scope. Evidence-based edges require linked evidence.
+
+### Generic-node integrity
+
+`commercial_graph_node_app(...)` verifies that each semantic-edge endpoint exists and belongs to the requesting user. The hardening migration ensures an unknown/foreign UUID raises instead of being interpreted as an unscoped entity.
+
+### Reviewed-memory reuse doctrine
+
+`strategic_memory_reuse_reviews` separates **learning validity** from **permission to reuse that learning**.
+
+Purposes currently include strategy recommendation, campaign/content generation, prospect qualification, market ranking, scenario planning and bounded autonomy.
+
+Scopes are source offering, explicit target offering, or portfolio. A review starts pending. Only approved, active, unexpired, freshness-matching memory is exposed in `approved_strategic_memory_reuse`.
+
+Approved reuse is bound to a material learning fingerprint. A material learning change invalidates the grant until fresh review. Approved grant purpose/scope/rationale/reviewer history is immutable; change requires revoke + fresh review. Revocation preserves the original approver identity.
+
+### Bounded-autonomy memory doctrine
+
+Bounded-autonomy reuse is stricter than advisory/generation reuse:
+
+- current learning must be active and `supported`;
+- portfolio-wide bounded-autonomy reuse is forbidden;
+- cross-offering use requires tested transferability;
+- cross-offering use requires a completed supporting transfer test for that exact target offering;
+- the permission function rechecks current qualifying support at use time.
+
+This still does not bypass Phase 5 governance.
+
+### Strategy Command UI
+
+`/strategy` now exposes the Commercial World Model for:
+
+- focused graph-neighborhood inspection;
+- structural vs semantic relationship visibility;
+- durable external commercial entity creation only when no native record exists;
+- explicit semantic-link recording/revocation;
+- memory-reuse review creation;
+- approval/rejection/revocation of memory reuse;
+- visibility into fresh vs stale/expired reuse grants.
+
+### Consumption boundary
+
+Phase 7 establishes the graph and reviewed-memory contract but **does not yet inject approved strategic memory into generators or agents**. That remains a separate controlled phase to avoid self-reinforcing loops and hidden context use.
+
+## Important deployment constraint
+
+The `/strategy` page now depends on all strategic migrations in this exact order:
+
+1. `supabase/migrations/20261017162000_strategic_objectives_decision_ledger.sql`
+2. `supabase/migrations/20261017170000_evidence_uncertainty_engine.sql`
+3. `supabase/migrations/20261017180000_market_choice_engine.sql`
+4. `supabase/migrations/20261017190000_strategy_simulation_engine.sql`
+5. `supabase/migrations/20261017200000_deterministic_governance_engine.sql`
+6. `supabase/migrations/20261017201000_governance_freshness_guards.sql`
+7. `supabase/migrations/20261017202000_governance_fail_closed_actions.sql`
+8. `supabase/migrations/20261017210000_strategic_memory_causal_learning.sql`
+9. `supabase/migrations/20261017211000_strategic_memory_epistemic_guards.sql`
+10. `supabase/migrations/20261017220000_commercial_decision_graph.sql`
+11. `supabase/migrations/20261017221000_reviewed_memory_reuse.sql`
+12. `supabase/migrations/20261017222000_commercial_graph_memory_reuse_hardening.sql`
+13. `supabase/migrations/20261017223000_memory_reuse_review_history_guard.sql`
+
+Do **not** deploy `/strategy` where these migrations have not been reviewed and applied in order. Do not apply them directly to production without the controlled Lovable Cloud migration/release path and non-production validation.
 
 ## Repository validation state
 
-Latest integrated Phase 6 code head before the documentation commits:
-
-`5b05a4e9caf41b3ab40ee19627361c0988c16c18`
-
-GitHub Actions run `39048284372`:
+The Phase 7 integrated UI/code head `73b9664cfa74383b8d24cad64177850a7268a90e` passed GitHub Actions run `39051727047`:
 
 - lint: PASS
 - test: PASS
 - build: PASS
 
-Because the documentation commits create later branch heads, final merge review must still confirm exact-head CI on the final commit selected for merge.
+Later SQL/documentation hardening commits create newer branch heads. Final merge review must therefore re-run/confirm CI on the exact final head selected for merge.
 
-## Important deployment constraint
+Repository CI does not execute the managed database migrations and does not prove view/RLS/trigger correctness.
 
-The `/strategy` page depends on all strategic migrations in order:
+## Next controlled implementation phase
 
-- `supabase/migrations/20261017162000_strategic_objectives_decision_ledger.sql`
-- `supabase/migrations/20261017170000_evidence_uncertainty_engine.sql`
-- `supabase/migrations/20261017180000_market_choice_engine.sql`
-- `supabase/migrations/20261017190000_strategy_simulation_engine.sql`
-- `supabase/migrations/20261017200000_deterministic_governance_engine.sql`
-- `supabase/migrations/20261017201000_governance_freshness_guards.sql`
-- `supabase/migrations/20261017202000_governance_fail_closed_actions.sql`
-- `supabase/migrations/20261017210000_strategic_memory_causal_learning.sql`
-- `supabase/migrations/20261017211000_strategic_memory_epistemic_guards.sql`
+### Phase 8 — Controlled Decision Context Assembly
 
-Do **not** deploy `/strategy` to a runtime where these migrations have not been reviewed and applied in order. Do not apply them directly to production without the controlled Lovable Cloud migration/release path and non-production validation.
+The next phase should consume the world model instead of creating another knowledge store.
 
-## Next implementation phase
+A context assembler should:
 
-### Phase 7 — Commercial world model
+1. receive a target offering and explicit purpose;
+2. retrieve the relevant graph neighborhood;
+3. retrieve evidence with provenance and unknowns;
+4. retrieve only fresh, purpose-approved strategic memory;
+5. retrieve applicable governance/authority state;
+6. return a provenance-rich context package with causal/transferability labels intact;
+7. begin with recommendation-only workflows before any bounded-autonomy consumption.
 
-Unify company, market, customer, competitor, product, pricing, channel, partner, strategy, experiment, governance, action, outcome, evidence, mechanism and learning entities into a queryable Commercial Decision Graph.
-
-Phase 7 should define explicit reuse policies for strategic memory rather than allowing every stored lesson to influence every future recommendation.
+No generator should simply query all historical memory and treat it as truth.
 
 ## Engineering continuation rules
 
@@ -251,7 +277,9 @@ Phase 7 should define explicit reuse policies for strategic memory rather than a
 - Keep migrations additive until data migration/removal is explicitly planned.
 - RLS must remain enabled for user-owned strategic data.
 - Never expose service-role credentials to the client.
-- Preserve epistemic labels: observation, inference, hypothesis and causal state are not interchangeable.
-- Do not call work complete until exact branch/head has passed the repository's required build/lint/test checks.
+- Preserve epistemic labels: observation, inference, hypothesis, causal status and reuse permission are not interchangeable.
+- Preserve native domain records as canonical; do not duplicate them into generic graph storage.
+- No stored learning becomes automated context without explicit reviewed reuse permission.
+- Do not call work complete until exact branch/head has passed required build/lint/test checks.
 - Do not merge or deploy merely because code compiles.
 - Database migration application, managed-runtime validation and production release are separate gates.
