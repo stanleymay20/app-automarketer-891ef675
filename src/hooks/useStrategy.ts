@@ -50,6 +50,7 @@ export interface StrategicDecision {
   app_id: string | null;
   goal_id: string | null;
   recommendation_id: string | null;
+  market_option_id: string | null;
   decision_type: DecisionType;
   title: string;
   recommendation: string;
@@ -94,6 +95,7 @@ export interface CreateStrategicObjectiveInput {
 export interface CreateStrategicDecisionInput {
   app_id: string;
   goal_id?: string;
+  market_option_id?: string;
   decision_type: DecisionType;
   title: string;
   recommendation: string;
