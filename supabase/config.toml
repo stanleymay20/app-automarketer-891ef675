@@ -99,10 +99,14 @@ verify_jwt = false
 [functions.analyze-website]
 verify_jwt = false
 
-
-
-
-
-
 [functions.track-book-promo]
+verify_jwt = false
+
+[functions.generate-strategic-recommendations]
+verify_jwt = false
+
+[functions.rank-strategic-markets]
+verify_jwt = false
+
+[functions.assess-strategic-scenario]
 verify_jwt = false
