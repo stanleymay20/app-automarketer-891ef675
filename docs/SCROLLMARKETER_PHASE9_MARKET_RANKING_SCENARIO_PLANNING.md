@@ -39,7 +39,7 @@ The AI layer may only annotate the deterministic result with one of:
 - `wait`
 - `deprioritize`
 
-and explain why. Sparse support reduces confidence deterministically. Fabricated evidence/memory/question/unknown IDs are discarded.
+and explain why. Sparse support reduces confidence deterministically. Fabricated evidence/memory/question/unknown IDs are discarded. If the model omits a market annotation, ScrollMarketer stores `confidence = NULL` rather than inventing a default confidence value.
 
 ### Scenario planning
 
@@ -53,6 +53,8 @@ The system preserves these distinctions:
 - observed-frequency evidence that is not a validated observation is labeled `unverified_observation`;
 - `stress_score` remains a prioritisation proxy, not expected financial loss;
 - low/base/high sensitivity values are stored inputs, not invented by Phase 9.
+
+Each snapshot branch also exposes a `qualified_stress_score`. If an observed-frequency branch is backed only by an unvalidated observation, its qualified stress is `NULL`. A database hardening trigger recomputes the assessment-level `max_stress_score` from qualified branch stress only, so unverified historical-frequency evidence cannot inflate the persisted aggregate.
 
 The AI may return only:
 
@@ -105,7 +107,7 @@ Authenticated clients receive SELECT only. The two Edge Functions record complet
 
 `record_strategic_market_ranking_run(...)` copies rank state, rank position and scoring fields from the immutable snapshot. It never accepts those values from model output.
 
-`record_strategic_scenario_assessment_run(...)` copies branch/sensitivity summary metrics from the immutable scenario snapshot. It never accepts those counts from model output.
+`record_strategic_scenario_assessment_run(...)` copies branch/sensitivity summary metrics from the immutable scenario snapshot. The subsequent epistemic-hardening trigger overrides persisted maximum stress with the qualified snapshot-derived value. The model cannot supply that metric.
 
 ## Edge Functions
 
@@ -137,7 +139,7 @@ Authenticated clients receive SELECT only. The two Edge Functions record complet
 
 `MarketScenarioDecisionSupportPanel` is mounted inside the existing Controlled Decision Context surface.
 
-The market section shows the current deterministic preview before generation and the latest persisted immutable ranking after generation.
+The market section shows the current deterministic preview before generation and the latest persisted immutable ranking after generation. Ranking history is scope-correct: changing objective scope never falls back to a ranking run generated for a different objective.
 
 The scenario section shows explicit branch coverage/unknowns before generation and the latest immutable recommendation-only assessment afterward.
 
@@ -153,24 +155,26 @@ in `supabase/config.toml`.
 
 All three functions perform their own authenticated-user check even though project config currently uses `verify_jwt = false`, matching the repository's existing Edge Function pattern.
 
-## Migration
+## Migrations
 
-Phase 9 migration:
+Phase 9 adds, in order:
 
-`supabase/migrations/20261017240000_phase9_market_ranking_scenario_planning.sql`
+1. `supabase/migrations/20261017240000_phase9_market_ranking_scenario_planning.sql`
+2. `supabase/migrations/20261017241000_phase9_epistemic_hardening.sql`
 
-It must run after the sixteen Phase 1–8 migrations.
+They must run after the sixteen Phase 1–8 migrations.
 
 ## Required managed-runtime validation
 
 Repository lint/test/build is necessary but insufficient. Before merge/deployment, controlled Lovable Cloud non-production must prove at least:
 
-- migration 17 applies cleanly after migrations 1–16;
+- migrations 17–18 apply cleanly after migrations 1–16;
 - two-user RLS isolation on all three Phase 9 artifact tables;
 - authenticated clients cannot insert/update/delete Phase 9 analysis artifacts;
 - service-role-only recorder RPCs cannot be invoked by authenticated/anon roles;
 - foreign app/objective/scenario IDs are rejected by snapshot creators;
 - market ranking includes no numeric rank for `decision_readiness_score IS NULL`;
+- an omitted AI annotation persists no invented confidence;
 - excluded markets remain excluded;
 - deterministic rank cannot be changed by model output;
 - fabricated cited IDs are discarded;
@@ -178,6 +182,7 @@ Repository lint/test/build is necessary but insufficient. Before merge/deploymen
 - scenario unknown likelihood remains `NULL` in the snapshot;
 - manual assumptions remain labeled assumptions;
 - unvalidated observed-frequency evidence remains labeled unverified;
+- persisted maximum stress ignores unqualified observed-frequency branches;
 - a scenario with no assessed branches is forced to `needs_more_evidence`;
 - scenario assessment does not update `strategic_scenarios.conclusion`;
 - market ranking does not update market-option scores/status;
