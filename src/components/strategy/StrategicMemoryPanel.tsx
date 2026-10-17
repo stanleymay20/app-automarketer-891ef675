@@ -1,17 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import {
-  Beaker,
-  Brain,
-  CheckCircle2,
-  CircleHelp,
-  Link2,
-  Loader2,
-  Plus,
-  RefreshCcw,
-  ShieldAlert,
-  XCircle,
-} from "lucide-react";
+import { Beaker, Brain, CircleHelp, Link2, Loader2, Plus, ShieldAlert, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,13 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import type { StrategicDecision } from "@/hooks/useStrategy";
 import {
-  CausalStatus,
-  EvidenceRelationship,
-  OutcomeDirection,
-  StrategicLearningEvent,
-  StrategicLearningKind,
-  TransferTestResult,
-  TransferabilityStatus,
+  type CausalStatus,
+  type EvidenceRelationship,
+  type OutcomeDirection,
+  type StrategicLearningEvent,
+  type StrategicLearningKind,
+  type TransferTestResult,
+  type TransferabilityStatus,
   useCreateStrategicLearning,
   useCreateStrategicTransferTest,
   useInvalidateStrategicLearning,
@@ -36,6 +25,7 @@ import {
   useStrategicMemory,
   useUpdateStrategicTransferTest,
 } from "@/hooks/useStrategicMemory";
+import { useReviewStrategicLearningState } from "@/hooks/useStrategicMemoryReview";
 
 interface Props {
   appId?: string;
@@ -69,6 +59,7 @@ export function StrategicMemoryPanel({ appId, decisions }: Props) {
   const createTransfer = useCreateStrategicTransferTest();
   const updateTransfer = useUpdateStrategicTransferTest();
   const invalidateLearning = useInvalidateStrategicLearning();
+  const reviewLearning = useReviewStrategicLearningState();
 
   const learnings = data?.learnings ?? [];
   const evidenceOptions = data?.evidenceOptions ?? [];
@@ -79,6 +70,7 @@ export function StrategicMemoryPanel({ appId, decisions }: Props) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const [kind, setKind] = useState<StrategicLearningKind>("strategic_postmortem");
   const [decisionId, setDecisionId] = useState("none");
@@ -111,6 +103,12 @@ export function StrategicMemoryPanel({ appId, decisions }: Props) {
   const [transferResult, setTransferResult] = useState<TransferTestResult>("supported");
   const [transferOutcome, setTransferOutcome] = useState("");
   const [confidenceAfter, setConfidenceAfter] = useState(50);
+
+  const [reviewLearningId, setReviewLearningId] = useState<string | null>(null);
+  const [reviewCausalStatus, setReviewCausalStatus] = useState<CausalStatus>("unknown");
+  const [reviewConfidence, setReviewConfidence] = useState(50);
+  const [reviewTransferability, setReviewTransferability] = useState<TransferabilityStatus>("unknown");
+  const [reviewTransferScope, setReviewTransferScope] = useState("");
 
   const activeLearnings = learnings.filter((item) => item.status === "active");
   const mechanismLearnings = activeLearnings.filter((item) => Boolean(item.mechanism_hypothesis));
@@ -242,6 +240,27 @@ export function StrategicMemoryPanel({ appId, decisions }: Props) {
     setCompleteOpen(false);
   };
 
+  const openReview = (learning: StrategicLearningEvent) => {
+    setReviewLearningId(learning.id);
+    setReviewCausalStatus(learning.causal_status);
+    setReviewConfidence(learning.confidence ?? 50);
+    setReviewTransferability(learning.transferability_status);
+    setReviewTransferScope(learning.transferability_scope ?? "");
+    setReviewOpen(true);
+  };
+
+  const submitReview = async () => {
+    if (!reviewLearningId) return;
+    await reviewLearning.mutateAsync({
+      id: reviewLearningId,
+      causal_status: reviewCausalStatus,
+      confidence: clampConfidence(reviewConfidence),
+      transferability_status: reviewTransferability,
+      transferability_scope: reviewTransferScope,
+    });
+    setReviewOpen(false);
+  };
+
   const linkedEvidenceFor = (learningId: string) =>
     evidenceLinks.filter((link) => link.learning_event_id === learningId);
 
@@ -266,20 +285,20 @@ export function StrategicMemoryPanel({ appId, decisions }: Props) {
             <div className="grid gap-4 py-2 sm:grid-cols-2">
               <div className="space-y-2"><Label>Learning type</Label><Select value={kind} onValueChange={(v) => setKind(v as StrategicLearningKind)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="strategic_postmortem">Strategic postmortem</SelectItem><SelectItem value="mechanism_hypothesis">Mechanism hypothesis</SelectItem><SelectItem value="correction">Correction</SelectItem><SelectItem value="transfer_result">Transfer result</SelectItem></SelectContent></Select></div>
               <div className="space-y-2"><Label>Linked decision</Label><Select value={decisionId} onValueChange={setDecisionId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No decision</SelectItem>{decisions.map((d) => <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>)}</SelectContent></Select></div>
-              {kind === "correction" && <div className="space-y-2 sm:col-span-2"><Label>Corrects / supersedes</Label><Select value={supersedesId} onValueChange={setSupersedesId}><SelectTrigger><SelectValue placeholder="Choose prior learning" /></SelectTrigger><SelectContent><SelectItem value="none">No linked prior learning</SelectItem>{learnings.map((item) => <SelectItem key={item.id} value={item.id}>{item.lesson.slice(0, 90)}</SelectItem>)}</SelectContent></Select></div>}
+              {kind === "correction" && <div className="space-y-2 sm:col-span-2"><Label>Corrects / supersedes</Label><Select value={supersedesId} onValueChange={setSupersedesId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No prior learning</SelectItem>{learnings.map((item) => <SelectItem key={item.id} value={item.id}>{item.lesson.slice(0, 90)}</SelectItem>)}</SelectContent></Select></div>}
               <div className="space-y-2 sm:col-span-2"><Label>Lesson</Label><Textarea value={lesson} onChange={(e) => setLesson(e.target.value)} placeholder="What should the organization remember?" /></div>
               <div className="space-y-2 sm:col-span-2"><Label>Action / intervention</Label><Textarea value={actionSummary} onChange={(e) => setActionSummary(e.target.value)} placeholder="What did we actually do?" /></div>
               <div className="space-y-2 sm:col-span-2"><Label>Observed outcome</Label><Textarea value={outcomeSummary} onChange={(e) => setOutcomeSummary(e.target.value)} placeholder="What happened? Keep observation separate from explanation." /></div>
               <div className="space-y-2"><Label>Outcome direction</Label><Select value={outcomeDirection} onValueChange={(v) => setOutcomeDirection(v as OutcomeDirection)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="positive">Positive</SelectItem><SelectItem value="negative">Negative</SelectItem><SelectItem value="mixed">Mixed</SelectItem><SelectItem value="neutral">Neutral</SelectItem><SelectItem value="unknown">Unknown</SelectItem></SelectContent></Select></div>
               <div className="space-y-2"><Label>Confidence (%)</Label><Input type="number" min={0} max={100} value={confidence} onChange={(e) => setConfidence(clampConfidence(Number(e.target.value)))} /></div>
               <div className="space-y-2 sm:col-span-2"><Label>Mechanism hypothesis</Label><Textarea value={mechanism} onChange={(e) => setMechanism(e.target.value)} placeholder="Why might the action have produced the outcome? This remains a hypothesis." /></div>
-              <div className="space-y-2"><Label>Causal status</Label><Select value={causalStatus} onValueChange={(v) => setCausalStatus(v as CausalStatus)} disabled={!mechanism.trim()}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="correlation">Correlation only</SelectItem><SelectItem value="plausible">Plausible mechanism</SelectItem><SelectItem value="supported">Supported by evidence</SelectItem><SelectItem value="challenged">Challenged</SelectItem><SelectItem value="falsified">Falsified</SelectItem></SelectContent></Select></div>
-              <div className="space-y-2"><Label>Transferability</Label><Select value={transferability} onValueChange={(v) => setTransferability(v as TransferabilityStatus)} disabled={!mechanism.trim()}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="local_only">Local only</SelectItem><SelectItem value="candidate">Candidate for transfer test</SelectItem><SelectItem value="tested">Tested elsewhere</SelectItem><SelectItem value="not_transferable">Not transferable</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label>Initial causal status</Label><Select value={causalStatus} onValueChange={(v) => setCausalStatus(v as CausalStatus)} disabled={!mechanism.trim()}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="correlation">Correlation only</SelectItem><SelectItem value="plausible">Plausible mechanism</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label>Initial transferability</Label><Select value={transferability} onValueChange={(v) => setTransferability(v as TransferabilityStatus)} disabled={!mechanism.trim()}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="local_only">Local only</SelectItem><SelectItem value="candidate">Candidate for transfer test</SelectItem></SelectContent></Select></div>
               <div className="space-y-2 sm:col-span-2"><Label>Transfer scope / conditions</Label><Input value={transferScope} onChange={(e) => setTransferScope(e.target.value)} placeholder="e.g. German SMEs with long sales cycles; do not assume other contexts" /></div>
               <div className="space-y-2 sm:col-span-2"><Label>Future impact</Label><Textarea value={futureImpact} onChange={(e) => setFutureImpact(e.target.value)} placeholder="How should this change future decisions or experiments?" /></div>
             </div>
             <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-              “Supported” means evidence currently supports the mechanism hypothesis. It does not mean ScrollMarketer has proven causation.
+              Strong labels such as supported, challenged, falsified or tested are review states. The database requires qualifying evidence or completed transfer tests before accepting them.
             </div>
             <DialogFooter><Button onClick={submitLearning} disabled={!lesson.trim() || (kind === "mechanism_hypothesis" && !mechanism.trim()) || createLearning.isPending}>{createLearning.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save learning</Button></DialogFooter>
           </DialogContent>
@@ -321,7 +340,7 @@ export function StrategicMemoryPanel({ appId, decisions }: Props) {
                 <CardContent className="space-y-3 p-4 pt-2">
                   {learning.action_summary && <div><p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Action</p><p className="text-sm">{learning.action_summary}</p></div>}
                   {learning.outcome_summary && <div><p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Observed outcome · {learning.outcome_direction}</p><p className="text-sm">{learning.outcome_summary}</p></div>}
-                  {learning.mechanism_hypothesis ? <div className="rounded-md border p-3"><div className="mb-1 flex items-center gap-1 text-xs font-semibold"><CircleHelp className="h-3.5 w-3.5" />Mechanism hypothesis</div><p className="text-sm text-muted-foreground">{learning.mechanism_hypothesis}</p><p className="mt-2 text-[11px] text-muted-foreground">Status: {learning.causal_status}. This label does not prove causation.</p></div> : <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">No mechanism hypothesis recorded. The outcome remains descriptive.</div>}
+                  {learning.mechanism_hypothesis ? <div className="rounded-md border p-3"><div className="mb-1 flex items-center gap-1 text-xs font-semibold"><CircleHelp className="h-3.5 w-3.5" />Mechanism hypothesis</div><p className="text-sm text-muted-foreground">{learning.mechanism_hypothesis}</p><p className="mt-2 text-[11px] text-muted-foreground">Status: {learning.causal_status}. Even “supported” is not proof of causation.</p></div> : <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">No mechanism hypothesis recorded. The outcome remains descriptive.</div>}
                   {learning.future_impact && <p className="text-xs"><span className="font-semibold">Future impact:</span> {learning.future_impact}</p>}
                   {learning.transferability_scope && <p className="text-xs"><span className="font-semibold">Transfer scope:</span> {learning.transferability_scope}</p>}
 
@@ -340,6 +359,7 @@ export function StrategicMemoryPanel({ appId, decisions }: Props) {
                     <div className="flex flex-wrap gap-2">
                       <Button size="sm" variant="outline" className="h-7" onClick={() => openLink(learning.id)}><Link2 className="mr-1 h-3.5 w-3.5" />Evidence</Button>
                       {learning.mechanism_hypothesis && learning.status === "active" && <Button size="sm" variant="outline" className="h-7" onClick={() => openTransfer(learning)}><Beaker className="mr-1 h-3.5 w-3.5" />Transfer test</Button>}
+                      {learning.mechanism_hypothesis && learning.status === "active" && <Button size="sm" variant="outline" className="h-7" onClick={() => openReview(learning)}>Review state</Button>}
                       {learning.status === "active" && <Button size="sm" variant="ghost" className="h-7 text-destructive" onClick={() => invalidateLearning.mutate(learning.id)} disabled={invalidateLearning.isPending}><XCircle className="mr-1 h-3.5 w-3.5" />Invalidate</Button>}
                     </div>
                   </div>
@@ -370,7 +390,7 @@ export function StrategicMemoryPanel({ appId, decisions }: Props) {
             <div className="space-y-2"><Label>Target market</Label><Input value={targetMarket} onChange={(e) => setTargetMarket(e.target.value)} placeholder="Austria" /></div>
             <div className="space-y-2"><Label>Target segment</Label><Input value={targetSegment} onChange={(e) => setTargetSegment(e.target.value)} placeholder="SMEs, 10–100 employees" /></div>
             <div className="space-y-2 sm:col-span-2"><Label>Mechanism to test</Label><Textarea value={transferHypothesis} onChange={(e) => setTransferHypothesis(e.target.value)} /></div>
-            <div className="space-y-2 sm:col-span-2"><Label>Method</Label><Textarea value={transferMethod} onChange={(e) => setTransferMethod(e.target.value)} placeholder="Describe the smallest valid test and the observation that would support/challenge transfer." /></div>
+            <div className="space-y-2 sm:col-span-2"><Label>Method</Label><Textarea value={transferMethod} onChange={(e) => setTransferMethod(e.target.value)} placeholder="Describe the smallest valid test and the observation that would support or challenge transfer." /></div>
             <div className="space-y-2"><Label>Confidence before (%)</Label><Input type="number" min={0} max={100} value={confidenceBefore} onChange={(e) => setConfidenceBefore(clampConfidence(Number(e.target.value)))} /></div>
           </div>
           <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">A transfer test checks whether a mechanism survives a new context. It does not copy a tactic blindly.</div>
@@ -390,10 +410,24 @@ export function StrategicMemoryPanel({ appId, decisions }: Props) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>Review epistemic state</DialogTitle></DialogHeader>
+          <div className="grid gap-4 py-2 sm:grid-cols-2">
+            <div className="space-y-2"><Label>Causal status</Label><Select value={reviewCausalStatus} onValueChange={(v) => setReviewCausalStatus(v as CausalStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="correlation">Correlation only</SelectItem><SelectItem value="plausible">Plausible mechanism</SelectItem><SelectItem value="supported">Supported by qualifying evidence</SelectItem><SelectItem value="challenged">Challenged</SelectItem><SelectItem value="falsified">Falsified</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Confidence (%)</Label><Input type="number" min={0} max={100} value={reviewConfidence} onChange={(e) => setReviewConfidence(clampConfidence(Number(e.target.value)))} /></div>
+            <div className="space-y-2"><Label>Transferability</Label><Select value={reviewTransferability} onValueChange={(v) => setReviewTransferability(v as TransferabilityStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unknown">Unknown</SelectItem><SelectItem value="local_only">Local only</SelectItem><SelectItem value="candidate">Candidate</SelectItem><SelectItem value="tested">Tested in another context</SelectItem><SelectItem value="not_transferable">Not transferable</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Transfer scope</Label><Input value={reviewTransferScope} onChange={(e) => setReviewTransferScope(e.target.value)} /></div>
+          </div>
+          <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">The database rejects strong labels that lack the required validated observation evidence or completed transfer-test result.</div>
+          <DialogFooter><Button onClick={submitReview} disabled={reviewLearning.isPending}>{reviewLearning.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Apply reviewed state</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card className="border-dashed">
         <CardContent className="flex gap-3 p-4 text-xs text-muted-foreground">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <div><span className="font-semibold text-foreground">Causal discipline:</span> tactical `learning_insights` may suggest patterns, but they are not silently promoted into durable causal memory. Durable learning keeps the observed outcome, mechanism hypothesis, confidence, challenging evidence and transfer tests separate.</div>
+          <div><span className="font-semibold text-foreground">Causal discipline:</span> tactical `learning_insights` may suggest patterns, but they are not silently promoted into durable causal memory. Durable learning keeps observed outcomes, mechanism hypotheses, confidence, challenging evidence and transfer tests separate.</div>
         </CardContent>
       </Card>
     </section>
