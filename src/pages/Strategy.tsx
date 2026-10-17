@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { EvidenceUncertaintyPanel } from "@/components/strategy/EvidenceUncertaintyPanel";
+import { GovernanceAuthorityPanel } from "@/components/strategy/GovernanceAuthorityPanel";
 import { MarketChoicePanel } from "@/components/strategy/MarketChoicePanel";
 import { ScenarioLabPanel } from "@/components/strategy/ScenarioLabPanel";
 import { Badge } from "@/components/ui/badge";
@@ -254,6 +255,8 @@ export default function Strategy() {
         <MarketChoicePanel appId={effectiveAppId} objectives={objectives} decisions={decisions} />
 
         <ScenarioLabPanel appId={effectiveAppId} objectives={objectives} decisions={decisions} />
+
+        <GovernanceAuthorityPanel appId={effectiveAppId} decisions={decisions} />
 
         <div className="grid gap-6 xl:grid-cols-[1fr_1.35fr]">
           <section className="space-y-3">
