@@ -51,6 +51,7 @@ export interface StrategicDecision {
   goal_id: string | null;
   recommendation_id: string | null;
   market_option_id: string | null;
+  context_snapshot_id: string | null;
   decision_type: DecisionType;
   title: string;
   recommendation: string;
