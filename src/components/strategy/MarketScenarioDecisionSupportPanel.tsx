@@ -62,7 +62,7 @@ export function MarketScenarioDecisionSupportPanel({
 
   const latestRanking = (phase9?.rankingRuns ?? []).find((run) =>
     objectiveId === "all" ? run.objective_id === null : run.objective_id === objectiveId
-  ) ?? phase9?.rankingRuns?.[0];
+  );
   const latestRankingItems = latestRanking
     ? (phase9?.rankingItems ?? []).filter((item) => item.run_id === latestRanking.id)
     : [];
