@@ -196,7 +196,7 @@ This score is **not expected monetary value** and must not be presented as such.
 
 ### Next-best-question workflow
 
-`/strategy` now contains an Evidence & Uncertainty panel that:
+`/strategy` contains an Evidence & Uncertainty panel that:
 
 - shows observations, assumptions, unresolved unknowns and recorded confidence
 - lets the user record evidence/uncertainty with provenance
@@ -208,36 +208,81 @@ This score is **not expected monetary value** and must not be presented as such.
 
 This preserves the difference between learning that something was said and proving that the underlying claim is true.
 
+## Slice 3 — Opportunity and market choice
+
+Detailed handoff: `docs/SCROLLMARKETER_PHASE3_MARKET_CHOICE.md`
+
+Migration: `supabase/migrations/20261017180000_market_choice_engine.sql`
+
+New table: `strategic_market_options`.
+
+Phase 3 adds evidence-aware market/segment ranking with:
+
+- market and optional segment
+- unmet need and competitor-gap evidence
+- white-space hypothesis kept separate from white-space scoring
+- route-to-market and distribution constraints
+- entry mode and timing posture
+- reversibility/commitment class and optional capital commitment
+- ten explicit opportunity/risk factors
+- evidence coverage and evidence confidence
+- attractiveness, white-space and decision-readiness proxies
+- next reversible validation test
+- link from market option to proposed strategic decision
+
+### Unknown-factor doctrine
+
+Unknown factors remain `NULL`; they are never silently replaced by neutral scores or model guesses.
+
+Attractiveness is not emitted until at least four of ten factors are known. Evidence coverage is always shown next to attractiveness.
+
+Decision readiness is deliberately conservative:
+
+`decision_readiness = attractiveness × evidence_coverage × evidence_confidence`
+
+Coverage and confidence are normalised to 0–1. This is a prioritisation proxy, not ROI, NPV, TAM or probability of success.
+
+### White-space doctrine
+
+The white-space proxy requires demand, customer value and competition inputs. It does not prove an unmet need. The user records a white-space hypothesis separately, preserving the distinction between score and claim.
+
+### Route-to-market reuse
+
+The market-choice UI surfaces existing `distribution_targets` as app-level context. Existing distribution scores are not automatically treated as evidence that a specific country is accessible.
+
+### Reversible validation integration
+
+A market option can create a proposed `test` decision linked by `strategic_decisions.market_option_id`.
+
+This deliberately does not create or approve an `enter` decision. Missing market factors populate `next_information_needed`, which flows into the strategic-question system.
+
+### Ownership integrity
+
+In addition to owner-scoped RLS, database triggers verify that linked app/objective/market-option records belong to the same user.
+
 ## Repository validation state
 
-Latest exact head validated before this documentation-only commit: `bc99d484281da48df3051bb5e9264df110261307`.
+Latest exact head validated before this documentation update: `9268849dadd4eaa4fa93fecf2d7e0066d66c8d43`.
 
-GitHub Actions run `39042733700` on that exact code head:
+GitHub Actions run `39043640328` on that exact head:
 
 - lint: PASS
 - test: PASS
 - build: PASS
 
-Because this paragraph itself changes the branch head, it does not substitute for final exact-head validation before merge. The engineering rule remains: re-run/confirm CI on the final head used for merge.
+Because this documentation update itself creates a new commit, it does not substitute for final exact-head validation before merge. Reconfirm CI on the final branch head.
 
 ## Important deployment constraint
 
-The `/strategy` page now depends on both additive database migrations:
+The `/strategy` page now depends on all three additive database migrations, in order:
 
 - `supabase/migrations/20261017162000_strategic_objectives_decision_ledger.sql`
 - `supabase/migrations/20261017170000_evidence_uncertainty_engine.sql`
+- `supabase/migrations/20261017180000_market_choice_engine.sql`
 
 Do **not** deploy the UI to a runtime where these migrations have not been applied in order. Do not apply them directly to production without the normal controlled Lovable Cloud migration/release path and validation.
 
 ## Next implementation phases
-
-### Phase 3 — Opportunity and market choice
-
-- market attractiveness model
-- white-space detection
-- route-to-market and distribution constraints
-- market/segment opportunity ranking
-- first-mover/pioneering-cost and strategic-commitment analysis
 
 ### Phase 4 — Simulation
 
@@ -245,6 +290,7 @@ Do **not** deploy the UI to a runtime where these migrations have not been appli
 - move/countermove trees
 - sensitivity analysis
 - competitor response probabilities based only on observable historical behavior
+- compare market/strategy choices under multiple plausible futures
 - reversible experiment recommendation before hard commitment
 
 ### Phase 5 — Authority and deterministic governance
