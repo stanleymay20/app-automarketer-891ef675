@@ -152,9 +152,26 @@ References: [OpenAI MCP tools](https://developers.openai.com/plugins/build/mcp-s
 [OpenAI authentication](https://developers.openai.com/plugins/build/auth),
 [Supabase identity verification](https://supabase.com/docs/reference/javascript/auth-getuser).
 
-## Current deployment status
+## Current deployment status (2026-10-18)
 
-Lovable inspection on 2026-10-07 confirmed preview and production share one backend, without isolated staging.
-A draft does not isolate the database. Create a separate staging backend before applying this migration.
-Neither the bridge nor the migration has been deployed. Local PostgreSQL and HTTP tests do not prove a
-managed Deno deployment or real ChatGPT OAuth. Lovable remains the control plane for this backend.
+PR #8 remains draft, unmerged and unconnected to ChatGPT. The dedicated,
+nonproduction Supabase connector staging project `hdpakzkguumyocopvplt`
+was restored and verified ACTIVE_HEALTHY. The unchanged connector migration
+is recorded in its migration history; the `chatgpt-connector-bridge`
+Edge Function is ACTIVE (version 2). Secrets and authenticated bridge behavior
+have **not** been verified end-to-end.
+
+A Render **static** staging consent frontend is now deployed live on
+https://scrollmarketer-chatgpt-consent-staging.onrender.com at the original
+connector feature head `6667eefdb83686e1cea4d9f87fcf8497480d332d`,
+using the staging public backend URL and publishable key only. It does not yet
+have `VITE_SCROLLMARKETER_CONNECTOR_URL`; therefore consent cannot complete.
+The separate Render Node/Docker MCP server, HTTPS `/mcp` URL, exact ChatGPT
+callback configuration and matching backend-to-Render bridge secret are still
+missing. Verify static-site SPA deep-link rewrite before connecting OAuth.
+
+See `connector/staging/README.md` for precise staging project/service IDs,
+verified results, unresolved checks and next safe steps. Do not merge this
+connector with the independently draft strategic-intelligence PR #9 merely to
+get an MCP endpoint. Keep production untouched until the full staged OAuth,
+two-account isolation, token revocation, and draft-review validation passes.
