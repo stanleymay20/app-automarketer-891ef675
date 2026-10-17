@@ -5,7 +5,16 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "supabase/functions/**", "tailwind.config.ts"] },
+  {
+    ignores: [
+      "dist",
+      "supabase/functions/**",
+      "tailwind.config.ts",
+      // Lovable-managed generated source. Validate generated behavior via build/tests;
+      // do not hand-edit this file to satisfy style-only lint rules.
+      "src/integrations/supabase/previewAuthStorage.ts",
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

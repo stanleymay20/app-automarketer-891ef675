@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Reality from "./pages/Reality";
+import Strategy from "./pages/Strategy";
 
 import CreatePost from "./pages/CreatePost";
 import Onboarding from "./pages/Onboarding";
@@ -77,6 +78,7 @@ function AppRoutes() {
 
       <Route path="/oauth/callback" element={<OAuthCallback />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/strategy" element={<ProtectedRoute><Strategy /></ProtectedRoute>} />
       <Route path="/today" element={<ProtectedRoute><Today /></ProtectedRoute>} />
       <Route path="/first-client" element={<ProtectedRoute><FirstClient /></ProtectedRoute>} />
       <Route path="/create" element={<ProtectedRoute><CreatePost /></ProtectedRoute>} />

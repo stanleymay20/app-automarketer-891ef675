@@ -20,6 +20,7 @@ import {
   FlaskConical,
   Radar,
   Brain,
+  BrainCircuit,
   Lightbulb,
   BarChart3,
   DollarSign,
@@ -49,6 +50,7 @@ const SECTIONS: NavSection[] = [
     label: "Growth OS",
     items: [
       { icon: Zap, label: "Today", path: "/today" },
+      { icon: BrainCircuit, label: "Strategy", path: "/strategy" },
       { icon: Target, label: "First Client", path: "/first-client" },
       { icon: Gauge, label: "Home", path: "/dashboard" },
       { icon: Gauge, label: "Reality", path: "/" },
