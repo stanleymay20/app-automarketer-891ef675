@@ -16,6 +16,7 @@ import {
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { EvidenceUncertaintyPanel } from "@/components/strategy/EvidenceUncertaintyPanel";
 import { MarketChoicePanel } from "@/components/strategy/MarketChoicePanel";
+import { ScenarioLabPanel } from "@/components/strategy/ScenarioLabPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -251,6 +252,8 @@ export default function Strategy() {
         <EvidenceUncertaintyPanel appId={effectiveAppId} objectives={objectives} decisions={decisions} />
 
         <MarketChoicePanel appId={effectiveAppId} objectives={objectives} decisions={decisions} />
+
+        <ScenarioLabPanel appId={effectiveAppId} objectives={objectives} decisions={decisions} />
 
         <div className="grid gap-6 xl:grid-cols-[1fr_1.35fr]">
           <section className="space-y-3">
