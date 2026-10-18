@@ -1,0 +1,11 @@
+**
+!connector
+!connector/package.json
+!connector/package-lock.json
+!connector/src
+!connector/src/**
+!supabase
+!supabase/functions
+!supabase/functions/_shared
+!supabase/functions/_shared/chatgpt-connector
+!supabase/functions/_shared/chatgpt-connector/**

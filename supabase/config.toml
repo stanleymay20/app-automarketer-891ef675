@@ -106,3 +106,7 @@ verify_jwt = false
 
 [functions.track-book-promo]
 verify_jwt = false
+
+# Authenticated server-to-server by the bridge handler's own secret.
+[functions.chatgpt-connector-bridge]
+verify_jwt = false

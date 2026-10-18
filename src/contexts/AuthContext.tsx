@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, 5000);
 
     console.info("[Auth] Bootstrapping auth", {
-      href: window.location.href,
+      pathname: window.location.pathname,
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {

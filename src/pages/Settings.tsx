@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlatformConnections } from "@/components/settings/PlatformConnections";
+import { ChatGPTConnection } from "@/components/settings/ChatGPTConnection";
 import { AutomationPolicySettings } from "@/components/settings/AutomationPolicySettings";
 import { GrowthGoalsSection } from "@/components/settings/GrowthGoalsSection";
 import { useUserSettings, useUpdateUserSettings } from "@/hooks/useUserSettings";
@@ -70,6 +71,7 @@ export default function Settings() {
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="autonomy">Autonomy</TabsTrigger>
           <TabsTrigger value="platforms">Platforms</TabsTrigger>
+          <TabsTrigger value="chatgpt">ChatGPT</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
@@ -149,6 +151,9 @@ export default function Settings() {
 
         <TabsContent value="platforms" className="space-y-6">
           <PlatformConnections />
+        </TabsContent>
+        <TabsContent value="chatgpt" className="space-y-6">
+          <ChatGPTConnection />
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
